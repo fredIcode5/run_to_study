@@ -5,6 +5,12 @@
   --radius-md: 16px;
   --shadow-soft: 0 10px 30px rgba(31, 36, 48, 0.08);
   --shadow-float: 0 8px 24px rgba(31, 36, 48, 0.14);
+
+  /* Couleurs personnalisables du minuteur Pomodoro.
+     Valeurs par défaut ici ; écrasées en JS via setProperty(...) */
+  --couleur-chrono: #1f2430;
+  --couleur-poignee: #e2472a;
+  --couleur-boutons: #e2472a;
 }
 
 *{
@@ -21,6 +27,7 @@ body{
   background: radial-gradient(circle at 50% 0%, #f5f6f8 0%, #eceef1 60%);
   font-family: 'Inter', system-ui, sans-serif;
   color: #1f2430;
+  transition: background-color 0.3s ease;
 }
 
 #root{
@@ -87,14 +94,34 @@ body{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 44px;
+  gap: 20px;
   transform: translateY(-110px);
   transition: transform 0.45s cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-/* Quand le panel est ouvert, le chrono se décale à gauche pour garder ~25px d'écart */
 .stage--panel-ouvert .chrono{
   transform: translate(-260px, -200px);
+}
+
+/* Badge indiquant la phase (travail / pause) */
+.chrono_phase{
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.chrono_phase--travail{
+  background: rgba(226, 71, 42, 0.12);
+  color: #b8371d;
+}
+
+.chrono_phase--pause{
+  background: rgba(47, 111, 107, 0.12);
+  color: #2f6f6b;
 }
 
 .chrono_affichage{
@@ -102,7 +129,7 @@ body{
   font-variant-numeric: tabular-nums;
   font-size: 72px;
   font-weight: 600;
-  color: #1f2430;
+  color: var(--couleur-chrono);
   letter-spacing: 1px;
 }
 
@@ -113,7 +140,7 @@ body{
 }
 
 .btn_primaire{
-  background: #e2472a;
+  background: var(--couleur-boutons);
   color: #fff;
   border: none;
   padding: 15px 34px;
@@ -122,13 +149,13 @@ body{
   font-family: 'Inter', sans-serif;
   border-radius: 999px;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(226, 71, 42, 0.35);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  box-shadow: 0 8px 18px rgba(31, 36, 48, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, background 0.2s ease;
 }
 
 .btn_primaire:hover{
   transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(226, 71, 42, 0.45);
+  box-shadow: 0 12px 24px rgba(31, 36, 48, 0.35);
 }
 
 .btn_primaire:disabled{
@@ -182,7 +209,6 @@ body{
 }
 
 /* --- Panneau latéral --- */
-/* Largeur totale du panneau inchangée (720px) : poignee (64px) + corps (656px) */
 .panel{
   position: fixed;
   top: 50%;
@@ -196,8 +222,6 @@ body{
   transition: transform 0.45s cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-/* Décalage = largeur du corps (656px) + décalage droit (14px) = corps totalement hors écran,
-   seule la poignée (64px) reste visible, collée au bord de l'écran */
 .panel--collapsed{
   transform: translateY(-50%) translateX(670px);
 }
@@ -205,7 +229,7 @@ body{
 .panel_poignee{
   width: 64px;
   flex-shrink: 0;
-  background: #e2472a;
+  background: var(--couleur-poignee);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -214,6 +238,7 @@ body{
   padding: 18px 0;
   border-radius: var(--radius-md) 0 0 var(--radius-md);
   box-shadow: var(--shadow-float);
+  transition: background 0.2s ease;
 }
 
 .poignee_toggle{
@@ -266,7 +291,7 @@ body{
 
 .poignee_carre.actif{
   background: #fff;
-  color: #b8371d;
+  color: var(--couleur-poignee);
 }
 
 .poignee_carre_icone{
@@ -281,7 +306,7 @@ body{
   height: 9px;
   border-radius: 50%;
   background: #ff3b3b;
-  border: 2px solid #e2472a;
+  border: 2px solid var(--couleur-poignee);
 }
 
 .poignee_carre.actif .poignee_notif{
@@ -357,6 +382,152 @@ body{
 
 .param{
   background: rgba(47, 111, 107, 0.09);
+}
+
+/* --- Sections du panneau Réglages (fond + Pomodoro) --- */
+.param_section{
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(31, 36, 48, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.param_section_titre{
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  color: #1f2430;
+}
+
+.param_champ{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.param_label{
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.param_champ_ligne{
+  display: flex;
+  gap: 8px;
+}
+
+.param_input{
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(31, 36, 48, 0.15);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  background: #fff;
+}
+
+.param_input:focus{
+  outline: 2px solid #e2472a;
+  border-color: transparent;
+}
+
+.param_btn_valider{
+  padding: 10px 18px;
+  border: none;
+  border-radius: 10px;
+  background: #e2472a;
+  color: #fff;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.param_btn_valider:hover{
+  background: #b8371d;
+}
+
+.param_file_input{
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.param_file_label{
+  display: inline-block;
+  width: fit-content;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 2px solid #2f6f6b;
+  color: #2f6f6b;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.param_file_label:hover{
+  background: #2f6f6b;
+  color: #fff;
+}
+
+.param_file_nom{
+  font-size: 12px;
+  font-weight: 600;
+  color: #2f6f6b;
+}
+
+/* Ligne "label + sélecteur de couleur" pour la section Pomodoro */
+.param_couleur_ligne{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.param_couleur_input{
+  width: 44px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(31, 36, 48, 0.15);
+  border-radius: 10px;
+  cursor: pointer;
+  background: none;
+  flex-shrink: 0;
+}
+
+.param_couleur_input::-webkit-color-swatch-wrapper{
+  padding: 4px;
+}
+
+.param_couleur_input::-webkit-color-swatch{
+  border: none;
+  border-radius: 6px;
+}
+
+.param_btn_reinit{
+  align-self: flex-start;
+  background: transparent;
+  border: 2px solid #e4e6ea;
+  color: #6b7280;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.param_btn_reinit:hover{
+  border-color: #b8371d;
+  color: #b8371d;
+  background: rgba(226, 71, 42, 0.08);
 }
 
 .Chat_IA{
@@ -454,7 +625,7 @@ body{
   cursor: not-allowed;
 }
 
-/* --- Bande du bas : bloc sautillant + flèches défilantes --- */
+/* --- Bande du bas : coureur GIF (au-dessus) + flèches défilantes (en dessous) --- */
 .bas_page{
   position: fixed;
   bottom: 0;
@@ -496,23 +667,17 @@ body{
   to{ transform: translateX(-50%); }
 }
 
-.bloc_sautillant{
-  width: 20px;
-  height: 20px;
-  background: #e2472a;
-  border-radius: 6px;
-  animation: sautiller 2.4s ease-in-out infinite;
-}
-
-.bloc_sautillant.arret{
-  animation-play-state: paused;
-}
-
-@keyframes sautiller{
-  0%{ transform: translateY(0); }
-  12%{ transform: translateY(-18px); }
-  24%{ transform: translateY(0); }
-  100%{ transform: translateY(0); }
+/* Coureur animé, placé au-dessus de la bande de flèches.
+   Agrandi pour être plus visible. Pas d'animation CSS ajoutée :
+   le GIF s'anime nativement image par image. */
+.coureur_defilant{
+  width: 130px;
+  height: 70px;
+  object-fit: contain;
+  display: block;
+  margin-left: -520px;
+  margin-bottom: 45px;;
+  transform: scale(3);
 }
 
 /* --- Panneau d'informations joueur --- */
@@ -737,5 +902,8 @@ body{
     flex-direction: column;
     align-items: flex-start;
     gap: 2px;
+  }
+  .coureur_defilant{
+    width: 90px;
   }
 }
