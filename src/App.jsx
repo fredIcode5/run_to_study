@@ -13,6 +13,21 @@ const REGLAGES_PAR_DEFAUT = {
 };
 
 const CLE_STOCKAGE_REGLAGES = 'pomodoro_reglages';
+const CLE_STOCKAGE_TACHES = 'pomodoro_taches';
+
+// Formate une date ISO en "jj/mm/aaaa hh:mm" (locale FR), utilisée dans
+// l'en-tête des notes épinglées pour afficher la création/dernière modification
+function formaterDateNote (dateIso) {
+  try {
+    const d = new Date(dateIso);
+    if (isNaN(d.getTime())) return '';
+    const jour = d.toLocaleDateString('fr-FR');
+    const heure = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `${jour} ${heure}`;
+  } catch {
+    return '';
+  }
+}
 
 
 function Navbar(){
@@ -196,11 +211,489 @@ function Chrono ({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes
 }
 
 
-function Note () {
-  return(
-    <div className='note'>
-      <h2>Note 1</h2>
-      <p>Contenu du bloc note...</p>
+// --- To-Do List (section "Notes") -------------------------------------
+// Chaque tâche : { id, contenu, tags: string[], dateEcheance, terminee }
+
+function genererIdTache () {
+  return `tache_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+}
+
+// Petit chip visuel représentant un tag, avec bouton de suppression
+function TacheTag ({ texte, onSupprimer }) {
+  return (
+    <span className="todo_tag">
+      {texte}
+      <button
+        type="button"
+        className="todo_tag_suppr"
+        onClick={onSupprimer}
+        aria-label={`Supprimer le tag ${texte}`}
+      >
+        ×
+      </button>
+    </span>
+  );
+}
+
+// Barre supérieure commune à la carte et à la modale : tags + date d'échéance
+function TacheBarre ({ tags, onAjouterTag, onSupprimerTag, dateEcheance, onModifierDate }) {
+  const [ajoutOuvert, setAjoutOuvert] = useState(false);
+  const [valeurTag, setValeurTag] = useState('');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (ajoutOuvert) inputRef.current?.focus();
+  }, [ajoutOuvert]);
+
+  const validerTag = () => {
+    const texte = valeurTag.trim();
+    if (texte) onAjouterTag(texte);
+    setValeurTag('');
+    setAjoutOuvert(false);
+  };
+
+  return (
+    <div className="todo_carte_barre" onClick={(e) => e.stopPropagation()}>
+      <div className="todo_tags">
+        {tags.map((tag, i) => (
+          <TacheTag key={`${tag}-${i}`} texte={tag} onSupprimer={() => onSupprimerTag(i)} />
+        ))}
+
+        {ajoutOuvert ? (
+          <input
+            ref={inputRef}
+            type="text"
+            className="todo_tag_input"
+            value={valeurTag}
+            maxLength={20}
+            placeholder="Nouveau tag"
+            onChange={(e) => setValeurTag(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') validerTag();
+              if (e.key === 'Escape') { setValeurTag(''); setAjoutOuvert(false); }
+            }}
+            onBlur={validerTag}
+          />
+        ) : (
+          <button
+            type="button"
+            className="todo_tag_ajouter"
+            onClick={() => setAjoutOuvert(true)}
+            aria-label="Ajouter un tag"
+          >
+            + tag
+          </button>
+        )}
+      </div>
+
+      <input
+        type="date"
+        className="todo_date"
+        value={dateEcheance || ''}
+        onChange={(e) => onModifierDate(e.target.value)}
+        aria-label="Date d'échéance"
+      />
+    </div>
+  );
+}
+
+// Zone de texte qui s'agrandit automatiquement selon son contenu
+function TacheZoneTexte ({ className, valeur, onChange, placeholder, autoFocus }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.style.height = 'auto';
+      ref.current.style.height = `${ref.current.scrollHeight}px`;
+    }
+  }, [valeur]);
+
+  return (
+    <textarea
+      ref={ref}
+      className={className}
+      value={valeur}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+      onClick={(e) => e.stopPropagation()}
+    />
+  );
+}
+
+// Une carte = une tâche, éditable directement dans la liste
+function TacheCarte ({ tache, actions, onAgrandir }) {
+  const zoneTexteRef = useRef(null);
+
+  // Clique n'importe où dans la carte (hors boutons/inputs déjà gérés) -> focus l'édition
+  const focaliserEdition = () => {
+    zoneTexteRef.current?.focus();
+  };
+
+  return (
+    <div
+      className={`todo_carte ${tache.terminee ? 'todo_carte--terminee' : ''}`}
+      onClick={focaliserEdition}
+    >
+      <button
+        type="button"
+        className="todo_carte_suppr"
+        onClick={(e) => { e.stopPropagation(); actions.supprimer(); }}
+        aria-label="Supprimer la tâche"
+      >
+        ×
+      </button>
+
+      <TacheBarre
+        tags={tache.tags}
+        onAjouterTag={actions.ajouterTag}
+        onSupprimerTag={actions.supprimerTag}
+        dateEcheance={tache.dateEcheance}
+        onModifierDate={actions.modifierDate}
+      />
+
+      <textarea
+        ref={zoneTexteRef}
+        className="todo_contenu"
+        value={tache.contenu}
+        onChange={(e) => actions.modifierContenu(e.target.value)}
+        placeholder="Écris ta tâche..."
+        onClick={(e) => e.stopPropagation()}
+      />
+
+      <div className="todo_carte_actions">
+        <button
+          type="button"
+          className="todo_btn_epingler"
+          onClick={(e) => { e.stopPropagation(); actions.epingler(); }}
+          title="Épingler sur le fond de la page"
+        >
+          📌 Épingler
+        </button>
+        <button
+          type="button"
+          className={`todo_btn_terminer ${tache.terminee ? 'actif' : ''}`}
+          onClick={(e) => { e.stopPropagation(); actions.toggleTerminee(); }}
+        >
+          {tache.terminee ? '✓ Terminé' : 'Terminé'}
+        </button>
+        <button
+          type="button"
+          className="todo_btn_agrandir"
+          onClick={(e) => { e.stopPropagation(); onAgrandir(); }}
+          aria-label="Agrandir la tâche"
+          title="Agrandir"
+        >
+          ⤢
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Modale d'édition "confortable" pour une tâche
+function ModalTache ({ tache, actions, fermer }) {
+  if (!tache) return null;
+
+  return (
+    <div className="modal_fond todo_modal_fond" onClick={fermer}>
+      <div
+        className={`modal_fenetre todo_modal_fenetre ${tache.terminee ? 'todo_carte--terminee' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button className="modal_fermer" onClick={fermer} aria-label="Fermer">×</button>
+
+        <div className="todo_modal_contenu">
+          <TacheBarre
+            tags={tache.tags}
+            onAjouterTag={actions.ajouterTag}
+            onSupprimerTag={actions.supprimerTag}
+            dateEcheance={tache.dateEcheance}
+            onModifierDate={actions.modifierDate}
+          />
+
+          <TacheZoneTexte
+            className="todo_contenu todo_contenu--modal"
+            valeur={tache.contenu}
+            onChange={actions.modifierContenu}
+            placeholder="Écris ta tâche..."
+            autoFocus
+          />
+
+          <div className="todo_carte_actions">
+            <button
+              type="button"
+              className="todo_btn_epingler"
+              onClick={actions.epingler}
+              title="Épingler sur le fond de la page"
+            >
+              📌 Épingler
+            </button>
+            <button
+              type="button"
+              className={`todo_btn_terminer ${tache.terminee ? 'actif' : ''}`}
+              onClick={actions.toggleTerminee}
+            >
+              {tache.terminee ? '✓ Terminé' : 'Marquer comme terminé'}
+            </button>
+            <button
+              type="button"
+              className="todo_btn_supprimer_modal"
+              onClick={() => { actions.supprimer(); fermer(); }}
+            >
+              Supprimer la tâche
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Petite modale de confirmation générique (utilisée pour le désépinglage)
+function ModalConfirmation ({ ouvert, message, onConfirmer, onAnnuler }) {
+  if (!ouvert) return null;
+
+  return (
+    <div className="modal_fond todo_modal_fond" onClick={onAnnuler}>
+      <div className="modal_fenetre todo_confirm_fenetre" onClick={(e) => e.stopPropagation()}>
+        <p className="todo_confirm_message">{message}</p>
+        <div className="todo_confirm_actions">
+          <button type="button" className="btn_secondaire" onClick={onAnnuler}>
+            Annuler
+          </button>
+          <button type="button" className="todo_btn_confirmer" onClick={onConfirmer}>
+            Désépingler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Modale de confirmation pour la sortie du mode concentration.
+// Contrairement à ModalConfirmation, elle exige que l'utilisateur active un
+// interrupteur avant de pouvoir valider (le bouton "Confirmer" reste désactivé
+// tant que l'interrupteur n'est pas activé).
+function ModalConfirmationSortie ({ ouvert, toggleActif, onToggle, onConfirmer, onAnnuler }) {
+  if (!ouvert) return null;
+
+  return (
+    <div className="modal_fond todo_modal_fond" onClick={onAnnuler}>
+      <div className="modal_fenetre todo_confirm_fenetre" onClick={(e) => e.stopPropagation()}>
+        <p className="todo_confirm_message">
+          Êtes-vous sûr de vouloir quitter le mode concentration ?
+        </p>
+
+        <div className="switch_ligne" onClick={onToggle} role="switch" aria-checked={toggleActif}>
+          <span className="switch_label">Je confirme vouloir quitter</span>
+          <span className={`switch ${toggleActif ? 'switch--actif' : ''}`}>
+            <span className="switch_bouton"></span>
+          </span>
+        </div>
+
+        <div className="todo_confirm_actions">
+          <button type="button" className="btn_secondaire" onClick={onAnnuler}>
+            Annuler
+          </button>
+          <button
+            type="button"
+            className="todo_btn_confirmer"
+            onClick={onConfirmer}
+            disabled={!toggleActif}
+          >
+            Confirmer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Note épinglée : widget flottant en LECTURE SEULE, semi-transparent et
+// déplaçable librement par glisser-déposer, affiché sur le fond principal
+// de la page. Seules deux interactions restent possibles une fois épinglée :
+// déplacer la note (poignée ⠿⠿) et la désépingler (bouton ✕, avec confirmation).
+// Le contenu, les tags et l'échéance sont affichés à plat, non modifiables.
+function NoteEpinglee ({ tache, actions }) {
+  const [position, setPosition] = useState(tache.position || { x: 60, y: 130 });
+  const positionRef = useRef(position);
+  const conteneurRef = useRef(null);
+  const decalageRef = useRef({ x: 0, y: 0 });
+  const enTrainDeGlisser = useRef(false);
+  const actionsRef = useRef(actions);
+
+  // Garde toujours une référence à jour des actions, sans re-déclencher l'effet de drag
+  useEffect(() => {
+    actionsRef.current = actions;
+  });
+
+  // Si la position stockée change depuis l'extérieur (ex: ré-épinglage), on se resynchronise
+  useEffect(() => {
+    if (tache.position) {
+      setPosition(tache.position);
+      positionRef.current = tache.position;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tache.position]);
+
+  // Écouteurs globaux du glisser-déposer, attachés une seule fois
+  useEffect(() => {
+    const gererDeplacement = (e) => {
+      if (!enTrainDeGlisser.current) return;
+      const marge = 8;
+      const largeurNote = conteneurRef.current?.offsetWidth || 260;
+      const hauteurNote = conteneurRef.current?.offsetHeight || 160;
+
+      let x = e.clientX - decalageRef.current.x;
+      let y = e.clientY - decalageRef.current.y;
+
+      x = Math.min(Math.max(x, marge), window.innerWidth - largeurNote - marge);
+      y = Math.min(Math.max(y, marge), window.innerHeight - hauteurNote - marge);
+
+      positionRef.current = { x, y };
+      setPosition({ x, y });
+    };
+
+    const terminerDrag = () => {
+      if (!enTrainDeGlisser.current) return;
+      enTrainDeGlisser.current = false;
+      actionsRef.current.deplacer(positionRef.current);
+    };
+
+    document.addEventListener('pointermove', gererDeplacement);
+    document.addEventListener('pointerup', terminerDrag);
+    return () => {
+      document.removeEventListener('pointermove', gererDeplacement);
+      document.removeEventListener('pointerup', terminerDrag);
+    };
+  }, []);
+
+  const demarrerDrag = (e) => {
+    e.preventDefault();
+    enTrainDeGlisser.current = true;
+    decalageRef.current = {
+      x: e.clientX - positionRef.current.x,
+      y: e.clientY - positionRef.current.y,
+    };
+  };
+
+  // Date affichée dans l'en-tête : dernière modification si elle existe et
+  // diffère de la création, sinon date de création (repli pour les notes
+  // créées avant l'ajout de ce champ, auquel cas rien n'est affiché)
+  const dateAffichee = tache.dateModification || tache.dateCreation;
+  const estModifiee = Boolean(
+    tache.dateModification && tache.dateCreation && tache.dateModification !== tache.dateCreation
+  );
+
+  return (
+    <div
+      ref={conteneurRef}
+      className={`note_epinglee ${tache.terminee ? 'note_epinglee--terminee' : ''}`}
+      style={{ left: `${position.x}px`, top: `${position.y}px` }}
+    >
+      <div className="note_epinglee_entete">
+        <span
+          className="note_epinglee_poignee"
+          onPointerDown={demarrerDrag}
+          title="Déplacer la note"
+          aria-hidden="true"
+        >
+          ⠿⠿
+        </span>
+
+        {dateAffichee && (
+          <span
+            className="note_epinglee_date"
+            title={estModifiee ? 'Dernière modification' : 'Création'}
+          >
+            {estModifiee ? '✎ ' : '＋ '}{formaterDateNote(dateAffichee)}
+          </span>
+        )}
+
+        <button
+          type="button"
+          className="note_epinglee_fermer"
+          onClick={actions.demanderDesepingler}
+          aria-label="Désépingler la note"
+          title="Désépingler"
+        >
+          ✕
+        </button>
+      </div>
+
+      {(tache.tags.length > 0 || tache.dateEcheance) && (
+        <div className="note_epinglee_barre_lecture">
+          {tache.tags.length > 0 && (
+            <div className="note_epinglee_tags_lecture">
+              {tache.tags.map((tag, i) => (
+                <span key={`${tag}-${i}`} className="note_epinglee_tag_lecture">{tag}</span>
+              ))}
+            </div>
+          )}
+          {tache.dateEcheance && (
+            <span className="note_epinglee_echeance_lecture">
+              Échéance : {tache.dateEcheance}
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="note_epinglee_contenu_lecture">
+        {tache.contenu
+          ? tache.contenu
+          : <span className="note_epinglee_contenu_vide">(Note vide)</span>}
+      </div>
+    </div>
+  );
+}
+
+// Composant de la section "Notes" : affiche la liste des tâches non épinglées
+// et la modale d'agrandissement. L'état des tâches (et leur persistance) est
+// géré par le composant App, afin que les notes épinglées puissent rester
+// affichées sur le fond principal même quand cet onglet n'est pas actif.
+function Note ({ taches, ajouterTache, actionsPour }) {
+  const [idAgrandie, setIdAgrandie] = useState(null);
+
+  // Une note épinglée quitte la liste : elle est déjà visible sur le fond principal
+  const tachesListe = taches.filter((t) => !t.epinglee);
+  const tacheAgrandie = taches.find((t) => t.id === idAgrandie) || null;
+
+  return (
+    <div className="todo_zone">
+      <div className="todo_entete">
+        <h2>Notes</h2>
+        <button type="button" className="todo_btn_ajouter" onClick={ajouterTache}>
+          + Nouvelle tâche
+        </button>
+      </div>
+
+      {tachesListe.length === 0 ? (
+        <p className="todo_vide">
+          {taches.length === 0
+            ? "Aucune tâche pour l'instant. Clique sur « + Nouvelle tâche » pour commencer."
+            : 'Toutes tes tâches sont épinglées sur le fond de la page.'}
+        </p>
+      ) : (
+        <div className="todo_liste">
+          {tachesListe.map((tache) => (
+            <TacheCarte
+              key={tache.id}
+              tache={tache}
+              actions={actionsPour(tache.id)}
+              onAgrandir={() => setIdAgrandie(tache.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {tacheAgrandie && (
+        <ModalTache
+          tache={tacheAgrandie}
+          actions={actionsPour(tacheAgrandie.id)}
+          fermer={() => setIdAgrandie(null)}
+        />
+      )}
     </div>
   );
 }
@@ -456,7 +949,8 @@ const ONGLETS_POIGNEE = [
   { id: 4, icone: '🏁', label: 'Salon de course', notif: true },
 ];
 
-// BlocDeux relaie les props "fond" et "réglages Pomodoro" vers Param
+// BlocDeux relaie les props "fond" et "réglages Pomodoro" vers Param,
+// et les props des tâches/notes vers Note
 function BlocDeux ({
   ouvert,
   setOuvert,
@@ -468,7 +962,10 @@ function BlocDeux ({
   reglages,
   onChangerDuree,
   onChangerCouleur,
-  onReinitialiserReglages
+  onReinitialiserReglages,
+  taches,
+  ajouterTache,
+  actionsPourTache
 }) {
   const [vueActive, setVueActive] = useState(1);
 
@@ -513,7 +1010,13 @@ function BlocDeux ({
         </div>
 
         <div className="panel_contenu">
-          {vueActive === 1 && <Note/>}
+          {vueActive === 1 && (
+            <Note
+              taches={taches}
+              ajouterTache={ajouterTache}
+              actionsPour={actionsPourTache}
+            />
+          )}
           {vueActive === 2 && (
             <Param
               couleurFondInput={couleurFondInput}
@@ -591,6 +1094,132 @@ function App() {
   const ajouterDistanceSession = (metres) => {
     setDistanceTotale((prev) => prev + metres);
   };
+
+  // --- Tâches / Notes (liste + notes épinglées sur le fond principal) ---
+  // L'état vit ici (et non dans le composant Note) afin que les notes
+  // épinglées restent visibles même quand l'onglet "Notes" n'est pas actif.
+  const [taches, setTaches] = useState(() => {
+    try {
+      const sauvegarde = localStorage.getItem(CLE_STOCKAGE_TACHES);
+      return sauvegarde ? JSON.parse(sauvegarde) : [];
+    } catch {
+      return [];
+    }
+  });
+  // Id de la note pour laquelle une confirmation de désépinglage est demandée
+  const [idADesepingler, setIdADesepingler] = useState(null);
+
+  // --- Mode concentration (plein écran + interface épurée) ---
+  const [modeConcentration, setModeConcentration] = useState(false);
+  const [confirmationSortieOuverte, setConfirmationSortieOuverte] = useState(false);
+  const [toggleSortieActif, setToggleSortieActif] = useState(false);
+  // Permet de distinguer, dans l'écouteur fullscreenchange, une sortie déjà
+  // validée par la modale (on finalise simplement) d'une sortie provoquée par
+  // autre chose (ex : touche F11 ou Echap), qui doit déclencher la même
+  // confirmation avant d'être effective.
+  const sortieConfirmeeRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLE_STOCKAGE_TACHES, JSON.stringify(taches));
+    } catch {
+      // Stockage indisponible : on ignore silencieusement
+    }
+  }, [taches]);
+
+  const ajouterTache = () => {
+    const maintenant = new Date().toISOString();
+    const nouvelle = {
+      id: genererIdTache(),
+      contenu: '',
+      tags: [],
+      dateEcheance: '',
+      terminee: false,
+      epinglee: false,
+      position: null,
+      dateCreation: maintenant,
+      dateModification: maintenant,
+    };
+    setTaches((prev) => [nouvelle, ...prev]);
+  };
+
+  const modifierTache = (id, champs) => {
+    setTaches((prev) => prev.map((t) => (t.id === id ? { ...t, ...champs } : t)));
+  };
+
+  const supprimerTache = (id) => {
+    setTaches((prev) => prev.filter((t) => t.id !== id));
+    setIdADesepingler((actuel) => (actuel === id ? null : actuel));
+  };
+
+  const ajouterTagTache = (id, tag) => {
+    setTaches((prev) => prev.map((t) => (
+      t.id === id
+        ? { ...t, tags: [...t.tags, tag], dateModification: new Date().toISOString() }
+        : t
+    )));
+  };
+
+  const supprimerTagTache = (id, index) => {
+    setTaches((prev) => prev.map((t) => (
+      t.id === id
+        ? { ...t, tags: t.tags.filter((_, i) => i !== index), dateModification: new Date().toISOString() }
+        : t
+    )));
+  };
+
+  // Épingle une tâche sur le fond principal, en cascade pour éviter
+  // que toutes les notes n'apparaissent superposées au même endroit
+  const epinglerTache = (id) => {
+    setTaches((prev) => {
+      const dejaEpinglees = prev.filter((t) => t.epinglee).length;
+      return prev.map((t) => (
+        t.id === id
+          ? {
+              ...t,
+              epinglee: true,
+              position: t.position || {
+                x: 60 + (dejaEpinglees % 6) * 34,
+                y: 130 + (dejaEpinglees % 6) * 34,
+              },
+            }
+          : t
+      ));
+    });
+  };
+
+  // Mémorise la position d'une note épinglée après un glisser-déposer
+  const deplacerTache = (id, position) => {
+    setTaches((prev) => prev.map((t) => (t.id === id ? { ...t, position } : t)));
+  };
+
+  // Ouvre la confirmation de désépinglage plutôt que de désépingler directement
+  const demanderDesepinglerTache = (id) => setIdADesepingler(id);
+
+  const confirmerDesepingler = () => {
+    modifierTache(idADesepingler, { epinglee: false });
+    setIdADesepingler(null);
+  };
+
+  const annulerDesepingler = () => setIdADesepingler(null);
+
+  // Fabrique le jeu d'actions (pré-liées à l'id) consommé par une carte,
+  // la modale d'agrandissement, ou une note épinglée
+  const actionsPourTache = (id) => ({
+    modifierContenu: (contenu) => modifierTache(id, { contenu, dateModification: new Date().toISOString() }),
+    modifierDate: (dateEcheance) => modifierTache(id, { dateEcheance, dateModification: new Date().toISOString() }),
+    ajouterTag: (tag) => ajouterTagTache(id, tag),
+    supprimerTag: (index) => supprimerTagTache(id, index),
+    toggleTerminee: () => {
+      setTaches((prev) => prev.map((t) => (t.id === id ? { ...t, terminee: !t.terminee } : t)));
+    },
+    supprimer: () => supprimerTache(id),
+    epingler: () => epinglerTache(id),
+    deplacer: (position) => deplacerTache(id, position),
+    demanderDesepingler: () => demanderDesepinglerTache(id),
+  });
+
+  const notesEpinglees = taches.filter((t) => t.epinglee);
 
   // Vérifie le format "rgb(r, g, b)" avec composantes entre 0 et 255, puis applique
   const appliquerCouleurFond = (valeur) => {
@@ -687,17 +1316,93 @@ function App() {
     setReglages(REGLAGES_PAR_DEFAUT);
   };
 
+  // --- Mode concentration --------------------------------------------
+  // On s'appuie sur l'API Fullscreen native et sur l'évènement
+  // "fullscreenchange" pour garder le bouton et l'état réel du plein écran
+  // toujours synchronisés, que le déclencheur soit notre bouton ou la
+  // touche F11 du navigateur.
+  useEffect(() => {
+    const gererChangementPleinEcran = () => {
+      const enPleinEcran = !!document.fullscreenElement;
+
+      if (enPleinEcran) {
+        setModeConcentration(true);
+        return;
+      }
+
+      if (sortieConfirmeeRef.current) {
+        // Sortie déjà validée via la fenêtre de confirmation : on finalise proprement
+        sortieConfirmeeRef.current = false;
+        setModeConcentration(false);
+        setConfirmationSortieOuverte(false);
+        setToggleSortieActif(false);
+      } else {
+        // Sortie déclenchée autrement que par notre bouton (ex : touche F11) :
+        // on applique la même logique de confirmation. On retente de rebasculer
+        // en plein écran le temps que l'utilisateur confirme ; certains
+        // navigateurs peuvent refuser cette nouvelle requête, auquel cas on
+        // quitte simplement le mode concentration.
+        setConfirmationSortieOuverte(true);
+        document.documentElement.requestFullscreen?.().catch(() => {
+          setModeConcentration(false);
+          setConfirmationSortieOuverte(false);
+          setToggleSortieActif(false);
+        });
+      }
+    };
+
+    document.addEventListener('fullscreenchange', gererChangementPleinEcran);
+    return () => document.removeEventListener('fullscreenchange', gererChangementPleinEcran);
+  }, []);
+
+  const activerModeConcentration = () => {
+    document.documentElement.requestFullscreen?.().catch(() => {
+      // Le navigateur a refusé le passage en plein écran (ex: geste utilisateur
+      // manquant) : on ignore silencieusement, le bouton reste inchangé.
+    });
+  };
+
+  // Clic sur "Quitter le mode concentration" : on ouvre la confirmation
+  // SANS sortir du plein écran immédiatement.
+  const demanderQuitterModeConcentration = () => {
+    setConfirmationSortieOuverte(true);
+  };
+
+  const basculerToggleSortie = () => {
+    setToggleSortieActif((prev) => !prev);
+  };
+
+  const confirmerSortieModeConcentration = () => {
+    if (!toggleSortieActif) return;
+    sortieConfirmeeRef.current = true;
+    document.exitFullscreen?.().catch(() => {
+      sortieConfirmeeRef.current = false;
+      setModeConcentration(false);
+      setConfirmationSortieOuverte(false);
+      setToggleSortieActif(false);
+    });
+  };
+
+  const annulerSortieModeConcentration = () => {
+    setConfirmationSortieOuverte(false);
+    setToggleSortieActif(false);
+  };
+
   return(
     <>
-    <Navbar/>
-    <PanneauJoueur
-      pseudo="Pseudo"
-      niveau={1}
-      distance={distanceTotale}
-      position={0}
-      ouvrirProfil={() => setProfilOuvert(true)}
-    />
-    <main className={`stage ${panelOuvert ? 'stage--panel-ouvert' : ''}`}>
+    {!modeConcentration && <Navbar/>}
+
+    {!modeConcentration && (
+      <PanneauJoueur
+        pseudo="Pseudo"
+        niveau={1}
+        distance={distanceTotale}
+        position={0}
+        ouvrirProfil={() => setProfilOuvert(true)}
+      />
+    )}
+
+    <main className={`stage ${panelOuvert && !modeConcentration ? 'stage--panel-ouvert' : ''}`}>
       <Chrono
         enMarche={enMarche}
         setEnMarche={setEnMarche}
@@ -706,24 +1411,62 @@ function App() {
         dureePauseMinutes={reglages.dureePause}
       />
     </main>
-    <BlocDeux
-      ouvert={panelOuvert}
-      setOuvert={setPanelOuvert}
-      couleurFondInput={couleurFondInput}
-      setCouleurFondInput={setCouleurFondInput}
-      onAppliquerCouleur={appliquerCouleurFond}
-      onChangerImage={appliquerImageFond}
-      imageFondActuelle={imageFond}
-      reglages={reglages}
-      onChangerDuree={gererChangementDuree}
-      onChangerCouleur={gererChangementCouleur}
-      onReinitialiserReglages={reinitialiserReglages}
-    />
-    <BarreDefilante actif={enMarche}/>
+
+    {!modeConcentration && (
+      <BlocDeux
+        ouvert={panelOuvert}
+        setOuvert={setPanelOuvert}
+        couleurFondInput={couleurFondInput}
+        setCouleurFondInput={setCouleurFondInput}
+        onAppliquerCouleur={appliquerCouleurFond}
+        onChangerImage={appliquerImageFond}
+        imageFondActuelle={imageFond}
+        reglages={reglages}
+        onChangerDuree={gererChangementDuree}
+        onChangerCouleur={gererChangementCouleur}
+        onReinitialiserReglages={reinitialiserReglages}
+        taches={taches}
+        ajouterTache={ajouterTache}
+        actionsPourTache={actionsPourTache}
+      />
+    )}
+
+    {!modeConcentration && <BarreDefilante actif={enMarche}/>}
+
+    {/* Bouton Mode concentration : toujours visible, y compris en plein écran,
+        pour permettre à l'utilisateur de sortir du mode. */}
+    <button
+      type="button"
+      className="btn_mode_concentration"
+      onClick={modeConcentration ? demanderQuitterModeConcentration : activerModeConcentration}
+    >
+      {modeConcentration ? 'Quitter le mode concentration' : 'Mode concentration'}
+    </button>
+
     <ModalProfil
       ouvert={profilOuvert}
       fermer={() => setProfilOuvert(false)}
       distanceTotale={distanceTotale}
+    />
+
+    {/* Notes épinglées : widgets flottants affichés sur le fond principal */}
+    {notesEpinglees.map((tache) => (
+      <NoteEpinglee key={tache.id} tache={tache} actions={actionsPourTache(tache.id)} />
+    ))}
+
+    <ModalConfirmation
+      ouvert={idADesepingler !== null}
+      message="Êtes-vous sûr de vouloir désépingler cette note ?"
+      onConfirmer={confirmerDesepingler}
+      onAnnuler={annulerDesepingler}
+    />
+
+    <ModalConfirmationSortie
+      ouvert={confirmationSortieOuverte}
+      toggleActif={toggleSortieActif}
+      onToggle={basculerToggleSortie}
+      onConfirmer={confirmerSortieModeConcentration}
+      onAnnuler={annulerSortieModeConcentration}
     />
     </>
   )
