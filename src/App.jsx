@@ -14,6 +14,18 @@ const REGLAGES_PAR_DEFAUT = {
 
 const CLE_STOCKAGE_REGLAGES = 'pomodoro_reglages';
 const CLE_STOCKAGE_TACHES = 'pomodoro_taches';
+const CLE_STOCKAGE_MUSIQUE = 'pomodoro_musique_ambiance';
+const CLE_STOCKAGE_PREREGLAGES = 'pomodoro_prereglages';
+
+// Position par défaut du lecteur de musique flottant, calculée en fonction
+// de la taille de la fenêtre pour rester visible sur la plupart des écrans
+function positionParDefautLecteur () {
+  if (typeof window === 'undefined') return { x: 24, y: 300 };
+  return {
+    x: 24,
+    y: Math.max(100, window.innerHeight - 320),
+  };
+}
 
 // Formate une date ISO en "jj/mm/aaaa hh:mm" (locale FR), utilisée dans
 // l'en-tête des notes épinglées pour afficher la création/dernière modification
@@ -698,9 +710,698 @@ function Note ({ taches, ajouterTache, actionsPour }) {
   );
 }
 
-// --- Param : deux sections ---
+// ======================================================================
+// --- Musique d'ambiance -------------------------------------------------
+// ======================================================================
+
+// Extrait l'identifiant de vidéo d'un lien YouTube (formats standards,
+// courts youtu.be, ou embed) afin de pouvoir instancier le lecteur IFrame
+function extraireIdYoutube (lien) {
+  try {
+    const url = new URL(lien.trim());
+    if (url.hostname.includes('youtu.be')) return url.pathname.slice(1) || null;
+    if (url.searchParams.get('v')) return url.searchParams.get('v');
+    const correspondance = url.pathname.match(/\/embed\/([^/?]+)/);
+    if (correspondance) return correspondance[1];
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Petite miniature carrée réutilisée à la fois dans la modale de choix de
+// musique (aperçu) et sur la carte du lecteur flottant : miniature YouTube
+// ou pochette Spotify, avec un repli en dégradé + icône si aucune image
+// n'est disponible (cas de la simulation Spotify, faute d'API réelle).
+function MiniatureMusique ({ className, iconeClassName, type, thumbnail }) {
+  return (
+    <div className={className}>
+      {thumbnail ? (
+        <img src={thumbnail} alt="" />
+      ) : (
+        <span className={iconeClassName}>{type === 'spotify' ? '🎧' : '🎵'}</span>
+      )}
+    </div>
+  );
+}
+
+// Modale de sélection de la musique d'ambiance : lien YouTube, ou recherche
+// via un compte Spotify connecté (simulation de connexion, comme pour les salons)
+function ModalChoisirMusique ({ ouvert, fermer, onValider }) {
+  const [typeMusique, setTypeMusique] = useState('youtube');
+  const [lienYoutube, setLienYoutube] = useState('');
+  const [spotifyConnecte, setSpotifyConnecte] = useState(false);
+  const [rechercheSpotify, setRechercheSpotify] = useState('');
+  const [artisteSpotify, setArtisteSpotify] = useState('');
+
+  if (!ouvert) return null;
+
+  // Aperçu en direct de la miniature qui sera utilisée sur la carte du
+  // lecteur, affiché au fur et à mesure de la saisie (lien YouTube valide,
+  // ou recherche Spotify renseignée)
+  const idYoutubeApercu = typeMusique === 'youtube' && lienYoutube.trim()
+    ? extraireIdYoutube(lienYoutube)
+    : null;
+  const afficherApercuSpotify = typeMusique === 'spotify' && spotifyConnecte && rechercheSpotify.trim();
+
+  const connecterSpotify = () => setSpotifyConnecte(true);
+
+  const validerYoutube = () => {
+    const id = extraireIdYoutube(lienYoutube);
+    if (!id) {
+      alert('Lien YouTube invalide. Utilisez un lien du type https://www.youtube.com/watch?v=...');
+      return;
+    }
+    // Le titre/artiste réels seront récupérés automatiquement une fois la
+    // vidéo chargée (voir LecteurVinyle > getVideoData). La miniature, elle,
+    // est disponible immédiatement via le CDN public de YouTube.
+    onValider({
+      type: 'youtube',
+      videoId: id,
+      titre: 'Musique YouTube',
+      artiste: '',
+      duree: 0,
+      thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+    });
+    setLienYoutube('');
+    fermer();
+  };
+
+  const validerSpotify = () => {
+    const titre = rechercheSpotify.trim();
+    if (!titre) return;
+    // Pas d'API de lecture Spotify disponible ici : la piste, sa durée et
+    // sa pochette sont simulées (aucune vraie recherche n'est effectuée)
+    onValider({
+      type: 'spotify',
+      titre,
+      artiste: artisteSpotify.trim(),
+      duree: 200 + Math.floor(Math.random() * 100),
+      thumbnail: null,
+    });
+    setRechercheSpotify('');
+    setArtisteSpotify('');
+    fermer();
+  };
+
+  return (
+    <div className="modal_fond salon_modal_fond" onClick={fermer}>
+      <div className="modal_fenetre salon_modal_fenetre" onClick={(e) => e.stopPropagation()}>
+        <button className="modal_fermer" onClick={fermer} aria-label="Fermer">×</button>
+
+        <div className="salon_modal_contenu">
+          <h3 className="salon_modal_titre">Choisir une musique d'ambiance</h3>
+
+          <div className="salon_champ">
+            <label className="salon_label">Source de la musique</label>
+            <div className="salon_musique_choix">
+              <button
+                type="button"
+                className={`salon_musique_onglet ${typeMusique === 'youtube' ? 'actif' : ''}`}
+                onClick={() => setTypeMusique('youtube')}
+              >
+                Lien YouTube
+              </button>
+              <button
+                type="button"
+                className={`salon_musique_onglet ${typeMusique === 'spotify' ? 'actif' : ''}`}
+                onClick={() => setTypeMusique('spotify')}
+              >
+                Spotify
+              </button>
+            </div>
+
+            {typeMusique === 'youtube' ? (
+              <>
+                <input
+                  type="text"
+                  className="param_input"
+                  placeholder="https://youtube.com/..."
+                  value={lienYoutube}
+                  onChange={(e) => setLienYoutube(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') validerYoutube(); }}
+                />
+
+                {idYoutubeApercu && (
+                  <div className="choix_musique_apercu_ligne">
+                    <MiniatureMusique
+                      className="choix_musique_apercu_vignette"
+                      iconeClassName="choix_musique_apercu_icone"
+                      type="youtube"
+                      thumbnail={`https://img.youtube.com/vi/${idYoutubeApercu}/hqdefault.jpg`}
+                    />
+                    <div className="choix_musique_apercu_details">
+                      <span className="choix_musique_apercu_titre">Musique YouTube</span>
+                      <span className="choix_musique_apercu_artiste">Aperçu de la miniature</span>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="salon_btn_valider_creation"
+                  onClick={validerYoutube}
+                >
+                  Utiliser cette musique
+                </button>
+              </>
+            ) : (
+              <div className="salon_spotify_zone salon_spotify_zone--colonne">
+                {!spotifyConnecte ? (
+                  <button type="button" className="salon_btn_spotify" onClick={connecterSpotify}>
+                    🎧 Connecter mon compte Spotify
+                  </button>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      className="param_input"
+                      placeholder="Rechercher un son sur Spotify..."
+                      value={rechercheSpotify}
+                      onChange={(e) => setRechercheSpotify(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') validerSpotify(); }}
+                    />
+                    <input
+                      type="text"
+                      className="param_input"
+                      placeholder="Artiste (optionnel)"
+                      value={artisteSpotify}
+                      onChange={(e) => setArtisteSpotify(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') validerSpotify(); }}
+                    />
+
+                    {afficherApercuSpotify && (
+                      <div className="choix_musique_apercu_ligne">
+                        <MiniatureMusique
+                          className="choix_musique_apercu_vignette"
+                          iconeClassName="choix_musique_apercu_icone"
+                          type="spotify"
+                          thumbnail={null}
+                        />
+                        <div className="choix_musique_apercu_details">
+                          <span className="choix_musique_apercu_titre">{rechercheSpotify}</span>
+                          <span className="choix_musique_apercu_artiste">
+                            {artisteSpotify.trim() || 'Artiste inconnu'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      className="salon_btn_valider_creation"
+                      onClick={validerSpotify}
+                    >
+                      Utiliser cette musique
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Formate un nombre de secondes en "m:ss" pour l'affichage du lecteur
+function formaterTempsPiste (s) {
+  if (!isFinite(s) || s < 0) s = 0;
+  const minutes = Math.floor(s / 60);
+  const secondes = Math.floor(s % 60).toString().padStart(2, '0');
+  return `${minutes}:${secondes}`;
+}
+
+// --- Lecteur "vinyle" : widget flottant, DÉPLAÇABLE LIBREMENT par glisser-
+// déposer (comme une note épinglée), affichant la miniature (YouTube) ou la
+// pochette (Spotify) de la piste en cours, en carré aux coins arrondis.
+// Deux modes de lecture :
+// - YouTube : lecture audio réelle via l'API IFrame YouTube (vidéo cachée)
+// - Spotify : la connexion est simulée (comme dans les salons), donc la
+//   progression de la piste est elle aussi simulée par un minuteur
+//
+// L'état de lecture (enLecture / boucle / durée / titre / artiste / position)
+// vit dans le composant App (dans l'objet `musique`) afin que le panneau
+// Réglages puisse afficher les informations détaillées de la piste en cours.
+// Seule la progression courante (tempsActuel) reste locale, car elle change
+// trop souvent pour être remontée à chaque tick sans impacter les perfs.
+//
+// Astuce : ce composant est monté avec une `key` unique par piste (voir App),
+// ce qui garantit une réinitialisation propre de son état local à chaque
+// changement de musique, sans avoir à gérer manuellement la resynchronisation.
+function LecteurVinyle ({ musique, fermer, onMettreAJour }) {
+  const [tempsActuel, setTempsActuel] = useState(0);
+  const [duree, setDuree] = useState(musique.duree || 0);
+  const [position, setPosition] = useState(musique.position || positionParDefautLecteur());
+  const [glisseActif, setGlisseActif] = useState(false);
+
+  const positionRef = useRef(position);
+  const conteneurRef = useRef(null);
+  const decalageRef = useRef({ x: 0, y: 0 });
+  const enTrainDeGlisser = useRef(false);
+
+  const lecteurYoutubeRef = useRef(null);
+  const conteneurYoutubeRef = useRef(null);
+  const intervalProgressionRef = useRef(null);
+  const intervalSimulationRef = useRef(null);
+  const boucleRef = useRef(Boolean(musique.boucle));
+  const onMettreAJourRef = useRef(onMettreAJour);
+
+  const enLecture = Boolean(musique.enLecture);
+  const boucle = Boolean(musique.boucle);
+
+  useEffect(() => { onMettreAJourRef.current = onMettreAJour; });
+  useEffect(() => { boucleRef.current = boucle; }, [boucle]);
+
+  // --- Glisser-déposer : mêmes principes que NoteEpinglee. La position n'est
+  // remontée au composant App (pour persistance) qu'une fois le glissement
+  // terminé, afin de garder l'animation fluide pendant le déplacement.
+  useEffect(() => {
+    const gererDeplacement = (e) => {
+      if (!enTrainDeGlisser.current) return;
+      const marge = 8;
+      const largeur = conteneurRef.current?.offsetWidth || 168;
+      const hauteur = conteneurRef.current?.offsetHeight || 220;
+
+      let x = e.clientX - decalageRef.current.x;
+      let y = e.clientY - decalageRef.current.y;
+
+      x = Math.min(Math.max(x, marge), window.innerWidth - largeur - marge);
+      y = Math.min(Math.max(y, marge), window.innerHeight - hauteur - marge);
+
+      positionRef.current = { x, y };
+      setPosition({ x, y });
+    };
+
+    const terminerDrag = () => {
+      if (!enTrainDeGlisser.current) return;
+      enTrainDeGlisser.current = false;
+      setGlisseActif(false);
+      onMettreAJourRef.current?.({ position: positionRef.current });
+    };
+
+    document.addEventListener('pointermove', gererDeplacement);
+    document.addEventListener('pointerup', terminerDrag);
+    return () => {
+      document.removeEventListener('pointermove', gererDeplacement);
+      document.removeEventListener('pointerup', terminerDrag);
+    };
+  }, []);
+
+  const demarrerDrag = (e) => {
+    e.preventDefault();
+    enTrainDeGlisser.current = true;
+    setGlisseActif(true);
+    decalageRef.current = {
+      x: e.clientX - positionRef.current.x,
+      y: e.clientY - positionRef.current.y,
+    };
+  };
+
+  // Mise en place du lecteur YouTube caché (audio réel). Grâce à la `key`
+  // posée sur ce composant dans App, un changement de piste remonte un tout
+  // nouveau LecteurVinyle : cet effet ne s'exécute donc qu'une seule fois
+  // par piste, il n'a pas besoin de dépendre de `musique`.
+  useEffect(() => {
+    if (musique.type !== 'youtube') return undefined;
+    let annule = false;
+
+    const creerLecteur = () => {
+      if (annule || !conteneurYoutubeRef.current) return;
+      lecteurYoutubeRef.current = new window.YT.Player(conteneurYoutubeRef.current, {
+        videoId: musique.videoId,
+        playerVars: { controls: 0, disablekb: 1 },
+        events: {
+          onReady: (e) => {
+            const d = e.target.getDuration();
+            setDuree(d);
+            onMettreAJourRef.current?.({ duree: d });
+
+            // Récupère le vrai titre / artiste (nom de la chaîne) de la vidéo
+            try {
+              const infos = e.target.getVideoData?.();
+              if (infos?.title) {
+                onMettreAJourRef.current?.({
+                  titre: infos.title,
+                  artiste: infos.author || '',
+                });
+              }
+            } catch {
+              // Méthode interne indisponible : on conserve le titre par défaut
+            }
+          },
+          onStateChange: (e) => {
+            const enCours = e.data === window.YT.PlayerState.PLAYING;
+            onMettreAJourRef.current?.({ enLecture: enCours });
+
+            if (e.data === window.YT.PlayerState.ENDED) {
+              if (boucleRef.current) {
+                lecteurYoutubeRef.current?.seekTo?.(0, true);
+                lecteurYoutubeRef.current?.playVideo?.();
+              } else {
+                onMettreAJourRef.current?.({ enLecture: false });
+              }
+            }
+          },
+        },
+      });
+    };
+
+    if (window.YT && window.YT.Player) {
+      creerLecteur();
+    } else {
+      if (!document.getElementById('youtube-iframe-api')) {
+        const script = document.createElement('script');
+        script.id = 'youtube-iframe-api';
+        script.src = 'https://www.youtube.com/iframe_api';
+        document.body.appendChild(script);
+      }
+      const precedent = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        precedent?.();
+        creerLecteur();
+      };
+    }
+
+    return () => {
+      annule = true;
+      lecteurYoutubeRef.current?.destroy?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Suivi de la progression pendant la lecture YouTube (l'API ne notifie pas le temps courant en continu)
+  useEffect(() => {
+    if (musique.type !== 'youtube') return undefined;
+    if (enLecture) {
+      intervalProgressionRef.current = setInterval(() => {
+        const t = lecteurYoutubeRef.current?.getCurrentTime?.();
+        if (typeof t === 'number') setTempsActuel(t);
+      }, 500);
+    }
+    return () => clearInterval(intervalProgressionRef.current);
+  }, [enLecture, musique.type]);
+
+  // Simulation de lecture pour Spotify : aucune API de lecture réelle n'est disponible ici
+  useEffect(() => {
+    if (musique.type !== 'spotify') return undefined;
+    if (enLecture) {
+      intervalSimulationRef.current = setInterval(() => {
+        setTempsActuel((prev) => {
+          if (prev + 1 >= duree) {
+            if (boucleRef.current) {
+              return 0;
+            }
+            clearInterval(intervalSimulationRef.current);
+            onMettreAJourRef.current?.({ enLecture: false });
+            return duree;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(intervalSimulationRef.current);
+  }, [enLecture, musique.type, duree]);
+
+  const basculerLecture = () => {
+    if (musique.type === 'youtube') {
+      if (enLecture) lecteurYoutubeRef.current?.pauseVideo?.();
+      else lecteurYoutubeRef.current?.playVideo?.();
+    } else {
+      onMettreAJour?.({ enLecture: !enLecture });
+    }
+  };
+
+  // Bouton "Retour au début" : remet la piste à 0:00 sans changer l'état de lecture
+  const retourDebut = () => {
+    setTempsActuel(0);
+    if (musique.type === 'youtube') {
+      lecteurYoutubeRef.current?.seekTo?.(0, true);
+    }
+  };
+
+  // Bouton "Lecture en boucle" : active/désactive la répétition automatique
+  const toggleBoucle = () => {
+    onMettreAJour?.({ boucle: !boucle });
+  };
+
+  // Permet de cliquer n'importe où sur la barre de progression pour s'y déplacer
+  const gererClicProgression = (e) => {
+    if (duree <= 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
+    const nouveauTemps = ratio * duree;
+    setTempsActuel(nouveauTemps);
+    if (musique.type === 'youtube') lecteurYoutubeRef.current?.seekTo?.(nouveauTemps, true);
+  };
+
+  const progression = duree > 0 ? Math.min((tempsActuel / duree) * 100, 100) : 0;
+
+  return (
+    <div
+      ref={conteneurRef}
+      className={`lecteur_vinyle ${glisseActif ? 'lecteur_vinyle--glisse' : ''}`}
+      style={{ left: `${position.x}px`, top: `${position.y}px` }}
+    >
+      <div className="lecteur_vinyle_entete">
+        <span
+          className="lecteur_vinyle_poignee"
+          onPointerDown={demarrerDrag}
+          title="Déplacer le lecteur"
+          aria-hidden="true"
+        >
+          ⠿⠿
+        </span>
+
+        <button
+          type="button"
+          className="lecteur_vinyle_fermer"
+          onClick={fermer}
+          aria-label="Fermer le lecteur de musique"
+          title="Fermer le lecteur"
+        >
+          ×
+        </button>
+      </div>
+
+      <MiniatureMusique
+        className={`vinyle_miniature ${enLecture ? 'vinyle_miniature--lecture' : ''}`}
+        iconeClassName="vinyle_miniature_icone"
+        type={musique.type}
+        thumbnail={musique.thumbnail}
+      />
+
+      <span className="lecteur_vinyle_titre" title={musique.titre}>{musique.titre}</span>
+
+      <div className="lecteur_vinyle_controles">
+        <button
+          type="button"
+          className="lecteur_vinyle_bouton_secondaire"
+          onClick={retourDebut}
+          aria-label="Retour au début"
+          title="Retour au début"
+        >
+          ⏮
+        </button>
+
+        <button
+          type="button"
+          className="lecteur_vinyle_bouton"
+          onClick={basculerLecture}
+          aria-label={enLecture ? 'Mettre la musique en pause' : 'Lire la musique'}
+        >
+          {enLecture ? '⏸' : '▶'}
+        </button>
+
+        <button
+          type="button"
+          className={`lecteur_vinyle_bouton_secondaire ${boucle ? 'actif' : ''}`}
+          onClick={toggleBoucle}
+          aria-label={boucle ? 'Désactiver la lecture en boucle' : 'Activer la lecture en boucle'}
+          title="Lecture en boucle"
+        >
+          🔁
+        </button>
+      </div>
+
+      <div
+        className="lecteur_vinyle_progression"
+        onClick={gererClicProgression}
+        role="slider"
+        aria-label="Progression de la piste"
+        aria-valuemin={0}
+        aria-valuemax={duree}
+        aria-valuenow={tempsActuel}
+      >
+        <div className="lecteur_vinyle_progression_remplie" style={{ width: `${progression}%` }}></div>
+      </div>
+
+      <div className="lecteur_vinyle_temps">
+        <span>{formaterTempsPiste(tempsActuel)}</span>
+        <span>{formaterTempsPiste(duree)}</span>
+      </div>
+
+      {/* Conteneur invisible utilisé uniquement par l'API YouTube pour la lecture audio */}
+      {musique.type === 'youtube' && (
+        <div ref={conteneurYoutubeRef} className="lecteur_vinyle_youtube_cache"></div>
+      )}
+    </div>
+  );
+}
+
+
+// ======================================================================
+// --- Préréglages ---------------------------------------------------------
+// ======================================================================
+// Un préréglage capture l'intégralité de la configuration visuelle et
+// sonore de l'application (fond, couleurs/durées du minuteur, musique
+// d'ambiance) afin de pouvoir la restaurer en un clic.
+
+function genererIdPrereglage () {
+  return `prereglage_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+}
+
+// Carte défilable représentant un préréglage : aperçu du fond en image
+// principale, bande basse avec le nom, et petites actions (mettre à jour,
+// renommer, supprimer) révélées au survol.
+function PrereglageCarte ({ prereglage, onAppliquer, onRenommer, onSupprimer, onRemplacer }) {
+  const styleApercu = prereglage.imageFond
+    ? { backgroundImage: `url(${prereglage.imageFond})` }
+    : { backgroundColor: prereglage.couleurFondAppliquee || '#1f2430' };
+
+  return (
+    <div className="prereglage_carte" onClick={onAppliquer}>
+      <div className="prereglage_carte_apercu" style={styleApercu}>
+        <div className="prereglage_carte_actions" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="prereglage_action_btn"
+            onClick={onRemplacer}
+            aria-label="Mettre à jour avec les réglages actuels"
+            title="Mettre à jour avec les réglages actuels"
+          >
+            ⟳
+          </button>
+          <button
+            type="button"
+            className="prereglage_action_btn"
+            onClick={onRenommer}
+            aria-label="Renommer le préréglage"
+            title="Renommer"
+          >
+            ✎
+          </button>
+          <button
+            type="button"
+            className="prereglage_action_btn"
+            onClick={onSupprimer}
+            aria-label="Supprimer le préréglage"
+            title="Supprimer"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+      <div className="prereglage_carte_bande">
+        <span className="prereglage_carte_nom" title={prereglage.nom}>{prereglage.nom}</span>
+      </div>
+    </div>
+  );
+}
+
+// Modale utilisée à la fois pour créer un nouveau préréglage (saisie du nom)
+// et pour renommer un préréglage existant (champ pré-rempli)
+function ModalPrereglage ({ ouvert, modeRenommage, nomInitial, fermer, onValider }) {
+  const [nom, setNom] = useState(nomInitial || '');
+
+  useEffect(() => {
+    setNom(nomInitial || '');
+  }, [nomInitial, ouvert]);
+
+  if (!ouvert) return null;
+
+  const valider = () => {
+    const nomFinal = nom.trim();
+    if (!nomFinal) return;
+    onValider(nomFinal);
+  };
+
+  return (
+    <div className="modal_fond salon_modal_fond" onClick={fermer}>
+      <div className="modal_fenetre salon_modal_fenetre" onClick={(e) => e.stopPropagation()}>
+        <button className="modal_fermer" onClick={fermer} aria-label="Fermer">×</button>
+
+        <div className="salon_modal_contenu">
+          <h3 className="salon_modal_titre">
+            {modeRenommage ? 'Renommer le préréglage' : 'Créer un préréglage'}
+          </h3>
+
+          <div className="salon_champ">
+            <label className="salon_label" htmlFor="prereglage-nom">Nom du préréglage</label>
+            <input
+              id="prereglage-nom"
+              type="text"
+              className="param_input"
+              placeholder="Ex : Soirée détente"
+              value={nom}
+              autoFocus
+              onChange={(e) => setNom(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') valider(); }}
+            />
+          </div>
+
+          <button type="button" className="salon_btn_valider_creation" onClick={valider}>
+            {modeRenommage ? 'Renommer' : 'Créer le préréglage'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Section "Préréglages" affichée en haut du panneau Réglages : carrousel
+// horizontal de cartes + bouton de création en bas de la page du panneau
+function SectionPrereglages ({
+  prereglages,
+  onAppliquer,
+  onOuvrirRenommage,
+  onDemanderSuppression,
+  onRemplacer
+}) {
+  return (
+    <div className="param_section prereglages_section">
+      <h3 className="param_section_titre">Préréglages</h3>
+
+      {prereglages.length === 0 ? (
+        <p className="prereglages_vide">
+          Aucun préréglage pour l'instant. Configure l'application ci-dessous, puis clique sur
+          « Créer un préréglage » en bas de la page.
+        </p>
+      ) : (
+        <div className="prereglages_scroll">
+          {prereglages.map((prereglage) => (
+            <PrereglageCarte
+              key={prereglage.id}
+              prereglage={prereglage}
+              onAppliquer={() => onAppliquer(prereglage)}
+              onRenommer={() => onOuvrirRenommage(prereglage.id)}
+              onSupprimer={() => onDemanderSuppression(prereglage.id)}
+              onRemplacer={() => onRemplacer(prereglage.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// --- Param : quatre sections ---
+// 0. Préréglages (configurations complètes sauvegardées)
 // 1. Arrière-plan du site (couleur RGB + image/GIF)
-// 2. Minuteur Pomodoro (durées + couleurs)
+// 2. Musique d'ambiance (choix + aperçu + informations détaillées) — juste après le fond
+// 3. Minuteur Pomodoro (durées + couleurs)
 function Param ({
   couleurFondInput,
   setCouleurFondInput,
@@ -710,12 +1411,30 @@ function Param ({
   reglages,
   onChangerDuree,
   onChangerCouleur,
-  onReinitialiserReglages
+  onReinitialiserReglages,
+  musiqueActuelle,
+  onOuvrirChoixMusique,
+  onSupprimerMusique,
+  prereglages,
+  onAppliquerPrereglage,
+  onOuvrirRenommagePrereglage,
+  onDemanderSuppressionPrereglage,
+  onRemplacerPrereglage,
+  onOuvrirCreationPrereglage
 }) {
   return(
     <div className='param'>
       <h2>Paramètre 2</h2>
       <p>Contenu du bloc paramètres...</p>
+
+      {/* --- Section : préréglages, toujours affichée en premier --- */}
+      <SectionPrereglages
+        prereglages={prereglages}
+        onAppliquer={onAppliquerPrereglage}
+        onOuvrirRenommage={onOuvrirRenommagePrereglage}
+        onDemanderSuppression={onDemanderSuppressionPrereglage}
+        onRemplacer={onRemplacerPrereglage}
+      />
 
       {/* --- Section : personnalisation de l'arrière-plan --- */}
       <div className="param_section">
@@ -766,6 +1485,85 @@ function Param ({
 
           {imageFondActuelle && (
             <span className="param_file_nom">Image de fond appliquée ✓</span>
+          )}
+        </div>
+      </div>
+
+      {/* --- Section : musique d'ambiance, juste après le fond --- */}
+      <div className="param_section">
+        <h3 className="param_section_titre">Musique d'ambiance</h3>
+        <p className="param_musique_texte">
+          Choisis la musique diffusée pendant que tu utilises l'application.
+        </p>
+
+        <div className="param_musique_bloc">
+          <div className="param_musique_ligne">
+            <button type="button" className="param_btn_valider" onClick={onOuvrirChoixMusique}>
+              🎵 Choisir une musique
+            </button>
+
+            {musiqueActuelle && (
+              <button type="button" className="param_btn_reinit" onClick={onSupprimerMusique}>
+                Retirer la musique
+              </button>
+            )}
+          </div>
+
+          {musiqueActuelle && (
+            <>
+              {/* Carte d'aperçu compacte : miniature YouTube ou pochette (placeholder) Spotify */}
+              <div className="param_musique_carte">
+                <MiniatureMusique
+                  className="param_musique_vignette"
+                  iconeClassName="param_musique_vignette_icone"
+                  type={musiqueActuelle.type}
+                  thumbnail={musiqueActuelle.thumbnail}
+                />
+                <div className="param_musique_carte_details">
+                  <span className="param_musique_carte_titre" title={musiqueActuelle.titre}>
+                    {musiqueActuelle.titre}
+                  </span>
+                  <span className="param_musique_carte_artiste">
+                    {musiqueActuelle.artiste || 'Artiste inconnu'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Informations détaillées de la piste sélectionnée */}
+              <div className="param_musique_infos">
+                <div className="param_musique_info_ligne">
+                  <span className="param_musique_info_label">Source</span>
+                  <span
+                    className={`param_musique_badge_source param_musique_badge_source--${musiqueActuelle.type}`}
+                  >
+                    {musiqueActuelle.type === 'youtube' ? 'YouTube' : 'Spotify'}
+                  </span>
+                </div>
+
+                <div className="param_musique_info_ligne">
+                  <span className="param_musique_info_label">Durée totale</span>
+                  <span className="param_musique_info_valeur">
+                    {musiqueActuelle.duree > 0 ? formaterTempsPiste(musiqueActuelle.duree) : 'Détection...'}
+                  </span>
+                </div>
+
+                <div className="param_musique_info_ligne">
+                  <span className="param_musique_info_label">Lecture</span>
+                  <span
+                    className={`param_musique_badge_etat param_musique_badge_etat--${musiqueActuelle.enLecture ? 'lecture' : 'pause'}`}
+                  >
+                    {musiqueActuelle.enLecture ? '▶ En lecture' : '⏸ En pause'}
+                  </span>
+                </div>
+
+                <div className="param_musique_info_ligne">
+                  <span className="param_musique_info_label">Répétition</span>
+                  <span className="param_musique_badge_boucle">
+                    {musiqueActuelle.boucle ? '🔁 Activée' : 'Désactivée'}
+                  </span>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -852,91 +1650,302 @@ function Param ({
           Réinitialiser les réglages
         </button>
       </div>
+
+      {/* --- Section : création d'un préréglage à partir des réglages actuels,
+          toujours en bas de la page du panneau --- */}
+      <div className="param_section prereglages_creation_section">
+        <button
+          type="button"
+          className="param_btn_valider prereglage_btn_creer"
+          onClick={onOuvrirCreationPrereglage}
+        >
+          + Créer un préréglage
+        </button>
+      </div>
     </div>
   );
 }
 
 
-function Chat_IA (){
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [chargement, setChargement] = useState(false);
-  const messagesFinRef = useRef(null);
+// ======================================================================
+// --- Section "Salons de course" ---------------------------------------
+// ======================================================================
 
-  useEffect(() => {
-    messagesFinRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+// Jeu de données statique temporaire, en attendant une vraie source (API/back)
+const SALONS_DEMO = [
+  { id: 's1', nom: 'Foulées du Matin', theme: 'Endurance', duree: '30 min' },
+  { id: 's2', nom: 'Sprint Éclair', theme: 'Vitesse', duree: '15 min' },
+  { id: 's3', nom: 'Trail Zen', theme: 'Trail', duree: '45 min' },
+  { id: 's4', nom: 'Cardio Boost', theme: 'Cardio', duree: '20 min' },
+  { id: 's5', nom: 'Marathon Découverte', theme: 'Endurance', duree: '60 min' },
+  { id: 's6', nom: 'Côte Infernale', theme: 'Trail', duree: '40 min' },
+];
 
-  const envoyerMessage = async () => {
-    if (!input.trim() || chargement) return;
+// Carte représentant un salon rejoignable : image (placeholder), nom,
+// thème et nombre de participants (valeur statique temporaire "4/5")
+function CarteSalon ({ salon }) {
+  return (
+    <div className="salon_carte">
+      <div className="salon_carte_image" aria-hidden="true">
+        <span className="salon_carte_image_icone">🏞️</span>
+      </div>
+      <div className="salon_carte_info">
+        <span className="salon_carte_nom">{salon.nom}</span>
+        <div className="salon_carte_meta">
+          <span className="salon_carte_theme">{salon.theme}</span>
+          <span className="salon_carte_participants">4/5</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-    const nouveauxMessages = [...messages, { role: 'user', text: input }];
-    setMessages(nouveauxMessages);
-    setInput('');
-    setChargement(true);
+// Modale de création d'un salon : image de fond, musique de fond
+// (lien YouTube ou recherche via un compte Spotify connecté),
+// nombre de participants et thème du salon.
+function ModalCreerSalon ({ ouvert, fermer }) {
+  const [imageFond, setImageFond] = useState(null);
+  const [typeMusique, setTypeMusique] = useState('youtube');
+  const [lienYoutube, setLienYoutube] = useState('');
+  const [spotifyConnecte, setSpotifyConnecte] = useState(false);
+  const [rechercheSpotify, setRechercheSpotify] = useState('');
+  const [nbParticipants, setNbParticipants] = useState(5);
+  const [themeSalon, setThemeSalon] = useState('');
 
-    try {
-      const res = await fetch('http://localhost:3001/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: nouveauxMessages.map(m => ({
-            role: m.role,
-            content: m.text
-          }))
-        })
-      });
-      const data = await res.json();
-      const reponseTexte = data.content?.[0]?.text || 'Erreur de réponse';
+  if (!ouvert) return null;
 
-      setMessages(prev => [...prev, { role: 'assistant', text: reponseTexte }]);
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Erreur de connexion au serveur.' }]);
-    } finally {
-      setChargement(false);
-    }
+  const gererImage = (fichier) => {
+    if (!fichier) return;
+    const lecteur = new FileReader();
+    lecteur.onload = () => setImageFond(lecteur.result);
+    lecteur.readAsDataURL(fichier);
   };
 
-  const gererTouche = (e) => {
-    if (e.key === 'Enter') envoyerMessage();
+  // Simulation de connexion à un compte Spotify (pas d'appel réel à l'API ici)
+  const connecterSpotify = () => {
+    setSpotifyConnecte(true);
   };
 
-  return(
-    <div className='Chat_IA'>
-      <div className="chat_messages">
-        {messages.length === 0 && (
-          <div className="chat_message_vide">Pose ta question à Claude...</div>
-        )}
-        {messages.map((msg, i) => (
-          <div key={i} className={`chat_message ${msg.role}`}>
-            {msg.text}
+  const validerCreation = () => {
+    alert('Salon créé (simulation) !');
+    fermer();
+  };
+
+  return (
+    <div className="modal_fond salon_modal_fond" onClick={fermer}>
+      <div className="modal_fenetre salon_modal_fenetre" onClick={(e) => e.stopPropagation()}>
+        <button className="modal_fermer" onClick={fermer} aria-label="Fermer">×</button>
+
+        <div className="salon_modal_contenu">
+          <h3 className="salon_modal_titre">Créer un salon</h3>
+
+          {/* Image de fond du salon */}
+          <div className="salon_champ">
+            <label className="salon_label" htmlFor="salon-image-fond">Image de fond</label>
+            <label htmlFor="salon-image-fond" className="param_file_label">
+              📁 Parcourir...
+            </label>
+            <input
+              id="salon-image-fond"
+              type="file"
+              accept="image/*,.gif"
+              className="param_file_input"
+              onChange={(e) => gererImage(e.target.files?.[0])}
+            />
+            {imageFond && <span className="param_file_nom">Image sélectionnée ✓</span>}
           </div>
-        ))}
-        {chargement && <div className="chat_message assistant">...</div>}
-        <div ref={messagesFinRef}></div>
-      </div>
 
-      <div className="chat_input_zone">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={gererTouche}
-          placeholder="Écris un message..."
-          disabled={chargement}
-        />
-        <button onClick={envoyerMessage} disabled={chargement}>Envoyer</button>
+          {/* Musique de fond : lien YouTube ou recherche Spotify */}
+          <div className="salon_champ">
+            <label className="salon_label">Musique de fond</label>
+            <div className="salon_musique_choix">
+              <button
+                type="button"
+                className={`salon_musique_onglet ${typeMusique === 'youtube' ? 'actif' : ''}`}
+                onClick={() => setTypeMusique('youtube')}
+              >
+                Lien YouTube
+              </button>
+              <button
+                type="button"
+                className={`salon_musique_onglet ${typeMusique === 'spotify' ? 'actif' : ''}`}
+                onClick={() => setTypeMusique('spotify')}
+              >
+                Spotify
+              </button>
+            </div>
+
+            {typeMusique === 'youtube' ? (
+              <input
+                type="text"
+                className="param_input"
+                placeholder="https://youtube.com/..."
+                value={lienYoutube}
+                onChange={(e) => setLienYoutube(e.target.value)}
+              />
+            ) : (
+              <div className="salon_spotify_zone">
+                {!spotifyConnecte ? (
+                  <button type="button" className="salon_btn_spotify" onClick={connecterSpotify}>
+                    🎧 Connecter mon compte Spotify
+                  </button>
+                ) : (
+                  <input
+                    type="text"
+                    className="param_input"
+                    placeholder="Rechercher un son sur Spotify..."
+                    value={rechercheSpotify}
+                    onChange={(e) => setRechercheSpotify(e.target.value)}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Nombre de participants */}
+          <div className="salon_champ">
+            <label className="salon_label" htmlFor="salon-participants">
+              Nombre de participants
+            </label>
+            <input
+              id="salon-participants"
+              type="number"
+              min="2"
+              max="20"
+              className="param_input"
+              value={nbParticipants}
+              onChange={(e) => setNbParticipants(e.target.value)}
+            />
+          </div>
+
+          {/* Thème du salon */}
+          <div className="salon_champ">
+            <label className="salon_label" htmlFor="salon-theme">Thème du salon</label>
+            <input
+              id="salon-theme"
+              type="text"
+              className="param_input"
+              placeholder="Ex : Endurance, Trail, Sprint..."
+              value={themeSalon}
+              onChange={(e) => setThemeSalon(e.target.value)}
+            />
+          </div>
+
+          <button type="button" className="salon_btn_valider_creation" onClick={validerCreation}>
+            Créer le salon
+          </button>
+        </div>
       </div>
     </div>
   );
 }
-
 
 function Salon_course () {
-  return(
-    <div className='salon_course'>
-      <h2>Statistiques</h2>
-      <p>Contenu du bloc stats...</p>
+  const [recherche, setRecherche] = useState('');
+  const [filtreTheme, setFiltreTheme] = useState('tous');
+  const [filtreDuree, setFiltreDuree] = useState('toutes');
+  const [rejoindreOuvert, setRejoindreOuvert] = useState(false);
+  const [codeSalon, setCodeSalon] = useState('');
+  const [creerOuvert, setCreerOuvert] = useState(false);
+
+  const themesDisponibles = ['tous', ...new Set(SALONS_DEMO.map((s) => s.theme))];
+  const dureesDisponibles = ['toutes', ...new Set(SALONS_DEMO.map((s) => s.duree))];
+
+  const salonsFiltres = SALONS_DEMO.filter((s) => {
+    const correspondNom = s.nom.toLowerCase().includes(recherche.trim().toLowerCase());
+    const correspondTheme = filtreTheme === 'tous' || s.theme === filtreTheme;
+    const correspondDuree = filtreDuree === 'toutes' || s.duree === filtreDuree;
+    return correspondNom && correspondTheme && correspondDuree;
+  });
+
+  const validerCodeSalon = () => {
+    if (!codeSalon.trim()) return;
+    alert(`Tentative de connexion au salon avec le code : ${codeSalon.trim()}`);
+    setCodeSalon('');
+    setRejoindreOuvert(false);
+  };
+
+  return (
+    <div className="salon_course">
+      <div className="salon_entete">
+        <h2>Salons de course</h2>
+        <div className="salon_actions_principales">
+          <button
+            type="button"
+            className="salon_btn_rejoindre"
+            onClick={() => setRejoindreOuvert((v) => !v)}
+          >
+            Rejoindre
+          </button>
+          <button type="button" className="salon_btn_creer" onClick={() => setCreerOuvert(true)}>
+            + Créer
+          </button>
+        </div>
+      </div>
+
+      {/* Encart de saisie du code de salon, affiché au clic sur "Rejoindre" */}
+      {rejoindreOuvert && (
+        <div className="salon_rejoindre_encart">
+          <input
+            type="text"
+            className="salon_rejoindre_input"
+            placeholder="Code du salon"
+            value={codeSalon}
+            onChange={(e) => setCodeSalon(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') validerCodeSalon(); }}
+            autoFocus
+          />
+          <button type="button" className="salon_rejoindre_valider" onClick={validerCodeSalon}>
+            Valider
+          </button>
+        </div>
+      )}
+
+      {/* Barre de recherche + filtres (thème, durée) */}
+      <div className="salon_recherche_zone">
+        <input
+          type="text"
+          className="salon_recherche_input"
+          placeholder="Rechercher un salon..."
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+        />
+        <div className="salon_filtres">
+          <select
+            className="salon_filtre_select"
+            value={filtreTheme}
+            onChange={(e) => setFiltreTheme(e.target.value)}
+            aria-label="Filtrer par thème"
+          >
+            {themesDisponibles.map((t) => (
+              <option key={t} value={t}>{t === 'tous' ? 'Tous les thèmes' : t}</option>
+            ))}
+          </select>
+          <select
+            className="salon_filtre_select"
+            value={filtreDuree}
+            onChange={(e) => setFiltreDuree(e.target.value)}
+            aria-label="Filtrer par durée"
+          >
+            {dureesDisponibles.map((d) => (
+              <option key={d} value={d}>{d === 'toutes' ? 'Toutes durées' : d}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Liste des salons rejoignables, filtrée */}
+      {salonsFiltres.length === 0 ? (
+        <p className="salon_vide">Aucun salon ne correspond à votre recherche.</p>
+      ) : (
+        <div className="salon_liste">
+          {salonsFiltres.map((salon) => (
+            <CarteSalon key={salon.id} salon={salon} />
+          ))}
+        </div>
+      )}
+
+      <ModalCreerSalon ouvert={creerOuvert} fermer={() => setCreerOuvert(false)} />
     </div>
   );
 }
@@ -945,8 +1954,7 @@ function Salon_course () {
 const ONGLETS_POIGNEE = [
   { id: 1, icone: '📝', label: 'Notes', notif: true },
   { id: 2, icone: '⚙️', label: 'Réglages', notif: true },
-  { id: 3, icone: '🤖', label: 'Assistant', notif: true },
-  { id: 4, icone: '🏁', label: 'Salon de course', notif: true },
+  { id: 3, icone: '🏁', label: 'Salon de course', notif: true },
 ];
 
 // BlocDeux relaie les props "fond" et "réglages Pomodoro" vers Param,
@@ -965,7 +1973,16 @@ function BlocDeux ({
   onReinitialiserReglages,
   taches,
   ajouterTache,
-  actionsPourTache
+  actionsPourTache,
+  musiqueActuelle,
+  onOuvrirChoixMusique,
+  onSupprimerMusique,
+  prereglages,
+  onAppliquerPrereglage,
+  onOuvrirRenommagePrereglage,
+  onDemanderSuppressionPrereglage,
+  onRemplacerPrereglage,
+  onOuvrirCreationPrereglage
 }) {
   const [vueActive, setVueActive] = useState(1);
 
@@ -1005,8 +2022,7 @@ function BlocDeux ({
         <div className="panel_controles">
           <button className={vueActive === 1 ? 'actif' : ''} onClick={() => setVueActive(1)}>Notes</button>
           <button className={vueActive === 2 ? 'actif' : ''} onClick={() => setVueActive(2)}>Réglages</button>
-          <button className={vueActive === 3 ? 'actif' : ''} onClick={() => setVueActive(3)}>Assistant</button>
-          <button className={vueActive === 4 ? 'actif' : ''} onClick={() => setVueActive(4)}>salon de course</button>
+          <button className={vueActive === 3 ? 'actif' : ''} onClick={() => setVueActive(3)}>Salon de course</button>
         </div>
 
         <div className="panel_contenu">
@@ -1028,10 +2044,18 @@ function BlocDeux ({
               onChangerDuree={onChangerDuree}
               onChangerCouleur={onChangerCouleur}
               onReinitialiserReglages={onReinitialiserReglages}
+              musiqueActuelle={musiqueActuelle}
+              onOuvrirChoixMusique={onOuvrirChoixMusique}
+              onSupprimerMusique={onSupprimerMusique}
+              prereglages={prereglages}
+              onAppliquerPrereglage={onAppliquerPrereglage}
+              onOuvrirRenommagePrereglage={onOuvrirRenommagePrereglage}
+              onDemanderSuppressionPrereglage={onDemanderSuppressionPrereglage}
+              onRemplacerPrereglage={onRemplacerPrereglage}
+              onOuvrirCreationPrereglage={onOuvrirCreationPrereglage}
             />
           )}
-          {vueActive === 3 && <Chat_IA/>}
-          {vueActive === 4 && <Salon_course/>}
+          {vueActive === 3 && <Salon_course/>}
         </div>
       </div>
     </div>
@@ -1050,7 +2074,7 @@ function BarreDefilante ({ actif }) {
     <div className="bas_page">
       {/* Coureur animé : placé au-dessus de la bande de flèches */}
       <img
-        src="/coureur.gif"
+        src="/coureur.png"
         alt="Coureur animé"
         className="coureur_defilant"
       />
@@ -1108,6 +2132,168 @@ function App() {
   });
   // Id de la note pour laquelle une confirmation de désépinglage est demandée
   const [idADesepingler, setIdADesepingler] = useState(null);
+
+  // --- Musique d'ambiance : piste choisie (persistée) + visibilité du lecteur ---
+  // L'objet musiqueAmbiance regroupe toute l'information sur la piste en
+  // cours : type/source, titre, artiste, durée, miniature/pochette, position
+  // du widget flottant, et état de lecture (enLecture / boucle). Centraliser
+  // cet état dans App permet au panneau Réglages d'afficher les informations
+  // détaillées de la piste, en plus du lecteur flottant lui-même.
+  const [musiqueAmbiance, setMusiqueAmbiance] = useState(() => {
+    try {
+      const sauvegarde = localStorage.getItem(CLE_STOCKAGE_MUSIQUE);
+      if (!sauvegarde) return null;
+      const parsed = JSON.parse(sauvegarde);
+      return {
+        boucle: false,
+        position: null,
+        ...parsed,
+        // On ne restaure jamais l'état "en lecture" au rechargement : la
+        // plupart des navigateurs bloquent de toute façon la lecture
+        // automatique sans interaction préalable de l'utilisateur.
+        enLecture: false,
+      };
+    } catch {
+      return null;
+    }
+  });
+  const [choixMusiqueOuvert, setChoixMusiqueOuvert] = useState(false);
+  const [lecteurMusiqueVisible, setLecteurMusiqueVisible] = useState(Boolean(musiqueAmbiance));
+
+  useEffect(() => {
+    try {
+      if (musiqueAmbiance) {
+        localStorage.setItem(CLE_STOCKAGE_MUSIQUE, JSON.stringify(musiqueAmbiance));
+      } else {
+        localStorage.removeItem(CLE_STOCKAGE_MUSIQUE);
+      }
+    } catch {
+      // Stockage indisponible : on ignore silencieusement
+    }
+  }, [musiqueAmbiance]);
+
+  const validerMusiqueAmbiance = (musique) => {
+    setMusiqueAmbiance({
+      enLecture: false,
+      boucle: false,
+      position: positionParDefautLecteur(),
+      ...musique,
+    });
+    setLecteurMusiqueVisible(true);
+  };
+
+  const supprimerMusiqueAmbiance = () => {
+    setMusiqueAmbiance(null);
+    setLecteurMusiqueVisible(false);
+  };
+
+  // Fusionne des champs partiels dans l'objet musiqueAmbiance (utilisé par
+  // le lecteur pour remonter position, état de lecture, boucle, métadonnées
+  // réelles récupérées depuis l'API YouTube, etc.)
+  const mettreAJourMusique = (champs) => {
+    setMusiqueAmbiance((prev) => (prev ? { ...prev, ...champs } : prev));
+  };
+
+  // --- Préréglages : configurations complètes sauvegardées (fond, couleurs,
+  // durées du minuteur, musique d'ambiance) ---
+  const [prereglages, setPrereglages] = useState(() => {
+    try {
+      const sauvegarde = localStorage.getItem(CLE_STOCKAGE_PREREGLAGES);
+      return sauvegarde ? JSON.parse(sauvegarde) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLE_STOCKAGE_PREREGLAGES, JSON.stringify(prereglages));
+    } catch {
+      // Stockage indisponible : on ignore silencieusement
+    }
+  }, [prereglages]);
+
+  // Modale de création / renommage : idPrereglageEnEdition à null = mode
+  // création, sinon on édite le nom du préréglage correspondant
+  const [modalPrereglageOuvert, setModalPrereglageOuvert] = useState(false);
+  const [idPrereglageEnEdition, setIdPrereglageEnEdition] = useState(null);
+  const [nomPrereglageInitial, setNomPrereglageInitial] = useState('');
+  // Id du préréglage pour lequel une confirmation de suppression est demandée
+  const [idPrereglageASupprimer, setIdPrereglageASupprimer] = useState(null);
+
+  // Capture un instantané de la configuration actuelle (fond, réglages,
+  // musique), utilisé aussi bien à la création qu'à la mise à jour d'un préréglage
+  const capturerConfigurationActuelle = () => ({
+    couleurFondAppliquee,
+    imageFond,
+    reglages,
+    musiqueAmbiance: musiqueAmbiance ? { ...musiqueAmbiance, enLecture: false } : null,
+  });
+
+  const ouvrirCreationPrereglage = () => {
+    setIdPrereglageEnEdition(null);
+    setNomPrereglageInitial('');
+    setModalPrereglageOuvert(true);
+  };
+
+  const ouvrirRenommagePrereglage = (id) => {
+    const prereglage = prereglages.find((p) => p.id === id);
+    if (!prereglage) return;
+    setIdPrereglageEnEdition(id);
+    setNomPrereglageInitial(prereglage.nom);
+    setModalPrereglageOuvert(true);
+  };
+
+  const fermerModalPrereglage = () => setModalPrereglageOuvert(false);
+
+  // Valide la modale : crée un nouveau préréglage, ou renomme celui en édition
+  const validerModalPrereglage = (nom) => {
+    if (idPrereglageEnEdition) {
+      setPrereglages((prev) => prev.map((p) => (
+        p.id === idPrereglageEnEdition ? { ...p, nom } : p
+      )));
+    } else {
+      const nouveauPrereglage = {
+        id: genererIdPrereglage(),
+        nom,
+        ...capturerConfigurationActuelle(),
+      };
+      setPrereglages((prev) => [...prev, nouveauPrereglage]);
+    }
+    setModalPrereglageOuvert(false);
+  };
+
+  // Applique instantanément l'ensemble des réglages d'un préréglage
+  const appliquerPrereglage = (prereglage) => {
+    setCouleurFondAppliquee(prereglage.couleurFondAppliquee || null);
+    setImageFond(prereglage.imageFond || null);
+    setReglages({ ...REGLAGES_PAR_DEFAUT, ...prereglage.reglages });
+
+    if (prereglage.musiqueAmbiance) {
+      setMusiqueAmbiance({ ...prereglage.musiqueAmbiance, enLecture: false });
+      setLecteurMusiqueVisible(true);
+    } else {
+      setMusiqueAmbiance(null);
+      setLecteurMusiqueVisible(false);
+    }
+  };
+
+  const demanderSuppressionPrereglage = (id) => setIdPrereglageASupprimer(id);
+
+  const confirmerSuppressionPrereglage = () => {
+    setPrereglages((prev) => prev.filter((p) => p.id !== idPrereglageASupprimer));
+    setIdPrereglageASupprimer(null);
+  };
+
+  const annulerSuppressionPrereglage = () => setIdPrereglageASupprimer(null);
+
+  // Remplace un préréglage existant par la configuration actuelle de l'application,
+  // sans changer son nom
+  const remplacerPrereglage = (id) => {
+    setPrereglages((prev) => prev.map((p) => (
+      p.id === id ? { ...p, ...capturerConfigurationActuelle() } : p
+    )));
+  };
 
   // --- Mode concentration (plein écran + interface épurée) ---
   const [modeConcentration, setModeConcentration] = useState(false);
@@ -1256,7 +2442,10 @@ function App() {
     lecteur.readAsDataURL(fichier);
   };
 
-  // Applique dynamiquement le fond choisi (couleur ou image) sur le <body>
+  // Applique dynamiquement le fond choisi (couleur ou image) sur le <body>.
+  // En l'absence de tout réglage personnalisé (aucune couleur ni image
+  // choisie par l'utilisateur), le fond par défaut de l'application
+  // (/basicbg.jpg, à placer dans /public) est utilisé.
   useEffect(() => {
     if (imageFond) {
       document.body.style.backgroundImage = `url(${imageFond})`;
@@ -1269,12 +2458,13 @@ function App() {
       document.body.style.backgroundImage = 'none';
       document.body.style.backgroundColor = couleurFondAppliquee;
     } else {
-      document.body.style.backgroundImage = '';
+      // Aucun réglage personnalisé : on retombe sur le fond par défaut
+      document.body.style.backgroundImage = 'url(/basicbg.jpg)';
       document.body.style.backgroundColor = '';
-      document.body.style.backgroundSize = '';
-      document.body.style.backgroundPosition = '';
-      document.body.style.backgroundRepeat = '';
-      document.body.style.backgroundAttachment = '';
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center';
+      document.body.style.backgroundRepeat = 'no-repeat';
+      document.body.style.backgroundAttachment = 'fixed';
     }
   }, [couleurFondAppliquee, imageFond]);
 
@@ -1388,6 +2578,13 @@ function App() {
     setToggleSortieActif(false);
   };
 
+  // Clé stable identifiant la piste en cours, utilisée pour forcer un
+  // remontage propre du LecteurVinyle à chaque changement de musique
+  // (réinitialise proprement son état local : progression, glisser-déposer...)
+  const cleLecteurMusique = musiqueAmbiance
+    ? `${musiqueAmbiance.type}-${musiqueAmbiance.videoId || musiqueAmbiance.titre}`
+    : null;
+
   return(
     <>
     {!modeConcentration && <Navbar/>}
@@ -1428,6 +2625,15 @@ function App() {
         taches={taches}
         ajouterTache={ajouterTache}
         actionsPourTache={actionsPourTache}
+        musiqueActuelle={musiqueAmbiance}
+        onOuvrirChoixMusique={() => setChoixMusiqueOuvert(true)}
+        onSupprimerMusique={supprimerMusiqueAmbiance}
+        prereglages={prereglages}
+        onAppliquerPrereglage={appliquerPrereglage}
+        onOuvrirRenommagePrereglage={ouvrirRenommagePrereglage}
+        onDemanderSuppressionPrereglage={demanderSuppressionPrereglage}
+        onRemplacerPrereglage={remplacerPrereglage}
+        onOuvrirCreationPrereglage={ouvrirCreationPrereglage}
       />
     )}
 
@@ -1454,6 +2660,24 @@ function App() {
       <NoteEpinglee key={tache.id} tache={tache} actions={actionsPourTache(tache.id)} />
     ))}
 
+    {/* Lecteur de musique d'ambiance : widget flottant "vinyle", librement
+        déplaçable. La `key` force un remontage propre à chaque changement
+        de piste (voir cleLecteurMusique ci-dessus). */}
+    {musiqueAmbiance && lecteurMusiqueVisible && (
+      <LecteurVinyle
+        key={cleLecteurMusique}
+        musique={musiqueAmbiance}
+        fermer={() => setLecteurMusiqueVisible(false)}
+        onMettreAJour={mettreAJourMusique}
+      />
+    )}
+
+    <ModalChoisirMusique
+      ouvert={choixMusiqueOuvert}
+      fermer={() => setChoixMusiqueOuvert(false)}
+      onValider={validerMusiqueAmbiance}
+    />
+
     <ModalConfirmation
       ouvert={idADesepingler !== null}
       message="Êtes-vous sûr de vouloir désépingler cette note ?"
@@ -1467,6 +2691,22 @@ function App() {
       onToggle={basculerToggleSortie}
       onConfirmer={confirmerSortieModeConcentration}
       onAnnuler={annulerSortieModeConcentration}
+    />
+
+    {/* --- Préréglages : modale de création/renommage + confirmation de suppression --- */}
+    <ModalPrereglage
+      ouvert={modalPrereglageOuvert}
+      modeRenommage={idPrereglageEnEdition !== null}
+      nomInitial={nomPrereglageInitial}
+      fermer={fermerModalPrereglage}
+      onValider={validerModalPrereglage}
+    />
+
+    <ModalConfirmation
+      ouvert={idPrereglageASupprimer !== null}
+      message="Êtes-vous sûr de vouloir supprimer ce préréglage ?"
+      onConfirmer={confirmerSuppressionPrereglage}
+      onAnnuler={annulerSuppressionPrereglage}
     />
     </>
   )

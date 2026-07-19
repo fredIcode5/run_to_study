@@ -11,6 +11,12 @@
   --couleur-chrono: #1f2430;
   --couleur-poignee: #e2472a;
   --couleur-boutons: #e2472a;
+
+  /* Empêche les champs de formulaire natifs de basculer sur le rendu
+     "dark" du navigateur (texte blanc par défaut) quand le système est
+     en thème sombre : toute l'appli reste en thème clair, y compris les
+     contrôles de formulaire (voir règle globale input/textarea/select ci-dessous) */
+  color-scheme: light;
 }
 
 *{
@@ -37,6 +43,49 @@ body{
   width: 100%;
   min-height: 100vh;
   text-align: left;
+}
+
+/* ======================================================================
+   Lisibilité globale des champs de formulaire (contraste)
+   ------------------------------------------------------------------
+   Règle de base : tout champ de saisie (texte, nombre, date, recherche,
+   textarea, select) affiche un texte sombre et bien contrasté, quel que
+   soit le thème système de l'utilisateur (clair/sombre) ou l'état
+   (survol, focus, désactivé). Les règles plus spécifiques ci-dessous
+   ne font que préciser les couleurs de fond propres à chaque champ.
+   ====================================================================== */
+input,
+textarea,
+select{
+  color: #1f2430;
+  color-scheme: light;
+  font-family: 'Inter', sans-serif;
+  accent-color: #e2472a;
+}
+
+input::placeholder,
+textarea::placeholder{
+  color: #8b909a;
+  opacity: 1;
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled{
+  color: #9aa0ab;
+  background-color: #eceef1;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+select{
+  color: #1f2430;
+  background-color: #fff;
+}
+
+select option{
+  color: #1f2430;
+  background-color: #fff;
 }
 
 /* --- Navbar flottante --- */
@@ -384,7 +433,7 @@ body{
   background: rgba(47, 111, 107, 0.09);
 }
 
-/* --- Sections du panneau Réglages (fond + Pomodoro) --- */
+/* --- Sections du panneau Réglages (fond + Pomodoro + musique) --- */
 .param_section{
   margin-top: 24px;
   padding-top: 20px;
@@ -426,6 +475,7 @@ body{
   font-family: 'Inter', sans-serif;
   font-size: 14px;
   background: #fff;
+  color: #1f2430;
 }
 
 .param_input:focus{
@@ -530,99 +580,510 @@ body{
   background: rgba(226, 71, 42, 0.08);
 }
 
-.Chat_IA{
-  background: #1f2430;
-  color: #fff;
-  height: 100%;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+/* --- Section "Musique d'ambiance" du panneau Réglages --- */
+.param_musique_texte{
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
 }
 
-.chat_messages{
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
+.param_musique_bloc{
   display: flex;
   flex-direction: column;
+  gap: 14px;
+}
+
+.param_musique_ligne{
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
-.chat_message_vide{
-  color: rgba(255, 255, 255, 0.45);
-  text-align: center;
-  margin-top: 20px;
-  font-size: 14px;
+.param_musique_actuelle{
+  font-size: 12px;
+  font-weight: 600;
+  color: #2f6f6b;
+  background: rgba(47, 111, 107, 0.12);
+  padding: 6px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
 }
+
+/* Carte d'aperçu de la musique sélectionnée : miniature + titre/artiste */
+.param_musique_carte{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: 12px;
+  box-shadow: var(--shadow-soft);
+}
+
+.param_musique_vignette{
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1db954, #4c4ce0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.param_musique_vignette img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.param_musique_vignette_icone{
+  font-size: 26px;
+  color: #fff;
+}
+
+.param_musique_carte_details{
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.param_musique_carte_titre{
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2430;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.param_musique_carte_artiste{
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Bloc d'informations détaillées (source, durée, état de lecture, boucle) */
+.param_musique_infos{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-soft);
+}
+
+.param_musique_info_ligne{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.param_musique_info_label{
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.param_musique_info_valeur{
+  color: #1f2430;
+  font-weight: 600;
+  text-align: right;
+}
+
+.param_musique_badge_source,
+.param_musique_badge_etat,
+.param_musique_badge_boucle{
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.param_musique_badge_source--youtube{
+  background: rgba(226, 71, 42, 0.12);
+  color: #b8371d;
+}
+
+.param_musique_badge_source--spotify{
+  background: rgba(29, 185, 84, 0.14);
+  color: #169c46;
+}
+
+.param_musique_badge_etat--lecture{
+  background: rgba(47, 111, 107, 0.14);
+  color: #2f6f6b;
+}
+
+.param_musique_badge_etat--pause{
+  background: rgba(107, 114, 128, 0.14);
+  color: #6b7280;
+}
+
+.param_musique_badge_boucle{
+  background: rgba(124, 58, 237, 0.12);
+  color: #7c3aed;
+}
+
+/* ======================================================================
+   Section "Salons de course" (panneau coulissant)
+   ====================================================================== */
 
 .salon_course{
   height: 100%;
-  padding: 26px;
+  padding: 22px;
   overflow-y: auto;
-  background: rgba(100, 100, 255, 0.1);
+  background: rgba(100, 100, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.chat_message{
-  padding: 10px 14px;
-  border-radius: 14px;
-  max-width: 82%;
-  color: #fff;
-  font-size: 14px;
-  line-height: 1.4;
-  word-wrap: break-word;
+.salon_entete{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
-.chat_message.user{
-  background: #e2472a;
-  align-self: flex-end;
-  border-bottom-right-radius: 4px;
+.salon_entete h2{
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  color: #1f2430;
 }
 
-.chat_message.assistant{
-  background: rgba(255, 255, 255, 0.1);
-  align-self: flex-start;
-  border-bottom-left-radius: 4px;
-}
-
-.chat_input_zone{
+.salon_actions_principales{
   display: flex;
   gap: 8px;
-  padding: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.chat_input_zone input{
+.salon_btn_rejoindre,
+.salon_btn_creer{
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.salon_btn_rejoindre{
+  background: #fff;
+  color: #4c4ce0;
+  border: 2px solid rgba(76, 76, 224, 0.35);
+}
+
+.salon_btn_rejoindre:hover{
+  background: rgba(76, 76, 224, 0.08);
+}
+
+.salon_btn_creer{
+  background: #4c4ce0;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(76, 76, 224, 0.3);
+}
+
+.salon_btn_creer:hover{
+  background: #3939b8;
+  transform: translateY(-1px);
+}
+
+/* Encart de saisie du code de salon (affiché au clic sur "Rejoindre") */
+.salon_rejoindre_encart{
+  display: flex;
+  gap: 8px;
+  background: #fff;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+  flex-shrink: 0;
+}
+
+.salon_rejoindre_input{
   flex: 1;
   padding: 10px 12px;
   border-radius: 10px;
-  border: none;
+  border: 1px solid rgba(31, 36, 48, 0.15);
   font-family: 'Inter', sans-serif;
   font-size: 14px;
+  color: #1f2430;
+  background: #fff;
 }
 
-.chat_input_zone input:focus{
-  outline: 2px solid #e2472a;
+.salon_rejoindre_input:focus{
+  outline: 2px solid #4c4ce0;
+  border-color: transparent;
 }
 
-.chat_input_zone button{
-  padding: 10px 18px;
+.salon_rejoindre_valider{
   border: none;
-  border-radius: 10px;
-  background: #e2472a;
+  background: #4c4ce0;
   color: #fff;
+  padding: 10px 18px;
+  border-radius: 10px;
   font-weight: 600;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: background 0.2s ease;
 }
 
-.chat_input_zone button:hover:not(:disabled){
-  background: #b8371d;
+.salon_rejoindre_valider:hover{
+  background: #3939b8;
 }
 
-.chat_input_zone button:disabled{
-  opacity: 0.5;
-  cursor: not-allowed;
+/* Barre de recherche + filtres */
+.salon_recherche_zone{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.salon_recherche_input{
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(31, 36, 48, 0.15);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  background: #fff;
+  color: #1f2430;
+}
+
+.salon_recherche_input:focus{
+  outline: 2px solid #4c4ce0;
+  border-color: transparent;
+}
+
+.salon_filtres{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.salon_filtre_select{
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(31, 36, 48, 0.15);
+  background: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: #1f2430;
+  cursor: pointer;
+}
+
+.salon_vide{
+  font-size: 13px;
+  color: #6b7280;
+  margin: 8px 2px;
+}
+
+/* Grille des cartes de salons */
+.salon_liste{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  align-content: start;
+}
+
+.salon_carte{
+  background: #fff;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid rgba(31, 36, 48, 0.06);
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.salon_carte:hover{
+  box-shadow: var(--shadow-float);
+  transform: translateY(-2px);
+  border-color: rgba(76, 76, 224, 0.25);
+}
+
+.salon_carte_image{
+  height: 100px;
+  background: linear-gradient(135deg, rgba(76, 76, 224, 0.15), rgba(226, 71, 42, 0.12));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.salon_carte_image_icone{
+  font-size: 32px;
+  opacity: 0.6;
+}
+
+.salon_carte_info{
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.salon_carte_nom{
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2430;
+}
+
+.salon_carte_meta{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.salon_carte_theme{
+  font-size: 11px;
+  font-weight: 600;
+  color: #4c4ce0;
+  background: rgba(76, 76, 224, 0.1);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.salon_carte_participants{
+  font-size: 11px;
+  font-weight: 700;
+  color: #2f6f6b;
+}
+
+/* --- Modale de création de salon --- */
+.salon_modal_fond{
+  background: rgba(31, 36, 48, 0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  padding: 24px;
+}
+
+.salon_modal_fenetre{
+  width: 460px;
+  max-width: 100%;
+  min-height: auto;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 34px 28px 26px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.salon_modal_contenu{
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+}
+
+.salon_modal_titre{
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  color: #1f2430;
+}
+
+.salon_champ{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.salon_label{
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.salon_musique_choix{
+  display: flex;
+  gap: 6px;
+}
+
+.salon_musique_onglet{
+  flex: 1;
+  border: 1px solid rgba(31, 36, 48, 0.15);
+  background: transparent;
+  color: #6b7280;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.salon_musique_onglet.actif{
+  background: #4c4ce0;
+  border-color: #4c4ce0;
+  color: #fff;
+}
+
+.salon_spotify_zone{
+  display: flex;
+}
+
+.salon_spotify_zone--colonne{
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.salon_btn_spotify{
+  border: none;
+  background: #1db954;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.salon_btn_spotify:hover{
+  background: #169c46;
+}
+
+.salon_btn_valider_creation{
+  border: none;
+  background: #e2472a;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.salon_btn_valider_creation:hover{
+  background: #b8371d;
 }
 
 /* --- Bande du bas : coureur GIF (au-dessus) + flèches défilantes (en dessous) --- */
@@ -1046,6 +1507,8 @@ body{
   border-radius: 999px;
   border: 1px solid rgba(31, 36, 48, 0.2);
   font-family: 'Inter', sans-serif;
+  color: #1f2430;
+  background: #fff;
 }
 
 .todo_tag_input:focus{
@@ -1056,7 +1519,7 @@ body{
 .todo_date{
   border: none;
   background: rgba(31, 36, 48, 0.05);
-  color: #6b7280;
+  color: #1f2430;
   font-family: 'Inter', sans-serif;
   font-size: 11px;
   font-weight: 600;
@@ -1068,6 +1531,11 @@ body{
 
 .todo_date:focus{
   outline: 2px solid #e2472a;
+}
+
+.todo_date::-webkit-calendar-picker-indicator{
+  filter: opacity(0.6);
+  cursor: pointer;
 }
 
 /* Zone de texte éditable de la carte */
@@ -1476,6 +1944,422 @@ body{
   transform: translateX(20px);
 }
 
+/* ======================================================================
+   Lecteur de musique d'ambiance : widget flottant "vinyle", déplaçable
+   librement par glisser-déposer (comme une note épinglée)
+   ====================================================================== */
+.lecteur_vinyle{
+  position: fixed;
+  width: 168px;
+  background: rgba(31, 36, 48, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-float);
+  padding: 14px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 150;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+/* État actif pendant le glisser-déposer : légère mise en avant animée */
+.lecteur_vinyle--glisse{
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
+  transform: scale(1.03);
+  transition: none;
+}
+
+.lecteur_vinyle_entete{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.lecteur_vinyle_poignee{
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+  letter-spacing: 1px;
+  cursor: grab;
+  padding: 2px 6px;
+  border-radius: 6px;
+  user-select: none;
+  touch-action: none;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.lecteur_vinyle_poignee:active{
+  cursor: grabbing;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.lecteur_vinyle_fermer{
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.lecteur_vinyle_fermer:hover{
+  background: rgba(226, 71, 42, 0.5);
+}
+
+/* Miniature carrée de la musique en cours : miniature YouTube ou pochette
+   Spotify (avec repli en dégradé + icône si aucune image n'est disponible) */
+.vinyle_miniature{
+  width: 92px;
+  height: 92px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1db954, #4c4ce0);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.2s ease;
+}
+
+.vinyle_miniature--lecture{
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 0 0 3px var(--couleur-boutons);
+}
+
+.vinyle_miniature img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vinyle_miniature_icone{
+  font-size: 30px;
+  color: #fff;
+}
+
+.lecteur_vinyle_titre{
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Rangée de contrôles : retour au début / lecture-pause / boucle */
+.lecteur_vinyle_controles{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.lecteur_vinyle_bouton{
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--couleur-boutons);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.lecteur_vinyle_bouton:hover{
+  transform: translateY(-1px);
+}
+
+.lecteur_vinyle_bouton_secondaire{
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.lecteur_vinyle_bouton_secondaire:hover{
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.lecteur_vinyle_bouton_secondaire.actif{
+  background: var(--couleur-boutons);
+}
+
+.lecteur_vinyle_progression{
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.lecteur_vinyle_progression_remplie{
+  height: 100%;
+  background: var(--couleur-boutons);
+  border-radius: 999px;
+  transition: width 0.2s linear;
+}
+
+.lecteur_vinyle_temps{
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  font-variant-numeric: tabular-nums;
+}
+
+.lecteur_vinyle_youtube_cache{
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --- Aperçu de la miniature dans la modale de choix de musique
+   (même style que la miniature carrée, en légèrement plus petit) --- */
+.choix_musique_apercu_ligne{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: #f5f6f8;
+  border-radius: var(--radius-md);
+  padding: 10px;
+}
+
+.choix_musique_apercu_vignette{
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1db954, #4c4ce0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.choix_musique_apercu_vignette img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.choix_musique_apercu_icone{
+  font-size: 22px;
+  color: #fff;
+}
+
+.choix_musique_apercu_details{
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.choix_musique_apercu_titre{
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f2430;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.choix_musique_apercu_artiste{
+  font-size: 11px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ======================================================================
+   Section "Préréglages" (carrousel de configurations complètes)
+   ====================================================================== */
+
+/* Réutilise le même rythme vertical que les autres sections .param_section,
+   mais sans bordure supérieure : elle est la toute première section affichée */
+.prereglages_section{
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.prereglages_vide{
+  margin: 4px 2px 0;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+/* Carrousel horizontal : défilement gauche/droite, une carte = une config complète */
+.prereglages_scroll{
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 2px 12px;
+  margin: 0 -2px;
+  scroll-snap-type: x proximity;
+}
+
+.prereglages_scroll::-webkit-scrollbar{
+  height: 8px;
+}
+
+.prereglages_scroll::-webkit-scrollbar-thumb{
+  background: rgba(31, 36, 48, 0.15);
+  border-radius: 999px;
+}
+
+.prereglages_scroll::-webkit-scrollbar-track{
+  background: transparent;
+}
+
+.prereglage_carte{
+  flex: 0 0 auto;
+  width: 138px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+  background: #fff;
+  cursor: pointer;
+  scroll-snap-align: start;
+  border: 2px solid transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.prereglage_carte:hover{
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-float);
+  border-color: rgba(226, 71, 42, 0.35);
+}
+
+.prereglage_carte:active{
+  transform: translateY(-1px);
+}
+
+.prereglage_carte_apercu{
+  position: relative;
+  width: 100%;
+  height: 88px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+/* Petit dégradé discret en haut de l'aperçu pour garder les icônes d'action lisibles */
+.prereglage_carte_apercu::before{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), transparent 55%);
+  pointer-events: none;
+}
+
+.prereglage_carte_actions{
+  position: relative;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.prereglage_carte:hover .prereglage_carte_actions,
+.prereglage_action_btn:focus-visible{
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.prereglage_action_btn{
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.prereglage_action_btn:hover{
+  background: #e2472a;
+  transform: scale(1.08);
+}
+
+.prereglage_carte_bande{
+  padding: 9px 10px;
+  background: #fff;
+  border-top: 1px solid rgba(31, 36, 48, 0.06);
+}
+
+.prereglage_carte_nom{
+  display: block;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1f2430;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Bouton "Créer un préréglage", toujours en bas de la page du panneau Réglages */
+.prereglages_creation_section{
+  gap: 0;
+}
+
+.prereglage_btn_creer{
+  align-self: flex-start;
+  box-shadow: 0 6px 14px rgba(226, 71, 42, 0.25);
+}
+
 /* --- Responsive --- */
 @media (max-width: 1000px){
   .panel{
@@ -1492,6 +2376,15 @@ body{
   }
   .todo_modal_fenetre{
     width: 100%;
+  }
+  .salon_liste{
+    grid-template-columns: 1fr;
+  }
+  .prereglage_carte{
+    width: 120px;
+  }
+  .prereglage_carte_apercu{
+    height: 76px;
   }
 }
 
@@ -1560,5 +2453,32 @@ body{
     right: 12px;
     padding: 10px 14px;
     font-size: 12px;
+  }
+  .salon_entete{
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .salon_modal_fenetre{
+    width: 100%;
+  }
+  .lecteur_vinyle{
+    width: 140px;
+    padding: 12px 12px 12px;
+  }
+  .vinyle_miniature{
+    width: 76px;
+    height: 76px;
+  }
+  .prereglage_carte{
+    width: 108px;
+  }
+  .prereglage_carte_apercu{
+    height: 68px;
+  }
+  .prereglage_carte_bande{
+    padding: 7px 8px;
+  }
+  .prereglage_carte_nom{
+    font-size: 11px;
   }
 }
