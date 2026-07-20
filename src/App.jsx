@@ -664,21 +664,304 @@ function NoteEpinglee ({ tache, actions }) {
 // et la modale d'agrandissement. L'état des tâches (et leur persistance) est
 // géré par le composant App, afin que les notes épinglées puissent rester
 // affichées sur le fond principal même quand cet onglet n'est pas actif.
-function Note ({ taches, ajouterTache, actionsPour }) {
+// ==========================================================================
+// Fonctions utilitaires liées aux sessions
+// (à sortir dans un fichier séparé, ex: sessions.js, si le projet grossit)
+// ==========================================================================
+
+/**
+ * Génère un numéro de session unique (format "0001", "0002", ...)
+ * en se basant sur le plus grand numéro déjà utilisé dans les sessions sauvegardées.
+ */
+function genererNumeroSession(sessionsExistantes) {
+  const numeros = sessionsExistantes
+    .map((s) => parseInt(s.numero, 10))
+    .filter((n) => !Number.isNaN(n));
+
+  const suivant = numeros.length > 0 ? Math.max(...numeros) + 1 : 1;
+  return String(suivant).padStart(4, '0');
+}
+
+/** Charge les sessions déjà sauvegardées (localStorage). */
+function chargerSessionsSauvegardees() {
+  try {
+    const brut = window.localStorage.getItem('sessions_sauvegardees');
+    return brut ? JSON.parse(brut) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+/** Persiste la liste des sessions sauvegardées (localStorage). */
+function sauvegarderSessionsDansStockage(sessions) {
+  try {
+    window.localStorage.setItem('sessions_sauvegardees', JSON.stringify(sessions));
+  } catch (e) {
+    // Stockage indisponible (mode privé, quota dépassé, etc.) : on ignore silencieusement
+  }
+}
+
+// ==========================================================================
+// Composant principal
+// ==========================================================================
+
+function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre }) {
   const [idAgrandie, setIdAgrandie] = useState(null);
 
+  // Sessions déjà sauvegardées (chargées une seule fois au montage)
+  const [sessionsSauvegardees, setSessionsSauvegardees] = useState(() =>
+    chargerSessionsSauvegardees()
+  );
+
+  // Session en cours
+  const [numeroSession, setNumeroSession] = useState(() =>
+    genererNumeroSession(chargerSessionsSauvegardees())
+  );
+  const [titreSession, setTitreSession] = useState('');
+
+  // Boîte de dialogue "que faire de la session en cours ?"
+  const [confirmationOuverte, setConfirmationOuverte] = useState(false);
+
+  // Fenêtre "consulter les anciennes notes"
+  const [rechercheOuverte, setRechercheOuverte] = useState(false);
+  const [recherche, setRecherche] = useState('');
+
+  // --- Mode "organiser" : numérotation manuelle de l'ordre des notes ---
+  const [modeOrganisationActif, setModeOrganisationActif] = useState(false);
+  // Id de la première note sélectionnée lors d'une interversion (2e clic = échange)
+  const [notePremiereSelection, setNotePremiereSelection] = useState(null);
+
+  // Garde en mémoire les id déjà connus pour détecter l'arrivée d'une note
+  // réellement nouvelle (et non simplement une note existante sans ordre).
+  const idsConnusRef = useRef(new Set(taches.map((t) => t.id)));
+
   // Une note épinglée quitte la liste : elle est déjà visible sur le fond principal
-  const tachesListe = taches.filter((t) => !t.epinglee);
+  const tachesListe = taches
+    .filter((t) => !t.epinglee)
+    .slice()
+    .sort((a, b) => (a.ordre ?? Infinity) - (b.ordre ?? Infinity));
   const tacheAgrandie = taches.find((t) => t.id === idAgrandie) || null;
 
+  // Plus grand numéro d'ordre déjà attribué (0 si aucune note n'en a un)
+  const calculerProchainNumero = () => {
+    const numeros = taches
+      .map((t) => (typeof t.ordre === 'number' ? t.ordre : 0));
+    return numeros.length > 0 ? Math.max(...numeros) + 1 : 1;
+  };
+
+  // Attribue automatiquement le numéro suivant à toute note réellement
+  // nouvelle (ajoutée depuis le dernier rendu) qui n'a pas encore d'ordre.
+  useEffect(() => {
+    if (typeof definirOrdreTache !== 'function') return;
+
+    const idsActuels = new Set(taches.map((t) => t.id));
+    const nouvellesTaches = taches.filter(
+      (t) => !idsConnusRef.current.has(t.id) && t.ordre == null
+    );
+
+    if (nouvellesTaches.length > 0) {
+      let prochain = calculerProchainNumero();
+      nouvellesTaches.forEach((t) => {
+        definirOrdreTache(t.id, prochain);
+        prochain += 1;
+      });
+    }
+
+    idsConnusRef.current = idsActuels;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taches]);
+
+  // Quitte le mode organisation (clic droit ou touche Échap)
+  const quitterModeOrganisation = () => {
+    setModeOrganisationActif(false);
+    setNotePremiereSelection(null);
+  };
+
+  // Bascule l'état actif/inactif du bouton "Organiser"
+  const basculerModeOrganisation = () => {
+    setModeOrganisationActif((actif) => !actif);
+    setNotePremiereSelection(null);
+  };
+
+  // Retire les pastilles de toutes les notes (remise à zéro de l'ordre manuel).
+  // Les notes redeviennent numérotables une à une, comme au tout premier usage.
+  const reinitialiserPastilles = () => {
+    if (typeof reinitialiserOrdre !== 'function') return;
+    reinitialiserOrdre();
+    setNotePremiereSelection(null);
+  };
+
+  // Touche Échap : quitte le mode organisation si actif
+  useEffect(() => {
+    if (!modeOrganisationActif) return undefined;
+
+    const gererTouche = (e) => {
+      if (e.key === 'Escape') {
+        quitterModeOrganisation();
+      }
+    };
+
+    window.addEventListener('keydown', gererTouche);
+    return () => window.removeEventListener('keydown', gererTouche);
+  }, [modeOrganisationActif]);
+
+  // Clic sur une note pendant le mode organisation :
+  // - si elle n'a pas encore de numéro, elle reçoit le prochain numéro libre
+  // - sinon, elle entre dans une sélection à deux clics qui intervertit les numéros
+  const gererClicNoteEnModeOrganisation = (tache) => {
+    if (typeof definirOrdreTache !== 'function') return;
+
+    if (tache.ordre == null) {
+      definirOrdreTache(tache.id, calculerProchainNumero());
+      return;
+    }
+
+    if (notePremiereSelection == null) {
+      setNotePremiereSelection(tache.id);
+      return;
+    }
+
+    if (notePremiereSelection === tache.id) {
+      // Reclique sur la même note : annule la sélection en cours
+      setNotePremiereSelection(null);
+      return;
+    }
+
+    const autreTache = taches.find((t) => t.id === notePremiereSelection);
+    if (autreTache && autreTache.ordre != null) {
+      definirOrdreTache(tache.id, autreTache.ordre);
+      definirOrdreTache(autreTache.id, tache.ordre);
+    }
+    setNotePremiereSelection(null);
+  };
+
+  // Clique sur "+nouvelle session" : on n'écrase rien tout de suite,
+  // on demande d'abord ce qu'il faut faire de la session en cours.
+  const demarrerNouvelleSession = () => {
+    setConfirmationOuverte(true);
+  };
+
+  // Enregistre la session actuelle (titre, numéro, date, heure, notes),
+  // puis repart sur une session vierge.
+  const enregistrerSessionEtRepartir = () => {
+    const maintenant = new Date();
+
+    const sessionArchivee = {
+      id: `session_${Date.now()}`,
+      titre: titreSession.trim() || `Session ${numeroSession}`,
+      numero: numeroSession,
+      date: maintenant.toLocaleDateString(),
+      heure: maintenant.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      notes: taches,
+    };
+
+    const sessionsMisesAJour = [...sessionsSauvegardees, sessionArchivee];
+    setSessionsSauvegardees(sessionsMisesAJour);
+    sauvegarderSessionsDansStockage(sessionsMisesAJour);
+
+    repartirSurNouvelleSession(sessionsMisesAJour);
+  };
+
+  // Supprime la session actuelle sans l'enregistrer, puis repart sur une session vierge.
+  const supprimerSessionEtRepartir = () => {
+    repartirSurNouvelleSession(sessionsSauvegardees);
+  };
+
+  // Vide l'éditeur, réinitialise le titre et génère un nouveau numéro unique.
+  const repartirSurNouvelleSession = (sessionsActuelles) => {
+    if (typeof viderTaches === 'function') {
+      viderTaches();
+    } else if (typeof ajouterTache === 'function') {
+      // Solution de repli si "viderTaches" n'a pas encore été branché côté parent :
+      // au minimum on ouvre une nouvelle tâche, mais l'idéal est d'implémenter
+      // "viderTaches" pour vraiment vider la liste précédente.
+      ajouterTache();
+    }
+    setTitreSession('');
+    setNumeroSession(genererNumeroSession(sessionsActuelles));
+    setConfirmationOuverte(false);
+  };
+
+  // Filtre les sessions sauvegardées selon la barre de recherche (titre ou numéro)
+  const sessionsFiltrees = sessionsSauvegardees.filter((s) => {
+    const cible = recherche.trim().toLowerCase();
+    if (!cible) return true;
+    return (
+      s.titre.toLowerCase().includes(cible) ||
+      s.numero.toLowerCase().includes(cible)
+    );
+  });
+
   return (
-    <div className="todo_zone">
+    <div
+      className="todo_zone"
+      onContextMenu={(e) => {
+        if (modeOrganisationActif) {
+          e.preventDefault();
+          quitterModeOrganisation();
+        }
+      }}
+    >
       <div className="todo_entete">
-        <h2>Notes</h2>
-        <button type="button" className="todo_btn_ajouter" onClick={ajouterTache}>
-          + Nouvelle tâche
-        </button>
-      </div>
+
+
+  {/* ===========================
+      Barre de session
+  ============================ */}
+
+  <div className="session_section">
+
+   <div className="todo_actions">
+
+ <h3 className="session_titre"> Session :#{numeroSession}</h3>
+
+ <input
+   type="text"
+   className="session_titre_input"
+   placeholder="Titre de la session"
+   value={titreSession}
+   onChange={(e) => setTitreSession(e.target.value)}
+ />
+
+   <button type="button" className="todo_btn_ajouter" onClick={demarrerNouvelleSession}> +nouvelle sesssion </button>
+   <button type="button" className="note_btn_ajouter" onClick={ajouterTache}><span> +ajouter une note </span>
+      </button>
+
+</div>
+    <h3 className="session_soustitre">
+      vos notes
+    </h3>
+
+    <div className="session_liste_actions">
+      <button
+        type="button"
+        className={`session_action_btn${modeOrganisationActif ? ' session_action_btn--actif' : ''}`}
+        onClick={basculerModeOrganisation}
+      >
+        organiser
+      </button>
+      {modeOrganisationActif && (
+        <>
+          <span className="session_organiser_message">
+            Pour quitter ce mode, faites un clic droit ou appuyez sur Échap.
+          </span>
+          <button
+            type="button"
+            className="session_action_btn session_action_btn--reinit"
+            onClick={reinitialiserPastilles}
+            title="Retirer les numéros de toutes les notes"
+          >
+            ↺ Réinitialiser les pastilles
+          </button>
+        </>
+      )}
+      <button className="session_action_btn" onClick={() => setRechercheOuverte(true)}> consulter les anciennes notes</button>
+    </div>
+  </div>
+
+ 
+
+</div>
 
       {tachesListe.length === 0 ? (
         <p className="todo_vide">
@@ -689,12 +972,26 @@ function Note ({ taches, ajouterTache, actionsPour }) {
       ) : (
         <div className="todo_liste">
           {tachesListe.map((tache) => (
-            <TacheCarte
+            <div
               key={tache.id}
-              tache={tache}
-              actions={actionsPour(tache.id)}
-              onAgrandir={() => setIdAgrandie(tache.id)}
-            />
+              className={`session_organiser_case${modeOrganisationActif ? ' session_organiser_case--actif' : ''}${tache.id === notePremiereSelection ? ' session_organiser_case--selection' : ''}`}
+              onClickCapture={(e) => {
+                if (modeOrganisationActif) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  gererClicNoteEnModeOrganisation(tache);
+                }
+              }}
+            >
+              {tache.ordre != null && (
+                <span className="session_ordre_badge">{tache.ordre}</span>
+              )}
+              <TacheCarte
+                tache={tache}
+                actions={actionsPour(tache.id)}
+                onAgrandir={() => setIdAgrandie(tache.id)}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -706,9 +1003,127 @@ function Note ({ taches, ajouterTache, actionsPour }) {
           fermer={() => setIdAgrandie(null)}
         />
       )}
+
+      {confirmationOuverte && (
+        <DialogueNouvelleSession
+          onEnregistrer={enregistrerSessionEtRepartir}
+          onSupprimer={supprimerSessionEtRepartir}
+          onAnnuler={() => setConfirmationOuverte(false)}
+        />
+      )}
+
+      {rechercheOuverte && (
+        <FenetreAnciennesSessions
+          sessions={sessionsFiltrees}
+          recherche={recherche}
+          onChangerRecherche={setRecherche}
+          fermer={() => setRechercheOuverte(false)}
+        />
+      )}
     </div>
   );
 }
+
+// ==========================================================================
+// Boîte de dialogue : que faire de la session en cours ?
+// ==========================================================================
+
+function DialogueNouvelleSession({ onEnregistrer, onSupprimer, onAnnuler }) {
+  return (
+    <div className="session_confirm_fond" onClick={onAnnuler}>
+      <div className="session_confirm_fenetre" onClick={(e) => e.stopPropagation()}>
+        <h3 className="session_confirm_titre">Nouvelle session</h3>
+        <p className="session_confirm_texte">
+          Que faire de la session en cours avant de commencer une nouvelle session ?
+        </p>
+        <div className="session_confirm_actions">
+          <button
+            type="button"
+            className="session_confirm_btn session_confirm_btn--enregistrer"
+            onClick={onEnregistrer}
+          >
+            Enregistrer la session actuelle
+          </button>
+          <button
+            type="button"
+            className="session_confirm_btn session_confirm_btn--supprimer"
+            onClick={onSupprimer}
+          >
+            Supprimer sans enregistrer
+          </button>
+          <button
+            type="button"
+            className="session_confirm_btn session_confirm_btn--annuler"
+            onClick={onAnnuler}
+          >
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================================================
+// Fenêtre : consulter les anciennes sessions
+// ==========================================================================
+
+function FenetreAnciennesSessions({ sessions, recherche, onChangerRecherche, fermer }) {
+  return (
+    <div className="session_historique_fond" onClick={fermer}>
+      <div className="session_historique_fenetre" onClick={(e) => e.stopPropagation()}>
+        <div className="session_historique_entete">
+          <h3 className="session_historique_titre">Anciennes sessions</h3>
+          <button type="button" className="session_historique_fermer" onClick={fermer}>
+            ✕
+          </button>
+        </div>
+
+        <input
+          type="text"
+          placeholder="Rechercher par titre ou numéro..."
+          value={recherche}
+          onChange={(e) => onChangerRecherche(e.target.value)}
+          className="session_recherche_input"
+        />
+
+        <div className="session_historique_liste">
+          {sessions.length === 0 ? (
+            <p className="session_ligne_vide">Aucune session trouvée.</p>
+          ) : (
+            <table className="sessions_tableau">
+              <thead>
+                <tr>
+                  <th>Titre</th>
+                  <th>Numéro</th>
+                  <th>Date</th>
+                  <th>Heure</th>
+                  <th>Nombre de notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sessions.map((s) => (
+                  <tr key={s.id}>
+                    <td className="session_titre_cellule">{s.titre}</td>
+                    <td>
+                      <span className="session_numero_badge">#{s.numero}</span>
+                    </td>
+                    <td>{s.date}</td>
+                    <td>{s.heure}</td>
+                    <td>
+                      <span className="session_notes_badge">{s.notes.length}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 // ======================================================================
 // --- Musique d'ambiance -------------------------------------------------
@@ -1425,7 +1840,6 @@ function Param ({
   return(
     <div className='param'>
       <h2>Paramètre 2</h2>
-      <p>Contenu du bloc paramètres...</p>
 
       {/* --- Section : préréglages, toujours affichée en premier --- */}
       <SectionPrereglages
@@ -1683,7 +2097,7 @@ const SALONS_DEMO = [
 
 // Carte représentant un salon rejoignable : image (placeholder), nom,
 // thème et nombre de participants (valeur statique temporaire "4/5")
-function CarteSalon ({ salon }) {
+function CarteSalon ({ salon, onRejoindre }) {
   return (
     <div className="salon_carte">
       <div className="salon_carte_image" aria-hidden="true">
@@ -1695,11 +2109,17 @@ function CarteSalon ({ salon }) {
           <span className="salon_carte_theme">{salon.theme}</span>
           <span className="salon_carte_participants">4/5</span>
         </div>
+        <button
+          type="button"
+          className="salon_carte_btn_rejoindre"
+          onClick={() => onRejoindre(salon)}
+        >
+          Rejoindre
+        </button>
       </div>
     </div>
   );
 }
-
 // Modale de création d'un salon : image de fond, musique de fond
 // (lien YouTube ou recherche via un compte Spotify connecté),
 // nombre de participants et thème du salon.
@@ -1847,6 +2267,9 @@ function Salon_course () {
   const [rejoindreOuvert, setRejoindreOuvert] = useState(false);
   const [codeSalon, setCodeSalon] = useState('');
   const [creerOuvert, setCreerOuvert] = useState(false);
+    const rejoindreSalonDirect = (salon) => {
+    alert(`Vous avez rejoint le salon « ${salon.nom} » (simulation) !`);
+  };
 
   const themesDisponibles = ['tous', ...new Set(SALONS_DEMO.map((s) => s.theme))];
   const dureesDisponibles = ['toutes', ...new Set(SALONS_DEMO.map((s) => s.duree))];
@@ -1940,7 +2363,7 @@ function Salon_course () {
       ) : (
         <div className="salon_liste">
           {salonsFiltres.map((salon) => (
-            <CarteSalon key={salon.id} salon={salon} />
+            <CarteSalon key={salon.id} salon={salon} onRejoindre={rejoindreSalonDirect} />
           ))}
         </div>
       )}
@@ -1974,6 +2397,9 @@ function BlocDeux ({
   taches,
   ajouterTache,
   actionsPourTache,
+  definirOrdreTache,
+  reinitialiserOrdreTaches,
+  viderTaches,
   musiqueActuelle,
   onOuvrirChoixMusique,
   onSupprimerMusique,
@@ -2021,7 +2447,7 @@ function BlocDeux ({
       <div className="panel_corps">
         <div className="panel_controles">
           <button className={vueActive === 1 ? 'actif' : ''} onClick={() => setVueActive(1)}>Notes</button>
-          <button className={vueActive === 2 ? 'actif' : ''} onClick={() => setVueActive(2)}>Réglages</button>
+          <button className={vueActive === 2 ? 'actif' : ''} onClick={() => setVueActive(2)}>Mon Pomodoro</button>
           <button className={vueActive === 3 ? 'actif' : ''} onClick={() => setVueActive(3)}>Salon de course</button>
         </div>
 
@@ -2031,6 +2457,9 @@ function BlocDeux ({
               taches={taches}
               ajouterTache={ajouterTache}
               actionsPour={actionsPourTache}
+              definirOrdreTache={definirOrdreTache}
+              reinitialiserOrdre={reinitialiserOrdreTaches}
+              viderTaches={viderTaches}
             />
           )}
           {vueActive === 2 && (
@@ -2329,6 +2758,27 @@ function App() {
     setTaches((prev) => [nouvelle, ...prev]);
   };
 
+  // Vide entièrement la liste des tâches/notes (utilisé au démarrage d'une
+  // nouvelle session, qu'elle soit enregistrée ou supprimée au préalable).
+  const viderTaches = () => {
+    setTaches([]);
+  };
+
+  // Définit (ou remplace) le numéro d'ordre d'une tâche, utilisé par le
+  // mode "organiser" pour numéroter et intervertir les notes.
+  const definirOrdreTache = (id, ordre) => {
+    setTaches((prev) => prev.map((t) => (t.id === id ? { ...t, ordre } : t)));
+  };
+
+  // Réinitialise le numéro d'ordre de toutes les tâches (retire les pastilles) :
+  // utilisé par le bouton "Réinitialiser" du mode organiser.
+  const reinitialiserOrdreTaches = () => {
+    setTaches((prev) => prev.map((t) => {
+      const { ordre, ...reste } = t;
+      return reste;
+    }));
+  };
+
   const modifierTache = (id, champs) => {
     setTaches((prev) => prev.map((t) => (t.id === id ? { ...t, ...champs } : t)));
   };
@@ -2625,6 +3075,9 @@ function App() {
         taches={taches}
         ajouterTache={ajouterTache}
         actionsPourTache={actionsPourTache}
+        definirOrdreTache={definirOrdreTache}
+        reinitialiserOrdreTaches={reinitialiserOrdreTaches}
+        viderTaches={viderTaches}
         musiqueActuelle={musiqueAmbiance}
         onOuvrirChoixMusique={() => setChoixMusiqueOuvert(true)}
         onSupprimerMusique={supprimerMusiqueAmbiance}

@@ -1352,7 +1352,27 @@ select option{
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
+.carnet_carte_ajout{
+  border: none;
+  background: #e2472a;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(226, 71, 42, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
 .todo_btn_ajouter:hover{
+  background: #b8371d;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(226, 71, 42, 0.35);
+}
+
+.carnet_carte_ajout:hover{
   background: #b8371d;
   transform: translateY(-1px);
   box-shadow: 0 10px 18px rgba(226, 71, 42, 0.35);
@@ -2481,4 +2501,561 @@ select option{
   .prereglage_carte_nom{
     font-size: 11px;
   }
+  .session_confirm_fenetre,
+  .session_historique_fenetre{
+    width: 100%;
+  }
+  .session_titre_input{
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+.salon_carte_btn_rejoindre{
+  margin-top: 6px;
+  border: none;
+  background: #4c4ce0;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.salon_carte_btn_rejoindre:hover{
+  background: #3939b8;
+  transform: translateY(-1px);
+}
+.carnets_section{
+    margin:20px 0;
+}
+
+.carnets_titre{
+    margin-bottom:12px;
+    font-size:1rem;
+    font-weight:600;
+}
+
+.carnets_liste{
+    display:flex;
+    gap:12px;
+    overflow-x:auto;
+    padding-bottom:8px;
+    scrollbar-width:none;
+}
+
+.carnets_liste::-webkit-scrollbar{
+    display:none;
+}
+
+.carnet{
+    min-width:120px;
+    height:35px;
+
+    border:none;
+    border-radius:16px;
+
+    cursor:pointer;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+
+    flex-shrink:0;
+
+    transition:.25s;
+}
+
+.carnet:hover{
+    transform:translateY(-3px);
+}
+
+.carte_ajout{
+    font-size:2rem;
+    font-weight:bold;
+}
+
+.carte_ajout span{
+    margin-top:6px;
+    font-size:.8rem;
+}
+
+.carnet_historique{
+    font-weight:600;
+}
+
+.todo_actions{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    margin-top:20px;
+    margin-bottom:20px;
+}
+
+.todo_recherche{
+    flex:1;
+
+    height:46px;
+
+    padding:0 18px;
+
+    border-radius:14px;
+    border:none;
+
+    font-size:15px;
+
+    outline:none;
+
+    transition:.2s;
+}
+
+.todo_recherche:focus{
+    transform:scale(1.01);
+}
+
+.todo_btn_ajouter{
+    flex-shrink:0;
+}
+
+/* ======================================================================
+   Sessions (titre de session + boîte de confirmation + historique)
+   ====================================================================== */
+
+/* Bloc englobant la barre de session (titre, actions) et la liste d'actions secondaires */
+.session_section{
+  margin: 20px 0;
+}
+
+/* Intitulé "Session :#0001" */
+.session_titre{
+  margin-bottom: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2430;
+  white-space: nowrap;
+}
+
+/* Intitulé "vos notes" */
+.session_soustitre{
+  margin-bottom: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2430;
+}
+
+/* Rangée des actions secondaires (créer un ordre / consulter les anciennes notes) */
+.session_liste_actions{
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+}
+
+.session_liste_actions::-webkit-scrollbar{
+  display: none;
+}
+
+.session_action_btn{
+  min-width: 120px;
+  height: 35px;
+  flex-shrink: 0;
+  border: 1px solid rgba(31, 36, 48, 0.15);
+  background: #fff;
+  color: #6b7280;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s ease, border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.session_action_btn:hover{
+  transform: translateY(-3px);
+  border-color: #e2472a;
+  color: #b8371d;
+  background: rgba(226, 71, 42, 0.06);
+}
+
+/* État actif du bouton "organiser" (mode organisation en cours) */
+.session_action_btn--actif{
+  background: #e2472a;
+  border-color: #e2472a;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(226, 71, 42, 0.3);
+}
+
+.session_action_btn--actif:hover{
+  background: #b8371d;
+  border-color: #b8371d;
+  color: #fff;
+  transform: translateY(-3px);
+}
+
+/* Message gris affiché à côté du bouton "organiser" quand le mode est actif */
+.session_organiser_message{
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Conteneur d'une note dans la grille, pendant/hors mode organisation */
+.session_organiser_case{
+  position: relative;
+}
+
+/* En mode actif, la carte se comporte comme un bouton de sélection plutôt
+   qu'une zone éditable */
+.session_organiser_case--actif{
+  cursor: pointer;
+}
+
+.session_organiser_case--actif .todo_carte{
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.session_organiser_case--actif:hover .todo_carte{
+  border-color: rgba(226, 71, 42, 0.35);
+  box-shadow: var(--shadow-float);
+}
+
+/* Note choisie en premier lors d'une interversion : mise en évidence tant
+   que la seconde note n'a pas été cliquée */
+.session_organiser_case--selection .todo_carte{
+  border-color: #e2472a;
+  box-shadow: 0 0 0 2px rgba(226, 71, 42, 0.35);
+}
+
+/* Badge numéroté affiché en haut à gauche de la carte lorsqu'un ordre est attribué */
+.session_ordre_badge{
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #1f2430;
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-soft);
+}
+
+/* Bouton "+ajouter une note" : crée directement une note, même famille que .todo_btn_ajouter */
+.note_btn_ajouter{
+  border: none;
+  background: #e2472a;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(226, 71, 42, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.note_btn_ajouter:hover{
+  background: #b8371d;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(226, 71, 42, 0.35);
+}
+
+/* Champ de saisie du titre, placé juste après "Session :#0001" */
+.session_titre_input{
+  flex: 1;
+  min-width: 160px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 36, 48, 0.15);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  background: #fff;
+  color: #1f2430;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.session_titre_input::placeholder{
+  color: #9aa0ab;
+}
+
+.session_titre_input:focus{
+  outline: none;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px #e2472a;
+}
+
+/* --- Boîte de dialogue : que faire de la session en cours --- */
+.session_confirm_fond{
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  background: rgba(31, 36, 48, 0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.session_confirm_fenetre{
+  width: 400px;
+  max-width: 100%;
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
+  padding: 32px 28px 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.session_confirm_titre{
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2430;
+}
+
+.session_confirm_texte{
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.session_confirm_actions{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+  width: 100%;
+}
+
+.session_confirm_btn{
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 11px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Enregistrer : action principale, même ton que les boutons primaires de l'app */
+.session_confirm_btn--enregistrer{
+  background: #e2472a;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(226, 71, 42, 0.3);
+}
+
+.session_confirm_btn--enregistrer:hover{
+  background: #b8371d;
+  transform: translateY(-1px);
+}
+
+/* Supprimer : action destructive, en contour pour bien la distinguer d'"Enregistrer" */
+.session_confirm_btn--supprimer{
+  background: transparent;
+  border: 1px solid rgba(226, 71, 42, 0.4);
+  color: #b8371d;
+}
+
+.session_confirm_btn--supprimer:hover{
+  background: #e2472a;
+  color: #fff;
+  border-color: #e2472a;
+}
+
+/* Annuler : action neutre, cohérente avec .btn_secondaire */
+.session_confirm_btn--annuler{
+  background: transparent;
+  border: 2px solid #e4e6ea;
+  color: #6b7280;
+}
+
+.session_confirm_btn--annuler:hover{
+  border-color: #6b7280;
+  color: #1f2430;
+  background: #f5f6f8;
+}
+
+/* --- Fenêtre "Consulter les anciennes notes" --- */
+.session_historique_fond{
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  background: rgba(31, 36, 48, 0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.session_historique_fenetre{
+  width: 640px;
+  max-width: 100%;
+  max-height: 82vh;
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
+  padding: 30px 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.session_historique_entete{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.session_historique_titre{
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2430;
+}
+
+.session_historique_fermer{
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: #f5f6f8;
+  color: #6b7280;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.session_historique_fermer:hover{
+  background: rgba(226, 71, 42, 0.12);
+  color: #b8371d;
+}
+
+.session_recherche_input{
+  flex-shrink: 0;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(31, 36, 48, 0.15);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  background: #fff;
+  color: #1f2430;
+}
+
+.session_recherche_input:focus{
+  outline: 2px solid #e2472a;
+  border-color: transparent;
+}
+
+.session_historique_liste{
+  flex: 1;
+  overflow-y: auto;
+}
+
+.session_ligne_vide{
+  margin: 8px 2px;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.sessions_tableau{
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Inter', sans-serif;
+}
+
+.sessions_tableau thead th{
+  position: sticky;
+  top: 0;
+  background: #fff;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 0 10px 10px;
+  border-bottom: 1px solid rgba(31, 36, 48, 0.1);
+}
+
+.sessions_tableau tbody td{
+  padding: 12px 10px;
+  font-size: 13px;
+  color: #1f2430;
+  border-bottom: 1px solid rgba(31, 36, 48, 0.06);
+}
+
+.sessions_tableau tbody tr{
+  transition: background 0.15s ease;
+}
+
+.sessions_tableau tbody tr:hover{
+  background: rgba(226, 71, 42, 0.05);
+}
+
+.session_titre_cellule{
+  font-weight: 600;
+}
+
+.session_numero_badge{
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b8371d;
+  background: rgba(226, 71, 42, 0.1);
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.session_notes_badge{
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #2f6f6b;
+  background: rgba(47, 111, 107, 0.12);
+  padding: 3px 9px;
+  border-radius: 999px;
 }
