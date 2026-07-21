@@ -16,6 +16,7 @@ const CLE_STOCKAGE_REGLAGES = 'pomodoro_reglages';
 const CLE_STOCKAGE_TACHES = 'pomodoro_taches';
 const CLE_STOCKAGE_MUSIQUE = 'pomodoro_musique_ambiance';
 const CLE_STOCKAGE_PREREGLAGES = 'pomodoro_prereglages';
+const CLE_STOCKAGE_POINTS_POMODORO = 'pomodoro_points_tracker';
 
 // Position par défaut du lecteur de musique flottant, calculée en fonction
 // de la taille de la fenêtre pour rester visible sur la plupart des écrans
@@ -705,7 +706,36 @@ function sauvegarderSessionsDansStockage(sessions) {
 // Composant principal
 // ==========================================================================
 
-function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre }) {
+// --- Pomodoro Tracker : barre de points représentant les séances de
+// travail terminées (10 emplacements max). Survol d'un point rempli =
+// tooltip affichant la durée de la séance correspondante.
+function PomodoroTracker ({ points }) {
+  const emplacements = Array.from({ length: 10 });
+
+  return (
+    <div className="pomodoro_tracker">
+      <div className="pomodoro_tracker_barre">
+        {emplacements.map((_, index) => {
+          const point = points[index];
+          return (
+            <div key={index} className="pomodoro_tracker_slot">
+              {point && (
+                <>
+                  <span className="pomodoro_tracker_point"></span>
+                  <span className="pomodoro_tracker_tooltip">
+                    Séance de {point.duree} min
+                  </span>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre, pointsPomodoro }) {
   const [idAgrandie, setIdAgrandie] = useState(null);
 
   // Sessions déjà sauvegardées (chargées une seule fois au montage)
@@ -718,6 +748,10 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     genererNumeroSession(chargerSessionsSauvegardees())
   );
   const [titreSession, setTitreSession] = useState('');
+
+  // Date de création de la session en cours, utilisée pour le compteur de
+  // progression et affichée à côté du score (voir session_progression_ligne)
+  const [dateCreationSession, setDateCreationSession] = useState(() => new Date().toISOString());
 
   // Boîte de dialogue "que faire de la session en cours ?"
   const [confirmationOuverte, setConfirmationOuverte] = useState(false);
@@ -741,6 +775,11 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     .slice()
     .sort((a, b) => (a.ordre ?? Infinity) - (b.ordre ?? Infinity));
   const tacheAgrandie = taches.find((t) => t.id === idAgrandie) || null;
+
+  // Score de progression de la session en cours : toutes les notes comptent
+  // (épinglées ou non), une tâche "terminée" compte comme accomplie
+  const tachesTotal = taches.length;
+  const tachesTerminees = taches.filter((t) => t.terminee).length;
 
   // Plus grand numéro d'ordre déjà attribué (0 si aucune note n'en a un)
   const calculerProchainNumero = () => {
@@ -852,8 +891,11 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
       numero: numeroSession,
       date: maintenant.toLocaleDateString(),
       heure: maintenant.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateCreation: dateCreationSession,
       notes: taches,
     };
+
+    
 
     const sessionsMisesAJour = [...sessionsSauvegardees, sessionArchivee];
     setSessionsSauvegardees(sessionsMisesAJour);
@@ -879,7 +921,28 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     }
     setTitreSession('');
     setNumeroSession(genererNumeroSession(sessionsActuelles));
+    setDateCreationSession(new Date().toISOString());
     setConfirmationOuverte(false);
+  };
+
+    // Enregistre la session actuelle sans créer une nouvelle session
+  const enregistrerSession = () => {
+    const maintenant = new Date();
+
+    const sessionArchivee = {
+      id: `session_${Date.now()}`,
+      titre: titreSession.trim() || `Session ${numeroSession}`,
+      numero: numeroSession,
+      date: maintenant.toLocaleDateString(),
+      heure: maintenant.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateCreation: dateCreationSession,
+      notes: taches,
+    };
+
+    const sessionsMisesAJour = [...sessionsSauvegardees, sessionArchivee];
+
+    setSessionsSauvegardees(sessionsMisesAJour);
+    sauvegarderSessionsDansStockage(sessionsMisesAJour);
   };
 
   // Filtre les sessions sauvegardées selon la barre de recherche (titre ou numéro)
@@ -911,35 +974,79 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
 
   <div className="session_section">
 
-   <div className="todo_actions">
+ {/* Barre supérieure */}
+<div className="todo_actions_top">
 
- <h3 className="session_titre"> Session :#{numeroSession}</h3>
+  <button
+    type="button"
+    className="todo_btn_ajouter"
+    onClick={demarrerNouvelleSession}
+  >
+    +nouvelle session
+  </button>
 
- <input
-   type="text"
-   className="session_titre_input"
-   placeholder="Titre de la session"
-   value={titreSession}
-   onChange={(e) => setTitreSession(e.target.value)}
- />
-
-   <button type="button" className="todo_btn_ajouter" onClick={demarrerNouvelleSession}> +nouvelle sesssion </button>
-   <button type="button" className="note_btn_ajouter" onClick={ajouterTache}><span> +ajouter une note </span>
-      </button>
+  <button
+    className="session_action_btn"
+    onClick={() => setRechercheOuverte(true)}
+  >
+    Consulter les anciennes sessions
+  </button>
 
 </div>
-    <h3 className="session_soustitre">
-      vos notes
+
+{/* Barre de session */}
+<div className="todo_actions">
+
+<div className="session_infos">
+
+  <div className="session_titre_ligne">
+    <h3 className="session_titre">
+      Session : #{numeroSession}
     </h3>
 
+    <button
+      type="button"
+      className="session_action_btn"
+      onClick={enregistrerSession}
+    >
+      Enregistrer la session
+    </button>
+
+    <input
+      type="text"
+      className="session_titre_input"
+      placeholder="Titre de la session"
+      value={titreSession}
+      onChange={(e) => setTitreSession(e.target.value)}
+    />
+  </div>
+
+  <span className="session_progression_score">
+    <strong>{tachesTerminees}</strong> / {tachesTotal} tâches accomplies
+  </span>
+
+</div>
+
+</div>
     <div className="session_liste_actions">
       <button
-        type="button"
-        className={`session_action_btn${modeOrganisationActif ? ' session_action_btn--actif' : ''}`}
-        onClick={basculerModeOrganisation}
-      >
-        organiser
-      </button>
+    type="button"
+    className="note_btn_ajouter"
+    onClick={ajouterTache}
+  >
+    <span>+Ajouter une note</span>
+  </button>
+
+  <button
+    type="button"
+    className={`session_action_btn${modeOrganisationActif ? ' session_action_btn--actif' : ''}`}
+    onClick={basculerModeOrganisation}
+  >
+    Organiser
+  </button>
+
+  <PomodoroTracker points={pointsPomodoro || []} />
+
       {modeOrganisationActif && (
         <>
           <span className="session_organiser_message">
@@ -955,7 +1062,7 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
           </button>
         </>
       )}
-      <button className="session_action_btn" onClick={() => setRechercheOuverte(true)}> consulter les anciennes notes</button>
+
     </div>
   </div>
 
@@ -1098,6 +1205,7 @@ function FenetreAnciennesSessions({ sessions, recherche, onChangerRecherche, fer
                   <th>Numéro</th>
                   <th>Date</th>
                   <th>Heure</th>
+                  <th>Progression</th>
                   <th>Nombre de notes</th>
                 </tr>
               </thead>
@@ -1110,6 +1218,11 @@ function FenetreAnciennesSessions({ sessions, recherche, onChangerRecherche, fer
                     </td>
                     <td>{s.date}</td>
                     <td>{s.heure}</td>
+                    <td>
+                      <span className="session_progression_badge">
+                        {s.notes.filter((n) => n.terminee).length} / {s.notes.length}
+                      </span>
+                    </td>
                     <td>
                       <span className="session_notes_badge">{s.notes.length}</span>
                     </td>
@@ -2400,6 +2513,7 @@ function BlocDeux ({
   definirOrdreTache,
   reinitialiserOrdreTaches,
   viderTaches,
+  pointsPomodoro,
   musiqueActuelle,
   onOuvrirChoixMusique,
   onSupprimerMusique,
@@ -2460,6 +2574,7 @@ function BlocDeux ({
               definirOrdreTache={definirOrdreTache}
               reinitialiserOrdre={reinitialiserOrdreTaches}
               viderTaches={viderTaches}
+              pointsPomodoro={pointsPomodoro}
             />
           )}
           {vueActive === 2 && (
@@ -2524,6 +2639,29 @@ function App() {
   const [enMarche, setEnMarche] = useState(false);
   const [profilOuvert, setProfilOuvert] = useState(false);
   const [distanceTotale, setDistanceTotale] = useState(0);
+  // Repère l'horodatage du dernier ajout de session comptabilisé, afin
+  // d'ignorer un éventuel second déclenchement rapproché du même événement
+  // de fin de session (voir ajouterDistanceSession ci-dessous).
+  const dernierAjoutSessionRef = useRef(0);
+
+  // --- Pomodoro Tracker : historique des séances de travail terminées
+  // (jusqu'à 10 points, chacun représentant une séance Pomodoro accomplie) ---
+  const [pointsPomodoro, setPointsPomodoro] = useState(() => {
+    try {
+      const sauvegarde = localStorage.getItem(CLE_STOCKAGE_POINTS_POMODORO);
+      return sauvegarde ? JSON.parse(sauvegarde) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLE_STOCKAGE_POINTS_POMODORO, JSON.stringify(pointsPomodoro));
+    } catch {
+      // Stockage indisponible : on ignore silencieusement
+    }
+  }, [pointsPomodoro]);
 
   // --- États : personnalisation de l'arrière-plan ---
   const [couleurFondInput, setCouleurFondInput] = useState('');
@@ -2545,7 +2683,26 @@ function App() {
   });
 
   const ajouterDistanceSession = (metres) => {
+    const maintenant = Date.now();
+
+    // Protection contre un double déclenchement rapproché de la même fin de
+    // session (ex : re-render en cascade juste après la fin du chrono), qui
+    // ajouterait deux fois la distance / un point en trop dans le tracker
+    // pour une seule et même séance réellement terminée.
+    if (maintenant - dernierAjoutSessionRef.current < 1000) return;
+    dernierAjoutSessionRef.current = maintenant;
+
     setDistanceTotale((prev) => prev + metres);
+
+    // Chaque séance de travail terminée ajoute un point au Pomodoro Tracker
+    // (durée de la séance = réglage courant en minutes), limité à 10 points
+    setPointsPomodoro((prev) => {
+      const nouveauPoint = {
+        id: `point_${maintenant}_${Math.floor(Math.random() * 100000)}`,
+        duree: reglages.dureeTravail,
+      };
+      return [...prev, nouveauPoint].slice(-10);
+    });
   };
 
   // --- Tâches / Notes (liste + notes épinglées sur le fond principal) ---
@@ -2762,6 +2919,7 @@ function App() {
   // nouvelle session, qu'elle soit enregistrée ou supprimée au préalable).
   const viderTaches = () => {
     setTaches([]);
+    setPointsPomodoro([]);
   };
 
   // Définit (ou remplace) le numéro d'ordre d'une tâche, utilisé par le
@@ -3078,6 +3236,7 @@ function App() {
         definirOrdreTache={definirOrdreTache}
         reinitialiserOrdreTaches={reinitialiserOrdreTaches}
         viderTaches={viderTaches}
+        pointsPomodoro={pointsPomodoro}
         musiqueActuelle={musiqueAmbiance}
         onOuvrirChoixMusique={() => setChoixMusiqueOuvert(true)}
         onSupprimerMusique={supprimerMusiqueAmbiance}

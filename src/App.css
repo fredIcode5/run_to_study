@@ -1132,12 +1132,12 @@ select option{
    Agrandi pour être plus visible. Pas d'animation CSS ajoutée :
    le GIF s'anime nativement image par image. */
 .coureur_defilant{
-  width: 130px;
-  height: 70px;
+  width: 100px;
+  height: 50px;
   object-fit: contain;
   display: block;
   margin-left: -520px;
-  margin-bottom: 45px;;
+  margin-bottom: 28px;;
   transform: scale(3);
 }
 
@@ -2511,6 +2511,13 @@ select option{
   }
 }
 
+.session_titre_ligne {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
 .salon_carte_btn_rejoindre{
   margin-top: 6px;
   border: none;
@@ -2633,11 +2640,15 @@ select option{
 
 /* Intitulé "Session :#0001" */
 .session_titre{
-  margin-bottom: 12px;
+  margin: 0;
+  height: 35px;
+  display: flex;
+  align-items: center;
   font-size: 1rem;
   font-weight: 600;
   color: #1f2430;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Intitulé "vos notes" */
@@ -2651,6 +2662,8 @@ select option{
 /* Rangée des actions secondaires (créer un ordre / consulter les anciennes notes) */
 .session_liste_actions{
   display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 12px;
   overflow-x: auto;
   padding-bottom: 8px;
@@ -2766,11 +2779,17 @@ select option{
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 600;
-  padding: 10px 16px;
+  height: 35px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
   cursor: pointer;
   box-shadow: 0 6px 14px rgba(226, 71, 42, 0.3);
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .note_btn_ajouter:hover{
@@ -2781,16 +2800,19 @@ select option{
 
 /* Champ de saisie du titre, placé juste après "Session :#0001" */
 .session_titre_input{
-  flex: 1;
+  width: 220px;
   min-width: 160px;
-  padding: 10px 16px;
-  border-radius: 999px;
+  height: 35px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  border-radius: 16px;
   border: 1px solid rgba(31, 36, 48, 0.15);
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 500;
   background: #fff;
   color: #1f2430;
+  flex-shrink: 0;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -3058,4 +3080,161 @@ select option{
   background: rgba(47, 111, 107, 0.12);
   padding: 3px 9px;
   border-radius: 999px;
+}
+
+
+
+
+
+/* ======================================================================
+   Compteur de progression (tâches accomplies / totales) + date de
+   création de la session, affichés sous la barre numéro/titre/boutons
+   ====================================================================== */
+.session_progression_ligne{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  padding: 10px 14px;
+  background: rgba(226, 71, 42, 0.08);
+  border-radius: 12px;
+}
+
+.session_progression_score{
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2430;
+}
+
+.session_progression_score strong{
+  color: #b8371d;
+  font-size: 15px;
+}
+
+.session_progression_date{
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+/* Badge de progression réutilisé dans l'historique des sessions passées */
+.session_progression_badge{
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b8371d;
+  background: rgba(226, 71, 42, 0.1);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+@media (max-width: 720px){
+  .session_progression_ligne{
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.todo_actions_top{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:15px;
+    flex-wrap:wrap;
+}
+
+.todo_actions{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+}
+
+
+/* ======================================================================
+   Pomodoro Tracker : barre de points représentant les séances terminées
+   ====================================================================== */
+.pomodoro_tracker{
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  height: 35px;
+  flex-shrink: 0;
+}
+
+.pomodoro_tracker_titre{
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.pomodoro_tracker_barre{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 35px;
+  padding: 0 12px;
+  background: #fff;
+  border: 1px solid rgba(31, 36, 48, 0.15);
+  border-radius: 16px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.pomodoro_tracker_slot{
+  position: relative;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(31, 36, 48, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pomodoro_tracker_point{
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #e2472a;
+  display: block;
+}
+
+.pomodoro_tracker_tooltip{
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2430;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+}
+
+.pomodoro_tracker_slot:hover .pomodoro_tracker_tooltip{
+  opacity: 1;
+}
+
+@media (max-width: 720px){
+  .pomodoro_tracker_barre{
+    padding: 0 8px;
+    gap: 6px;
+  }
 }
