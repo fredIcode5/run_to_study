@@ -17,6 +17,7 @@ const CLE_STOCKAGE_TACHES = 'pomodoro_taches';
 const CLE_STOCKAGE_MUSIQUE = 'pomodoro_musique_ambiance';
 const CLE_STOCKAGE_PREREGLAGES = 'pomodoro_prereglages';
 const CLE_STOCKAGE_POINTS_POMODORO = 'pomodoro_points_tracker';
+const CLE_STOCKAGE_HISTORIQUE_JOURS = 'pomodoro_historique_jours';
 
 // Position par défaut du lecteur de musique flottant, calculée en fonction
 // de la taille de la fenêtre pour rester visible sur la plupart des écrans
@@ -26,6 +27,15 @@ function positionParDefautLecteur () {
     x: 24,
     y: Math.max(100, window.innerHeight - 320),
   };
+}
+
+// Formate une date en "aaaa-mm-jj" (jour ISO local, sans l'heure), utilisée
+// pour indexer les jours dans l'historique Pomodoro (heatmap du profil)
+function formaterJourIso (date) {
+  const annee = date.getFullYear();
+  const mois = String(date.getMonth() + 1).padStart(2, '0');
+  const jour = String(date.getDate()).padStart(2, '0');
+  return `${annee}-${mois}-${jour}`;
 }
 
 // Formate une date ISO en "jj/mm/aaaa hh:mm" (locale FR), utilisée dans
@@ -43,16 +53,109 @@ function formaterDateNote (dateIso) {
 }
 
 
-function Navbar(){
+function Navbar({ onAccueil, onCourse, onConnexion }){
   return(
     <>
     <div className="navbar">
-    <button>home</button>
-    <button>page</button>
-    <button>stats</button>
-    <button>compte</button>
+    <button onClick={onAccueil}>home</button>
+    <button onClick={onCourse}>Course</button>
+    <button onClick={onConnexion}>Se connecter</button>
     </div>
     </>
+  );
+}
+
+
+// --- Page d'accueil : vitrine ultra simple avant d'entrer dans l'appli.
+// Le fond (accueil_fond) sert de placeholder pour l'image vitrine à venir.
+function Accueil ({ onCommencer }) {
+  return (
+    <div className="accueil">
+      <div className="accueil_fond">
+        <button
+          type="button"
+          className="btn_primaire accueil_btn_commencer"
+          onClick={onCommencer}
+        >
+          Commencer à travailler
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+// --- Fenêtre "Se connecter" : bascule entre le formulaire de connexion et
+// celui de création de compte. Purement visuel pour l'instant : aucune
+// valeur n'est stockée ni envoyée nulle part.
+function ModalConnexion ({ ouvert, fermer }) {
+  const [vue, setVue] = useState('connexion'); // 'connexion' | 'creation'
+
+  // Revient toujours sur le formulaire de connexion à chaque réouverture
+  useEffect(() => {
+    if (ouvert) setVue('connexion');
+  }, [ouvert]);
+
+  if (!ouvert) return null;
+
+  return (
+    <div className="modal_fond" onClick={fermer}>
+      <div className="modal_fenetre" onClick={(e) => e.stopPropagation()}>
+        <button className="modal_fermer" onClick={fermer} aria-label="Fermer">×</button>
+
+        <div className="modal_contenu connexion_contenu">
+          {vue === 'connexion' ? (
+            <>
+              <h3 className="connexion_titre">Se connecter</h3>
+
+              <input type="text" className="connexion_input" placeholder="Identifiant" />
+              <input type="password" className="connexion_input" placeholder="Mot de passe" />
+
+              <hr className="connexion_separateur" />
+
+              <p className="connexion_texte_separateur">Se connecter avec</p>
+
+              <button type="button" className="btn_secondaire connexion_btn_google">
+                Se connecter avec Google
+              </button>
+
+              <p className="connexion_texte_info">Vous n'avez pas de compte ?</p>
+
+              <button
+                type="button"
+                className="btn_primaire connexion_btn_creer"
+                onClick={() => setVue('creation')}
+              >
+                Créer un compte
+              </button>
+            </>
+          ) : (
+            <>
+              <h3 className="connexion_titre">Créer un compte</h3>
+
+              <input type="email" className="connexion_input" placeholder="E-mail" />
+              <input type="text" className="connexion_input" placeholder="Pseudo" />
+              <input type="date" className="connexion_input" placeholder="Date de naissance" />
+              <input type="password" className="connexion_input" placeholder="Mot de passe" />
+
+              <label className="connexion_case">
+                <input type="checkbox" />
+                J'accepte le règlement
+              </label>
+
+              <label className="connexion_case">
+                <input type="checkbox" />
+                J'accepte les conditions d'utilisation
+              </label>
+
+              <button type="button" className="btn_primaire connexion_btn_creer">
+                Créer un compte
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -89,20 +192,154 @@ function PanneauJoueur ({ pseudo, niveau, distance, position, ouvrirProfil }) {
 }
 
 
-function ModalProfil ({ ouvert, fermer, distanceTotale }) {
+// --- Modale de profil : 3 onglets navigables (Profil / Stats / Social).
+// L'onglet actif est un simple état React ; aucun rechargement de page,
+// aucune donnée envoyée nulle part pour Stats/Social (structure prête pour
+// être complétée plus tard).
+function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPomodoro }) {
+  const [ongletActif, setOngletActif] = useState('profil');
+
+  // Revient toujours sur l'onglet "Profil" à chaque réouverture de la modale
+  useEffect(() => {
+    if (ouvert) setOngletActif('profil');
+  }, [ouvert]);
+
   if (!ouvert) return null;
+
+  const ONGLETS_PROFIL = [
+    { id: 'profil', label: 'Profil' },
+    { id: 'stats', label: 'Stats' },
+    { id: 'social', label: 'Social' },
+  ];
 
   return(
     <div className="modal_fond" onClick={fermer}>
-      <div className="modal_fenetre" onClick={(e) => e.stopPropagation()}>
+      <div className="modal_fenetre profil_modal_fenetre" onClick={(e) => e.stopPropagation()}>
         <button className="modal_fermer" onClick={fermer} aria-label="Fermer">×</button>
-        <div className="modal_contenu">
-          <p>Voici votre profil</p>
-          <p className="modal_distance_totale">
-            Distance totale parcourue : <strong>{distanceTotale} m</strong>
-          </p>
+
+        <div className="profil_onglets" role="tablist">
+          {ONGLETS_PROFIL.map((onglet) => (
+            <button
+              key={onglet.id}
+              type="button"
+              role="tab"
+              aria-selected={ongletActif === onglet.id}
+              className={`profil_onglet_btn ${ongletActif === onglet.id ? 'profil_onglet_btn--actif' : ''}`}
+              onClick={() => setOngletActif(onglet.id)}
+            >
+              {onglet.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="profil_onglet_contenu">
+          {ongletActif === 'profil' && (
+            <OngletProfil
+              pseudo={pseudo}
+              distanceTotale={distanceTotale}
+              historiqueJoursPomodoro={historiqueJoursPomodoro}
+            />
+          )}
+          {ongletActif === 'stats' && <OngletStats />}
+          {ongletActif === 'social' && <OngletSocial />}
         </div>
       </div>
+    </div>
+  );
+}
+
+// --- Onglet "Profil" : identité, médailles (emplacement réservé) et
+// heatmap mensuelle des jours avec au moins un Pomodoro terminé.
+function OngletProfil ({ pseudo, distanceTotale, historiqueJoursPomodoro }) {
+  return (
+    <div className="profil_onglet_panneau profil_onglet_panneau--profil">
+      <div className="profil_entete">
+        <div className="profil_photo">
+          <span className="profil_photo_icone">👤</span>
+        </div>
+        <span className="profil_pseudo">{pseudo}</span>
+      </div>
+
+      <p className="modal_distance_totale">
+        Distance totale parcourue : <strong>{distanceTotale} m</strong>
+      </p>
+
+      <div className="profil_section">
+        <h4 className="profil_section_titre">Médailles</h4>
+        <div className="profil_medailles_grille">
+          {/* Emplacement visuel réservé : aucune médaille pour l'instant */}
+        </div>
+      </div>
+
+      <div className="profil_section">
+        <h4 className="profil_section_titre">Activité Pomodoro</h4>
+        <HeatmapPomodoro historique={historiqueJoursPomodoro} />
+      </div>
+    </div>
+  );
+}
+
+// --- Heatmap mensuelle façon GitHub : un carré par jour du mois en cours,
+// actif dès qu'au moins un Pomodoro a été terminé ce jour-là.
+function HeatmapPomodoro ({ historique }) {
+  const joursActifs = new Set(historique || []);
+
+  const maintenant = new Date();
+  const annee = maintenant.getFullYear();
+  const mois = maintenant.getMonth(); // 0-indexé
+  const nombreJours = new Date(annee, mois + 1, 0).getDate();
+  const jours = Array.from({ length: nombreJours }, (_, i) => i + 1);
+  const nomMois = maintenant.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+
+  return (
+    <div className="heatmap_pomodoro">
+      <p className="heatmap_pomodoro_mois">{nomMois}</p>
+      <div className="heatmap_pomodoro_grille">
+        {jours.map((jour) => {
+          const iso = formaterJourIso(new Date(annee, mois, jour));
+          const actif = joursActifs.has(iso);
+          return (
+            <span
+              key={iso}
+              className={`heatmap_pomodoro_case ${actif ? 'heatmap_pomodoro_case--actif' : ''}`}
+              title={`${jour} ${nomMois}${actif ? ' — au moins un Pomodoro terminé' : ''}`}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// --- Onglet "Stats" : structure minimale pour l'instant, pensée pour
+// accueillir plus tard des sections (temps de concentration, séries de
+// Pomodoro, progression, records...) sans revoir l'organisation générale.
+function OngletStats () {
+  return (
+    <div className="profil_onglet_panneau profil_onglet_panneau--stats">
+      <h4 className="profil_section_titre">Stats</h4>
+      {/* Emplacements réservés pour de futures sections statistiques, ex :
+          <div className="profil_section">...temps de concentration...</div>
+          <div className="profil_section">...séries de Pomodoro...</div>
+          <div className="profil_section">...progression...</div>
+          <div className="profil_section">...records...</div> */}
+    </div>
+  );
+}
+
+// --- Onglet "Social" : structure minimale pour l'instant, pensée pour
+// accueillir plus tard la liste d'amis, les demandes, la recherche
+// d'utilisateurs, l'activité des amis et les classements/défis.
+function OngletSocial () {
+  return (
+    <div className="profil_onglet_panneau profil_onglet_panneau--social">
+      <h4 className="profil_section_titre">Liste d'amis</h4>
+      {/* Emplacements réservés pour de futures sections sociales, ex :
+          <div className="profil_section" data-section="liste-amis">...</div>
+          <div className="profil_section" data-section="demandes-amis">...</div>
+          <div className="profil_section" data-section="recherche-utilisateurs">...</div>
+          <div className="profil_section" data-section="activite-amis">...</div>
+          <div className="profil_section" data-section="classements">...</div> */}
     </div>
   );
 }
@@ -112,7 +349,7 @@ function ModalProfil ({ ouvert, fermer, distanceTotale }) {
 // pilotées par les réglages (props dureeTravailMinutes / dureePauseMinutes).
 // Les couleurs (chrono, boutons) sont appliquées globalement via des
 // variables CSS (voir App > useEffect couleurs), pas via des props ici.
-function Chrono ({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes, dureePauseMinutes }) {
+function Chrono ({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes, dureePauseMinutes, modeLecture }) {
   // 'travail' = session Pomodoro classique, 'pause' = pause qui suit
   const [phase, setPhase] = useState('travail');
 
@@ -122,6 +359,25 @@ function Chrono ({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes
 
   const [secondesRestantes, setSecondesRestantes] = useState(dureeActuelle);
   const intervalRef = useRef(null);
+
+  // Avertissement affiché quand on manipule le chrono pendant qu'on
+  // consulte une ancienne session (onglet Notes en lecture seule) :
+  // le temps de travail ne sera pas comptabilisé dans cette session-là.
+  const [avertissementLectureSeule, setAvertissementLectureSeule] = useState(false);
+  const timeoutAvertissementRef = useRef(null);
+
+  const signalerLectureSeule = () => {
+    if (!modeLecture) return;
+    setAvertissementLectureSeule(true);
+    clearTimeout(timeoutAvertissementRef.current);
+    timeoutAvertissementRef.current = setTimeout(() => {
+      setAvertissementLectureSeule(false);
+    }, 3000);
+  };
+
+  useEffect(() => {
+    return () => clearTimeout(timeoutAvertissementRef.current);
+  }, []);
 
   // Application "temps réel" des réglages de durée :
   // si le chrono est à l'arrêt, toute modification de durée dans les
@@ -184,8 +440,19 @@ function Chrono ({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes
   };
 
   const basculer = () => {
+    signalerLectureSeule();
     if (enMarche) pause();
     else start();
+  };
+
+  // Passe directement de la pause à une nouvelle session de travail,
+  // sans attendre la fin du décompte. N'a de sens qu'en phase "pause".
+  const sauterPause = () => {
+    if (phase !== 'pause') return;
+    clearInterval(intervalRef.current);
+    setEnMarche(false);
+    setPhase('travail');
+    setSecondesRestantes(dureeTravail);
   };
 
   const libelleBouton = enMarche
@@ -212,8 +479,24 @@ function Chrono ({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes
         <button className="btn_primaire" onClick={basculer} disabled={secondesRestantes === 0}>
           {libelleBouton}
         </button>
-        <button className="btn_secondaire" onClick={reset}>Recommencer</button>
+        <button
+          className="btn_secondaire"
+          onClick={() => { signalerLectureSeule(); reset(); }}
+        >
+          Recommencer
+        </button>
+        {phase === 'pause' && (
+          <button className="btn_secondaire" onClick={sauterPause}>
+            Sauter la pause
+          </button>
+        )}
       </div>
+
+      {avertissementLectureSeule && (
+        <p className="chrono_avertissement_lecture" role="status">
+          Le temps de travail ne sera pas ajouté à la session, vous êtes en lecture seule.
+        </p>
+      )}
 
       <div className="chrono_distance">
         <span className="chrono_distance_valeur">{distanceSession} m</span>
@@ -335,7 +618,7 @@ function TacheZoneTexte ({ className, valeur, onChange, placeholder, autoFocus }
 }
 
 // Une carte = une tâche, éditable directement dans la liste
-function TacheCarte ({ tache, actions, onAgrandir }) {
+function TacheCarte ({ tache, actions, onAgrandir, lectureSeule }) {
   const zoneTexteRef = useRef(null);
 
   // Clique n'importe où dans la carte (hors boutons/inputs déjà gérés) -> focus l'édition
@@ -353,17 +636,10 @@ function TacheCarte ({ tache, actions, onAgrandir }) {
         className="todo_carte_suppr"
         onClick={(e) => { e.stopPropagation(); actions.supprimer(); }}
         aria-label="Supprimer la tâche"
+        disabled={lectureSeule}
       >
-        ×
+        
       </button>
-
-      <TacheBarre
-        tags={tache.tags}
-        onAjouterTag={actions.ajouterTag}
-        onSupprimerTag={actions.supprimerTag}
-        dateEcheance={tache.dateEcheance}
-        onModifierDate={actions.modifierDate}
-      />
 
       <textarea
         ref={zoneTexteRef}
@@ -372,6 +648,7 @@ function TacheCarte ({ tache, actions, onAgrandir }) {
         onChange={(e) => actions.modifierContenu(e.target.value)}
         placeholder="Écris ta tâche..."
         onClick={(e) => e.stopPropagation()}
+        readOnly={lectureSeule}
       />
 
       <div className="todo_carte_actions">
@@ -380,6 +657,7 @@ function TacheCarte ({ tache, actions, onAgrandir }) {
           className="todo_btn_epingler"
           onClick={(e) => { e.stopPropagation(); actions.epingler(); }}
           title="Épingler sur le fond de la page"
+          disabled={lectureSeule}
         >
           📌 Épingler
         </button>
@@ -387,6 +665,7 @@ function TacheCarte ({ tache, actions, onAgrandir }) {
           type="button"
           className={`todo_btn_terminer ${tache.terminee ? 'actif' : ''}`}
           onClick={(e) => { e.stopPropagation(); actions.toggleTerminee(); }}
+          disabled={lectureSeule}
         >
           {tache.terminee ? '✓ Terminé' : 'Terminé'}
         </button>
@@ -417,14 +696,6 @@ function ModalTache ({ tache, actions, fermer }) {
         <button className="modal_fermer" onClick={fermer} aria-label="Fermer">×</button>
 
         <div className="todo_modal_contenu">
-          <TacheBarre
-            tags={tache.tags}
-            onAjouterTag={actions.ajouterTag}
-            onSupprimerTag={actions.supprimerTag}
-            dateEcheance={tache.dateEcheance}
-            onModifierDate={actions.modifierDate}
-          />
-
           <TacheZoneTexte
             className="todo_contenu todo_contenu--modal"
             valeur={tache.contenu}
@@ -591,14 +862,6 @@ function NoteEpinglee ({ tache, actions }) {
     };
   };
 
-  // Date affichée dans l'en-tête : dernière modification si elle existe et
-  // diffère de la création, sinon date de création (repli pour les notes
-  // créées avant l'ajout de ce champ, auquel cas rien n'est affiché)
-  const dateAffichee = tache.dateModification || tache.dateCreation;
-  const estModifiee = Boolean(
-    tache.dateModification && tache.dateCreation && tache.dateModification !== tache.dateCreation
-  );
-
   return (
     <div
       ref={conteneurRef}
@@ -615,15 +878,6 @@ function NoteEpinglee ({ tache, actions }) {
           ⠿⠿
         </span>
 
-        {dateAffichee && (
-          <span
-            className="note_epinglee_date"
-            title={estModifiee ? 'Dernière modification' : 'Création'}
-          >
-            {estModifiee ? '✎ ' : '＋ '}{formaterDateNote(dateAffichee)}
-          </span>
-        )}
-
         <button
           type="button"
           className="note_epinglee_fermer"
@@ -634,23 +888,6 @@ function NoteEpinglee ({ tache, actions }) {
           ✕
         </button>
       </div>
-
-      {(tache.tags.length > 0 || tache.dateEcheance) && (
-        <div className="note_epinglee_barre_lecture">
-          {tache.tags.length > 0 && (
-            <div className="note_epinglee_tags_lecture">
-              {tache.tags.map((tag, i) => (
-                <span key={`${tag}-${i}`} className="note_epinglee_tag_lecture">{tag}</span>
-              ))}
-            </div>
-          )}
-          {tache.dateEcheance && (
-            <span className="note_epinglee_echeance_lecture">
-              Échéance : {tache.dateEcheance}
-            </span>
-          )}
-        </div>
-      )}
 
       <div className="note_epinglee_contenu_lecture">
         {tache.contenu
@@ -735,7 +972,7 @@ function PomodoroTracker ({ points }) {
   );
 }
 
-function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre, pointsPomodoro }) {
+function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre, pointsPomodoro, modeLecture, setModeLecture }) {
   const [idAgrandie, setIdAgrandie] = useState(null);
 
   // Sessions déjà sauvegardées (chargées une seule fois au montage)
@@ -760,6 +997,10 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const [recherche, setRecherche] = useState('');
 
+    // mode_lecture : reçu depuis App (props) afin d'être partagé avec le Chrono
+  const [sessionConsultee, setSessionConsultee] = useState(null);
+
+
   // --- Mode "organiser" : numérotation manuelle de l'ordre des notes ---
   const [modeOrganisationActif, setModeOrganisationActif] = useState(false);
   // Id de la première note sélectionnée lors d'une interversion (2e clic = échange)
@@ -770,11 +1011,19 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
   const idsConnusRef = useRef(new Set(taches.map((t) => t.id)));
 
   // Une note épinglée quitte la liste : elle est déjà visible sur le fond principal
-  const tachesListe = taches
-    .filter((t) => !t.epinglee)
-    .slice()
-    .sort((a, b) => (a.ordre ?? Infinity) - (b.ordre ?? Infinity));
+ const sourceTaches = modeLecture
+  ? (sessionConsultee?.notes || [])
+  : taches;
+
+const tachesListe = sourceTaches
+  .filter((t) => !t.epinglee)
+  .slice()
+  .sort((a, b) => (a.ordre ?? Infinity) - (b.ordre ?? Infinity));
+
+
+
   const tacheAgrandie = taches.find((t) => t.id === idAgrandie) || null;
+
 
   // Score de progression de la session en cours : toutes les notes comptent
   // (épinglées ou non), une tâche "terminée" compte comme accomplie
@@ -923,7 +1172,21 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     setNumeroSession(genererNumeroSession(sessionsActuelles));
     setDateCreationSession(new Date().toISOString());
     setConfirmationOuverte(false);
+
+    // On quitte le mode lecture seule : sans ça, la session vierge reste
+    // masquée derrière les notes (en lecture seule) de l'ancienne session
+    // qu'on était en train de consulter.
+    setModeLecture(false);
+    setSessionConsultee(null);
   };
+
+
+  //consulter les sessions
+      const consulterSession = (session) => {
+      setSessionConsultee(session);
+      setModeLecture(true);
+      setRechercheOuverte(false);
+    };
 
     // Enregistre la session actuelle sans créer une nouvelle session
   const enregistrerSession = () => {
@@ -1004,13 +1267,19 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
       Session : #{numeroSession}
     </h3>
 
-    <button
-      type="button"
-      className="session_action_btn"
-      onClick={enregistrerSession}
-    >
-      Enregistrer la session
-    </button>
+      {modeLecture ? (
+      <div className="session_action_btn">
+        Mode lecture
+      </div>
+    ) : (
+      <button
+        type="button"
+        className="session_action_btn"
+        onClick={enregistrerSession}
+      >
+        Enregistrer la session
+      </button>
+    )}
 
     <input
       type="text"
@@ -1030,10 +1299,11 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
 </div>
     <div className="session_liste_actions">
       <button
-    type="button"
-    className="note_btn_ajouter"
-    onClick={ajouterTache}
-  >
+      type="button"
+      className="note_btn_ajouter"
+      onClick={ajouterTache}
+      disabled={modeLecture}
+    >
     <span>+Ajouter une note</span>
   </button>
 
@@ -1097,6 +1367,7 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
                 tache={tache}
                 actions={actionsPour(tache.id)}
                 onAgrandir={() => setIdAgrandie(tache.id)}
+                lectureSeule={modeLecture}
               />
             </div>
           ))}
@@ -1108,6 +1379,7 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
           tache={tacheAgrandie}
           actions={actionsPour(tacheAgrandie.id)}
           fermer={() => setIdAgrandie(null)}
+          lectureSeule={modeLecture}
         />
       )}
 
@@ -1120,12 +1392,13 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
       )}
 
       {rechercheOuverte && (
-        <FenetreAnciennesSessions
-          sessions={sessionsFiltrees}
-          recherche={recherche}
-          onChangerRecherche={setRecherche}
-          fermer={() => setRechercheOuverte(false)}
-        />
+      <FenetreAnciennesSessions
+      sessions={sessionsFiltrees}
+      recherche={recherche}
+      onChangerRecherche={setRecherche}
+      fermer={() => setRechercheOuverte(false)}
+      onConsulter={consulterSession}
+    />
       )}
     </div>
   );
@@ -1175,7 +1448,7 @@ function DialogueNouvelleSession({ onEnregistrer, onSupprimer, onAnnuler }) {
 // Fenêtre : consulter les anciennes sessions
 // ==========================================================================
 
-function FenetreAnciennesSessions({ sessions, recherche, onChangerRecherche, fermer }) {
+function FenetreAnciennesSessions({ sessions, recherche, onChangerRecherche, fermer, onConsulter }) {
   return (
     <div className="session_historique_fond" onClick={fermer}>
       <div className="session_historique_fenetre" onClick={(e) => e.stopPropagation()}>
@@ -1207,6 +1480,7 @@ function FenetreAnciennesSessions({ sessions, recherche, onChangerRecherche, fer
                   <th>Heure</th>
                   <th>Progression</th>
                   <th>Nombre de notes</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -1226,6 +1500,9 @@ function FenetreAnciennesSessions({ sessions, recherche, onChangerRecherche, fer
                     <td>
                       <span className="session_notes_badge">{s.notes.length}</span>
                     </td>
+                    <td>
+                    <button type="button" className="session_action_btn" onClick={() => onConsulter(s)} >Consulter </button>
+                  </td>
                   </tr>
                 ))}
               </tbody>
@@ -2514,6 +2791,8 @@ function BlocDeux ({
   reinitialiserOrdreTaches,
   viderTaches,
   pointsPomodoro,
+  modeLectureSession,
+  setModeLectureSession,
   musiqueActuelle,
   onOuvrirChoixMusique,
   onSupprimerMusique,
@@ -2575,6 +2854,8 @@ function BlocDeux ({
               reinitialiserOrdre={reinitialiserOrdreTaches}
               viderTaches={viderTaches}
               pointsPomodoro={pointsPomodoro}
+              modeLecture={modeLectureSession}
+              setModeLecture={setModeLectureSession}
             />
           )}
           {vueActive === 2 && (
@@ -2637,6 +2918,18 @@ function BarreDefilante ({ actif }) {
 function App() {
   const [panelOuvert, setPanelOuvert] = useState(true);
   const [enMarche, setEnMarche] = useState(false);
+  // Pseudo affiché à la fois dans le panneau joueur et la modale de profil
+  // (en dur pour l'instant, en attendant un vrai système de compte)
+  const pseudoJoueur = 'Pseudo';
+  // Navigation ultra simple entre la vitrine d'accueil et l'appli Pomodoro,
+  // sans routeur : on affiche l'un ou l'autre selon cet état.
+  const [pageActuelle, setPageActuelle] = useState('accueil');
+  // Fenêtre "Se connecter" ouverte depuis la navbar
+  const [connexionOuverte, setConnexionOuverte] = useState(false);
+  // Vrai quand l'onglet Notes consulte une ancienne session (lecture seule) :
+  // partagé avec le Chrono pour l'avertir que le temps de travail ne sera
+  // pas comptabilisé dans cette session.
+  const [modeLectureSession, setModeLectureSession] = useState(false);
   const [profilOuvert, setProfilOuvert] = useState(false);
   const [distanceTotale, setDistanceTotale] = useState(0);
   // Repère l'horodatage du dernier ajout de session comptabilisé, afin
@@ -2663,6 +2956,27 @@ function App() {
     }
   }, [pointsPomodoro]);
 
+  // --- Historique des jours avec au moins un Pomodoro terminé, utilisé par
+  // la heatmap de l'onglet "Profil" (contrairement à pointsPomodoro, non
+  // plafonné : on garde tout l'historique, un jour pouvant apparaître
+  // plusieurs fois si plusieurs séances ont eu lieu le même jour) ---
+  const [historiqueJoursPomodoro, setHistoriqueJoursPomodoro] = useState(() => {
+    try {
+      const sauvegarde = localStorage.getItem(CLE_STOCKAGE_HISTORIQUE_JOURS);
+      return sauvegarde ? JSON.parse(sauvegarde) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLE_STOCKAGE_HISTORIQUE_JOURS, JSON.stringify(historiqueJoursPomodoro));
+    } catch {
+      // Stockage indisponible : on ignore silencieusement
+    }
+  }, [historiqueJoursPomodoro]);
+
   // --- États : personnalisation de l'arrière-plan ---
   const [couleurFondInput, setCouleurFondInput] = useState('');
   const [couleurFondAppliquee, setCouleurFondAppliquee] = useState(null);
@@ -2685,6 +2999,8 @@ function App() {
   const ajouterDistanceSession = (metres) => {
     const maintenant = Date.now();
 
+
+
     // Protection contre un double déclenchement rapproché de la même fin de
     // session (ex : re-render en cascade juste après la fin du chrono), qui
     // ajouterait deux fois la distance / un point en trop dans le tracker
@@ -2703,6 +3019,11 @@ function App() {
       };
       return [...prev, nouveauPoint].slice(-10);
     });
+
+    // Alimente aussi l'historique (non plafonné) utilisé par la heatmap
+    // de l'onglet "Profil" : un jour est actif dès qu'au moins une séance
+    // de travail y a été terminée.
+    setHistoriqueJoursPomodoro((prev) => [...prev, formaterJourIso(new Date(maintenant))]);
   };
 
   // --- Tâches / Notes (liste + notes épinglées sur le fond principal) ---
@@ -3195,11 +3516,21 @@ function App() {
 
   return(
     <>
-    {!modeConcentration && <Navbar/>}
+    {!modeConcentration && (
+      <Navbar
+        onAccueil={() => setPageActuelle('accueil')}
+        onCourse={() => setPageActuelle('pomodoro')}
+        onConnexion={() => setConnexionOuverte(true)}
+      />
+    )}
 
+    {pageActuelle === 'accueil' ? (
+      <Accueil onCommencer={() => setPageActuelle('pomodoro')} />
+    ) : (
+    <>
     {!modeConcentration && (
       <PanneauJoueur
-        pseudo="Pseudo"
+        pseudo={pseudoJoueur}
         niveau={1}
         distance={distanceTotale}
         position={0}
@@ -3214,6 +3545,7 @@ function App() {
         onSessionTerminee={ajouterDistanceSession}
         dureeTravailMinutes={reglages.dureeTravail}
         dureePauseMinutes={reglages.dureePause}
+        modeLecture={modeLectureSession}
       />
     </main>
 
@@ -3237,6 +3569,8 @@ function App() {
         reinitialiserOrdreTaches={reinitialiserOrdreTaches}
         viderTaches={viderTaches}
         pointsPomodoro={pointsPomodoro}
+        modeLectureSession={modeLectureSession}
+        setModeLectureSession={setModeLectureSession}
         musiqueActuelle={musiqueAmbiance}
         onOuvrirChoixMusique={() => setChoixMusiqueOuvert(true)}
         onSupprimerMusique={supprimerMusiqueAmbiance}
@@ -3264,7 +3598,9 @@ function App() {
     <ModalProfil
       ouvert={profilOuvert}
       fermer={() => setProfilOuvert(false)}
+      pseudo={pseudoJoueur}
       distanceTotale={distanceTotale}
+      historiqueJoursPomodoro={historiqueJoursPomodoro}
     />
 
     {/* Notes épinglées : widgets flottants affichés sur le fond principal */}
@@ -3319,6 +3655,13 @@ function App() {
       message="Êtes-vous sûr de vouloir supprimer ce préréglage ?"
       onConfirmer={confirmerSuppressionPrereglage}
       onAnnuler={annulerSuppressionPrereglage}
+    />
+    </>
+    )}
+
+    <ModalConnexion
+      ouvert={connexionOuverte}
+      fermer={() => setConnexionOuverte(false)}
     />
     </>
   )

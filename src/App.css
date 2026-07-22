@@ -1242,7 +1242,10 @@ select option{
 .modal_fond{
   position: fixed;
   inset: 0;
-  background: rgb(255, 255, 255);
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: backdrop-filter 0.2s ease, background 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1261,6 +1264,22 @@ select option{
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Variante agrandie de .modal_fenetre pour la modale de profil (onglets
+   Profil / Stats / Social) : prend 70% de l'écran, avec des bornes pour
+   rester lisible sur très petits et très grands écrans. */
+.profil_modal_fenetre{
+  width: 70vw;
+  height: 70vh;
+  max-width: 1100px;
+  min-width: 320px;
+  min-height: 420px;
+  padding: 32px 40px;
+  align-items: stretch;
+  justify-content: flex-start;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .modal_fermer{
@@ -1305,6 +1324,165 @@ select option{
 
 .modal_distance_totale strong{
   color: #02b948;
+}
+
+/* --- Onglets de la modale de profil (Profil / Stats / Social) --- */
+.profil_onglets{
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(31, 36, 48, 0.1);
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+}
+
+.profil_onglet_btn{
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 18px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.profil_onglet_btn:hover{
+  background: rgba(226, 71, 42, 0.08);
+  color: #b8371d;
+}
+
+.profil_onglet_btn--actif{
+  background: #e2472a;
+  color: #ffffff;
+}
+
+.profil_onglet_btn--actif:hover{
+  background: #e2472a;
+  color: #ffffff;
+}
+
+.profil_onglet_contenu{
+  flex: 1;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.profil_onglet_panneau{
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* --- Onglet Profil : en-tête (photo + pseudo) --- */
+.profil_entete{
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profil_photo{
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(226, 71, 42, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profil_photo_icone{
+  font-size: 34px;
+  line-height: 1;
+}
+
+.profil_pseudo{
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2430;
+}
+
+/* --- Sections génériques réutilisées par les 3 onglets (Médailles,
+   Activité Pomodoro, futures sections Stats/Social) --- */
+.profil_section{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profil_section_titre{
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* --- Médailles : grille d'emplacements réservés --- */
+.profil_medailles_grille{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 12px;
+  min-height: 56px;
+}
+
+/* --- Heatmap Pomodoro (façon GitHub), onglet Profil --- */
+.heatmap_pomodoro{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.heatmap_pomodoro_mois{
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2430;
+  text-transform: capitalize;
+}
+
+.heatmap_pomodoro_grille{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18px, 1fr));
+  gap: 5px;
+  max-width: 420px;
+}
+
+.heatmap_pomodoro_case{
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: rgba(31, 36, 48, 0.08);
+  border: 1px solid rgba(31, 36, 48, 0.08);
+  transition: transform 0.15s ease;
+}
+
+.heatmap_pomodoro_case:hover{
+  transform: scale(1.15);
+}
+
+.heatmap_pomodoro_case--actif{
+  background: #e2472a;
+  border-color: #b8371d;
+}
+
+@media (max-width: 720px){
+  .profil_modal_fenetre{
+    width: 92vw;
+    height: 80vh;
+    padding: 24px 20px;
+  }
+
+  .profil_onglet_btn{
+    padding: 8px 12px;
+    font-size: 13px;
+  }
 }
 
 /* ======================================================================
@@ -3237,4 +3415,13 @@ select option{
     padding: 0 8px;
     gap: 6px;
   }
+}
+
+.accueil_fond {
+  min-height: 100vh;
+  background: #1f2430; /* remplace par ton image plus tard : background-image: url(...) */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 60px;
 }
