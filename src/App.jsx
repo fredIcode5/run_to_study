@@ -66,9 +66,35 @@ function Navbar({ onAccueil, onCourse, onConnexion }){
 }
 
 
-// --- Page d'accueil : vitrine ultra simple avant d'entrer dans l'appli.
-// Le fond (accueil_fond) sert de placeholder pour l'image vitrine à venir.
+// --- Page d'accueil : vitrine avant d'entrer dans l'appli.
+// Le fond (accueil_fond) sert de placeholder pour l'image vitrine à venir
+// et occupe le premier écran ; la suite (présentation, fonctionnalités,
+// footer) forme une seconde partie accessible par un défilement naturel
+// à la molette (voir accueil_suite plus bas).
 function Accueil ({ onCommencer }) {
+  const FONCTIONNALITES_ACCUEIL = [
+    {
+      id: 'personnalisation',
+      titre: 'Personnalisez votre Pomodoro',
+      texte: 'Ajustez la durée du minuteur, choisissez parmi plusieurs thèmes visuels, personnalisez les sons de notification et adaptez l\'expérience à votre façon de travailler.',
+    },
+    {
+      id: 'motivation',
+      titre: 'Motivez-vous seul ou à plusieurs',
+      texte: 'Suivez votre progression en solo ou rejoignez vos amis pour vous encourager mutuellement, comparer vos sessions et rester motivé sur la durée.',
+    },
+    {
+      id: 'medaillons',
+      titre: 'Collectez des médaillons uniques à échanger et collectionner',
+      texte: 'Débloquez des médaillons en accomplissant vos sessions, complétez votre collection et échangez-les avec d\'autres utilisateurs pour enrichir votre profil.',
+    },
+    {
+      id: 'statistiques',
+      titre: 'Trackez vos statistiques avec des outils adaptés',
+      texte: 'Visualisez votre temps de concentration, vos séries de Pomodoro et votre progression grâce à des graphiques clairs et des outils de suivi pensés pour vous.',
+    },
+  ];
+
   return (
     <div className="accueil">
       <div className="accueil_fond">
@@ -80,7 +106,77 @@ function Accueil ({ onCommencer }) {
           Commencer à travailler
         </button>
       </div>
+
+      {/* --- Seconde partie de la vitrine : accessible par défilement naturel --- */}
+      <div className="accueil_suite">
+
+        <section className="accueil_presentation">
+          <h2 className="accueil_presentation_titre">Qu'est-ce que la méthode Pomodoro ?</h2>
+          <p className="accueil_presentation_texte">
+            La méthode Pomodoro consiste à alterner des périodes de travail
+            concentré, généralement de 25 minutes, avec de courtes pauses
+            régulières. Ce rythme aide à maintenir un haut niveau de
+            concentration, réduit la fatigue mentale et améliore la
+            productivité en structurant naturellement la gestion du temps.
+          </p>
+        </section>
+
+        <section className="accueil_fonctionnalites_grille">
+          {FONCTIONNALITES_ACCUEIL.map((fonctionnalite) => (
+            <div key={fonctionnalite.id} className="accueil_fonctionnalite_bloc">
+              <h3 className="accueil_fonctionnalite_titre">{fonctionnalite.titre}</h3>
+              <p className="accueil_fonctionnalite_texte">{fonctionnalite.texte}</p>
+            </div>
+          ))}
+        </section>
+
+        <PiedDePage />
+      </div>
     </div>
+  );
+}
+
+
+// --- Footer de la vitrine d'accueil : identité de l'appli, liens légaux,
+// réseaux sociaux (placeholders) et mention de copyright.
+function PiedDePage () {
+  const anneeActuelle = new Date().getFullYear();
+
+  const RESEAUX_SOCIAUX_PLACEHOLDER = [
+    { id: 'instagram', label: 'Instagram', href: '#' },
+    { id: 'twitter', label: 'X / Twitter', href: '#' },
+    { id: 'tiktok', label: 'TikTok', href: '#' },
+  ];
+
+  return (
+    <footer className="site_footer">
+      <div className="site_footer_contenu">
+
+        <div className="site_footer_bloc site_footer_identite">
+          <span className="site_footer_logo">🍅 Pomodoro</span>
+          <p className="site_footer_signature">Made with ❤️ by Pomodoro Team</p>
+        </div>
+
+        <nav className="site_footer_bloc site_footer_liens" aria-label="Liens légaux">
+          <a href="#" className="site_footer_lien">Contact</a>
+          <a href="#" className="site_footer_lien">Terms of Service</a>
+          <a href="#" className="site_footer_lien">Privacy Policy</a>
+        </nav>
+
+        <div className="site_footer_bloc site_footer_reseaux">
+          {RESEAUX_SOCIAUX_PLACEHOLDER.map((reseau) => (
+            <a key={reseau.id} href={reseau.href} className="site_footer_lien_reseau">
+              {reseau.label}
+            </a>
+          ))}
+        </div>
+
+      </div>
+
+      <p className="site_footer_copyright">
+        © {anneeActuelle} Pomodoro Team. Tous droits réservés.
+      </p>
+    </footer>
   );
 }
 
@@ -210,6 +306,7 @@ function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursP
     { id: 'profil', label: 'Profil' },
     { id: 'stats', label: 'Stats' },
     { id: 'social', label: 'Social' },
+    { id: 'parametres', label: 'Paramètres' },
   ];
 
   return(
@@ -242,6 +339,7 @@ function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursP
           )}
           {ongletActif === 'stats' && <OngletStats />}
           {ongletActif === 'social' && <OngletSocial />}
+          {ongletActif === 'parametres' && <OngletParametres pseudo={pseudo} />}
         </div>
       </div>
     </div>
@@ -253,27 +351,46 @@ function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursP
 function OngletProfil ({ pseudo, distanceTotale, historiqueJoursPomodoro }) {
   return (
     <div className="profil_onglet_panneau profil_onglet_panneau--profil">
-      <div className="profil_entete">
-        <div className="profil_photo">
-          <span className="profil_photo_icone">👤</span>
+      <div className="profil_layout">
+        {/* Colonne gauche : emplacement réservé pour le coureur (skin du
+            personnage). Fond gris pour bien le distinguer en attendant
+            l'intégration du visuel final. */}
+        <div className="profil_coureur_colonne">
+          <div
+            className="profil_coureur_placeholder"
+            style={{ backgroundColor: '#d9d9d9' }}
+          >
+            {/* Emplacement visuel réservé : aperçu du coureur à venir */}
+          </div>
+          <button type="button" className="btn_secondaire profil_coureur_btn_personnaliser">
+            Personnaliser
+          </button>
         </div>
-        <span className="profil_pseudo">{pseudo}</span>
-      </div>
 
-      <p className="modal_distance_totale">
-        Distance totale parcourue : <strong>{distanceTotale} m</strong>
-      </p>
+        <div className="profil_colonne_infos">
+          <div className="profil_entete">
+            <div className="profil_photo">
+              <span className="profil_photo_icone">👤</span>
+            </div>
+            <span className="profil_pseudo">{pseudo}</span>
+          </div>
 
-      <div className="profil_section">
-        <h4 className="profil_section_titre">Médailles</h4>
-        <div className="profil_medailles_grille">
-          {/* Emplacement visuel réservé : aucune médaille pour l'instant */}
+          <p className="modal_distance_totale">
+            Distance totale parcourue : <strong>{distanceTotale} m</strong>
+          </p>
+
+          <div className="profil_section">
+            <h4 className="profil_section_titre">Médailles</h4>
+            <div className="profil_medailles_grille">
+              {/* Emplacement visuel réservé : aucune médaille pour l'instant */}
+            </div>
+          </div>
+
+          <div className="profil_section">
+            <h4 className="profil_section_titre">Activité Pomodoro</h4>
+            <HeatmapPomodoro historique={historiqueJoursPomodoro} />
+          </div>
         </div>
-      </div>
-
-      <div className="profil_section">
-        <h4 className="profil_section_titre">Activité Pomodoro</h4>
-        <HeatmapPomodoro historique={historiqueJoursPomodoro} />
       </div>
     </div>
   );
@@ -327,19 +444,379 @@ function OngletStats () {
   );
 }
 
-// --- Onglet "Social" : structure minimale pour l'instant, pensée pour
-// accueillir plus tard la liste d'amis, les demandes, la recherche
-// d'utilisateurs, l'activité des amis et les classements/défis.
+// --- Onglet "Social" : partagé en deux colonnes.
+// Gauche : recherche d'utilisateurs (barre de recherche + résultats placeholder).
+// Droite : liste d'amis (placeholder), avec statut et actions rapides.
 function OngletSocial () {
+  // Résultats de recherche placeholder : structure prête pour être
+  // remplacée par de vraies données utilisateur plus tard.
+  const RESULTATS_RECHERCHE_PLACEHOLDER = [
+    { id: 'r1', pseudo: 'Utilisateur_1', niveau: 3 },
+    { id: 'r2', pseudo: 'Utilisateur_2', niveau: 7 },
+    { id: 'r3', pseudo: 'Utilisateur_3', niveau: 1 },
+  ];
+
+  // Liste d'amis placeholder : structure prête pour être remplacée par
+  // de vraies données (statut en ligne, niveau d'activité, invitations...).
+  // "activite" est un pourcentage placeholder pour la barre d'activité.
+  const AMIS_PLACEHOLDER = [
+    { id: 'a1', pseudo: 'Ami_1', enLigne: true, activite: 80 },
+    { id: 'a2', pseudo: 'Ami_2', enLigne: true, activite: 45 },
+    { id: 'a3', pseudo: 'Ami_3', enLigne: false, activite: 15 },
+    { id: 'a4', pseudo: 'Ami_4', enLigne: false, activite: 60 },
+  ];
+
   return (
     <div className="profil_onglet_panneau profil_onglet_panneau--social">
-      <h4 className="profil_section_titre">Liste d'amis</h4>
-      {/* Emplacements réservés pour de futures sections sociales, ex :
-          <div className="profil_section" data-section="liste-amis">...</div>
-          <div className="profil_section" data-section="demandes-amis">...</div>
-          <div className="profil_section" data-section="recherche-utilisateurs">...</div>
-          <div className="profil_section" data-section="activite-amis">...</div>
-          <div className="profil_section" data-section="classements">...</div> */}
+      <div className="social_layout">
+
+        {/* Colonne gauche : recherche d'utilisateurs */}
+        <div className="social_colonne social_colonne_recherche">
+          <h4 className="profil_section_titre">Rechercher des utilisateurs</h4>
+
+          <input
+            type="text"
+            className="social_recherche_input"
+            placeholder="Rechercher un pseudo..."
+          />
+
+          <div className="social_resultats_liste">
+            {RESULTATS_RECHERCHE_PLACEHOLDER.map((resultat) => (
+              <div key={resultat.id} className="social_resultat_rectangle social_carte_compacte">
+                <div className="social_resultat_infos">
+                  <div className="social_resultat_photo">
+                    <span className="social_resultat_photo_icone">👤</span>
+                  </div>
+                  <div className="social_resultat_identite">
+                    <span className="social_resultat_pseudo">{resultat.pseudo}</span>
+                    <span className="social_resultat_niveau">Niv. {resultat.niveau}</span>
+                  </div>
+                </div>
+
+                <button type="button" className="btn_secondaire social_resultat_btn_ajouter">
+                  Ajouter
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Colonne droite : liste d'amis */}
+        <div className="social_colonne social_colonne_amis">
+          <h4 className="profil_section_titre">Liste d'amis</h4>
+
+          <div className="social_amis_liste">
+            {AMIS_PLACEHOLDER.map((ami) => (
+              <div key={ami.id} className="social_ami_rectangle social_carte_compacte">
+                {/* Emplacement visuel réservé : photo de profil de l'ami */}
+                <div className="social_ami_photo">
+                  <span className="social_ami_photo_icone">👤</span>
+                </div>
+
+                <div className="social_ami_contenu">
+                  <div className="social_ami_ligne_haut">
+                    <span className="social_ami_pseudo">{ami.pseudo}</span>
+                    <div className="social_ami_actions">
+                      <button type="button" className="btn_secondaire social_ami_btn_inviter">
+                        Inviter
+                      </button>
+                      <button type="button" className="btn_primaire social_ami_btn_rejoindre">
+                        Rejoindre
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="social_ami_statut_ligne">
+                    <span className={`social_ami_statut ${ami.enLigne ? 'social_ami_statut--en_ligne' : ''}`}>
+                      {ami.enLigne ? 'En ligne' : 'Hors ligne'}
+                    </span>
+                    <span className="social_ami_activite_label">Activité</span>
+                  </div>
+
+                  {/* Barre d'activité placeholder */}
+                  <div className="social_ami_barre_activite">
+                    <div
+                      className="social_ami_barre_activite_remplie"
+                      style={{ width: `${ami.activite}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+
+// --- Onglet "Paramètres" : gestion du compte (photo de profil avec
+// repositionnement, e-mail, mot de passe, comptes liés, suppression de
+// compte) et des informations personnelles (date de naissance, sexe).
+// Purement front-end pour l'instant : aucune donnée n'est envoyée à un
+// serveur, "Enregistrer les modifications" est un emplacement réservé
+// prêt à être branché sur une vraie API plus tard.
+function OngletParametres ({ pseudo }) {
+  // Photo de profil : image choisie localement (data URL) + position en
+  // pourcentage (utilisée comme object-position) pour permettre à
+  // l'utilisateur de recentrer la photo dans le cadre.
+  const [photoDataUrl, setPhotoDataUrl] = useState(null);
+  const [positionPhoto, setPositionPhoto] = useState({ x: 50, y: 50 });
+
+  const [email, setEmail] = useState('');
+  const [motDePasseActuel, setMotDePasseActuel] = useState('');
+  const [nouveauMotDePasse, setNouveauMotDePasse] = useState('');
+  const [confirmationMotDePasse, setConfirmationMotDePasse] = useState('');
+
+  const [dateNaissance, setDateNaissance] = useState('');
+  const [sexe, setSexe] = useState('');
+
+  const [suppressionCompteOuverte, setSuppressionCompteOuverte] = useState(false);
+
+  const zonePhotoRef = useRef(null);
+  const glissementRef = useRef(null); // { startX, startY, startPosX, startPosY } pendant un glissement
+
+  // Charge le fichier choisi par l'utilisateur (depuis son PC) en data URL
+  // pour un aperçu immédiat, sans passer par un serveur.
+  const gererChoixPhoto = (evenement) => {
+    const fichier = evenement.target.files?.[0];
+    if (!fichier) return;
+
+    const lecteur = new FileReader();
+    lecteur.onload = () => {
+      setPhotoDataUrl(lecteur.result);
+      setPositionPhoto({ x: 50, y: 50 }); // recentre par défaut à chaque nouvelle photo
+    };
+    lecteur.readAsDataURL(fichier);
+  };
+
+  // Glisser pour recentrer : on déplace le point de recadrage (object-position)
+  // en sens inverse du mouvement de la souris, borné entre 0 et 100%.
+  const gererGlissement = (evenement) => {
+    if (!glissementRef.current || !zonePhotoRef.current) return;
+    const rect = zonePhotoRef.current.getBoundingClientRect();
+
+    const deltaXPourcent = ((evenement.clientX - glissementRef.current.startX) / rect.width) * 100;
+    const deltaYPourcent = ((evenement.clientY - glissementRef.current.startY) / rect.height) * 100;
+
+    setPositionPhoto({
+      x: Math.min(100, Math.max(0, glissementRef.current.startPosX - deltaXPourcent)),
+      y: Math.min(100, Math.max(0, glissementRef.current.startPosY - deltaYPourcent)),
+    });
+  };
+
+  const arreterGlissement = () => {
+    glissementRef.current = null;
+    window.removeEventListener('mousemove', gererGlissement);
+    window.removeEventListener('mouseup', arreterGlissement);
+  };
+
+  const demarrerGlissement = (evenement) => {
+    if (!photoDataUrl) return; // rien à recentrer sans photo
+    glissementRef.current = {
+      startX: evenement.clientX,
+      startY: evenement.clientY,
+      startPosX: positionPhoto.x,
+      startPosY: positionPhoto.y,
+    };
+    window.addEventListener('mousemove', gererGlissement);
+    window.addEventListener('mouseup', arreterGlissement);
+  };
+
+  // Nettoyage des écouteurs si le composant est démonté pendant un glissement
+  useEffect(() => {
+    return () => {
+      window.removeEventListener('mousemove', gererGlissement);
+      window.removeEventListener('mouseup', arreterGlissement);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const enregistrerModifications = () => {
+    // Emplacement réservé : aucun appel serveur pour l'instant. Structure
+    // prête à être connectée à une vraie API de mise à jour de profil
+    // (envoi de la photo, du recadrage, de l'e-mail, du mot de passe...).
+    console.log('Modifications des paramètres (placeholder) :', {
+      photoDataUrl,
+      positionPhoto,
+      email,
+      dateNaissance,
+      sexe,
+    });
+  };
+
+  return (
+    <div className="profil_onglet_panneau profil_onglet_panneau--parametres">
+
+      {/* --- Photo de profil : choix depuis le PC + repositionnement --- */}
+      <div className="parametres_section">
+        <h4 className="profil_section_titre">Photo de profil</h4>
+
+        <div
+          className="parametres_photo_zone"
+          ref={zonePhotoRef}
+          onMouseDown={demarrerGlissement}
+        >
+          {photoDataUrl ? (
+            <img
+              src={photoDataUrl}
+              alt={`Photo de profil de ${pseudo}`}
+              className="parametres_photo_apercu"
+              style={{ objectPosition: `${positionPhoto.x}% ${positionPhoto.y}%` }}
+              draggable={false}
+            />
+          ) : (
+            <span className="parametres_photo_icone_defaut">👤</span>
+          )}
+        </div>
+
+        {photoDataUrl && (
+          <p className="parametres_photo_aide">Glissez la photo pour la recentrer</p>
+        )}
+
+        <label className="btn_secondaire parametres_photo_btn_choisir">
+          Choisir une photo depuis mon PC
+          <input
+            type="file"
+            accept="image/*"
+            onChange={gererChoixPhoto}
+            className="parametres_photo_input_fichier"
+          />
+        </label>
+      </div>
+
+      {/* --- Compte : e-mail et mot de passe --- */}
+      <div className="parametres_section">
+        <h4 className="profil_section_titre">Compte</h4>
+
+        <label className="parametres_champ_label">
+          Adresse e-mail associée
+          <input
+            type="email"
+            className="parametres_champ_input"
+            placeholder="votre@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </label>
+
+        <label className="parametres_champ_label">
+          Mot de passe actuel
+          <input
+            type="password"
+            className="parametres_champ_input"
+            value={motDePasseActuel}
+            onChange={(e) => setMotDePasseActuel(e.target.value)}
+          />
+        </label>
+
+        <label className="parametres_champ_label">
+          Nouveau mot de passe
+          <input
+            type="password"
+            className="parametres_champ_input"
+            value={nouveauMotDePasse}
+            onChange={(e) => setNouveauMotDePasse(e.target.value)}
+          />
+        </label>
+
+        <label className="parametres_champ_label">
+          Confirmer le nouveau mot de passe
+          <input
+            type="password"
+            className="parametres_champ_input"
+            value={confirmationMotDePasse}
+            onChange={(e) => setConfirmationMotDePasse(e.target.value)}
+          />
+        </label>
+      </div>
+
+      {/* --- Informations personnelles --- */}
+      <div className="parametres_section">
+        <h4 className="profil_section_titre">Informations personnelles</h4>
+
+        <label className="parametres_champ_label">
+          Date de naissance
+          <input
+            type="date"
+            className="parametres_champ_input"
+            value={dateNaissance}
+            onChange={(e) => setDateNaissance(e.target.value)}
+          />
+        </label>
+
+        <label className="parametres_champ_label">
+          Sexe
+          <select
+            className="parametres_champ_input"
+            value={sexe}
+            onChange={(e) => setSexe(e.target.value)}
+          >
+            <option value="">Non précisé</option>
+            <option value="femme">Femme</option>
+            <option value="homme">Homme</option>
+            <option value="autre">Autre</option>
+          </select>
+        </label>
+      </div>
+
+      {/* --- Comptes liés --- */}
+      <div className="parametres_section">
+        <h4 className="profil_section_titre">Comptes liés</h4>
+        <button type="button" className="btn_secondaire parametres_btn_lier_google">
+          Lier avec Google
+        </button>
+      </div>
+
+      {/* --- Zone de danger : suppression du compte --- */}
+      <div className="parametres_section parametres_section_danger">
+        <h4 className="profil_section_titre">Zone de danger</h4>
+
+        {!suppressionCompteOuverte ? (
+          <button
+            type="button"
+            className="btn_danger parametres_btn_supprimer_compte"
+            onClick={() => setSuppressionCompteOuverte(true)}
+          >
+            Supprimer le compte
+          </button>
+        ) : (
+          <div className="parametres_confirmation_suppression">
+            <p className="parametres_confirmation_suppression_texte">
+              Êtes-vous sûr de vouloir supprimer définitivement votre compte ?
+            </p>
+            <div className="parametres_confirmation_suppression_actions">
+              <button
+                type="button"
+                className="btn_secondaire"
+                onClick={() => setSuppressionCompteOuverte(false)}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="btn_danger"
+                onClick={() => {
+                  // Emplacement réservé : aucune suppression réelle pour l'instant
+                  setSuppressionCompteOuverte(false);
+                }}
+              >
+                Confirmer la suppression
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <button
+        type="button"
+        className="btn_primaire parametres_btn_enregistrer"
+        onClick={enregistrerModifications}
+      >
+        Enregistrer les modifications
+      </button>
     </div>
   );
 }

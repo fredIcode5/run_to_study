@@ -1429,7 +1429,7 @@ select option{
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
   gap: 12px;
-  min-height: 56px;
+  min-height: 20px;
 }
 
 /* --- Heatmap Pomodoro (façon GitHub), onglet Profil --- */
@@ -3424,4 +3424,377 @@ select option{
   align-items: flex-end;
   justify-content: center;
   padding-bottom: 60px;
+}
+
+.profil_layout {
+  display: flex;
+  gap: 24px;
+}
+
+.profil_coureur_colonne {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.profil_coureur_placeholder {
+  width: 140px;
+  height: 200px;
+  border-radius: 12px;
+}
+
+.profil_colonne_infos {
+  flex: 1;
+}
+
+
+.social_layout {
+  display: flex;
+  gap: 24px;
+}
+
+.social_colonne {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.social_recherche_input {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.social_resultats_liste,
+.social_amis_liste {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.social_resultat_rectangle,
+.social_ami_rectangle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f0f0f0;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.social_resultat_infos {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.social_resultat_identite,
+.social_ami_identite {
+  display: flex;
+  flex-direction: column;
+}
+
+.social_ami_actions {
+  display: flex;
+  gap: 8px;
+}
+
+.social_ami_statut--en_ligne {
+  color: #2e7d32;
+}
+.social_carte_compacte {
+  padding: 6px 10px;
+  gap: 8px;
+}
+
+.social_carte_compacte .social_resultat_photo,
+.social_ami_photo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #d9d9d9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.social_ami_rectangle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.social_ami_contenu {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.social_ami_ligne_haut {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.social_ami_statut_ligne {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8em;
+  color: #666;
+}
+
+.social_ami_activite_label {
+  color: #999;
+}
+
+.social_ami_barre_activite {
+  width: 100%;
+  height: 5px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.social_ami_barre_activite_remplie {
+  height: 100%;
+  background: #e2472a;
+  border-radius: 4px;
+}
+
+/* Rendre les cartes de résultat de recherche un peu plus compactes aussi */
+.social_resultat_rectangle {
+  font-size: 0.9em;
+}
+
+.parametres_section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.parametres_photo_zone {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: #d9d9d9;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  user-select: none;
+}
+
+.parametres_photo_apercu {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.parametres_photo_aide {
+  font-size: 0.8em;
+  color: #888;
+}
+
+.parametres_photo_btn_choisir {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.parametres_photo_input_fichier {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.parametres_champ_label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9em;
+}
+
+.parametres_champ_input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.parametres_section_danger {
+  border: 1px solid #e2472a;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.btn_danger {
+  background: #e2472a;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.parametres_confirmation_suppression_actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.parametres_btn_enregistrer {
+  align-self: flex-start;
+  margin-top: 10px;
+}
+
+/* S'assurer que rien n'empêche le scroll naturel sur la page d'accueil */
+html, body, #root {
+  height: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+.accueil {
+  min-height: 100vh; /* et non height: 100vh fixe */
+  display: flex;
+  flex-direction: column;
+}
+
+.accueil_fond {
+  background-image: url('/runtostudybg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.accueil_suite {
+  display: flex;
+  flex-direction: column;
+  gap: 60px;
+  padding: 60px 24px;
+}
+
+.accueil_presentation {
+  max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.accueil_presentation_titre {
+  font-size: 1.8em;
+  margin-bottom: 16px;
+}
+
+.accueil_presentation_texte {
+  color: #555;
+  line-height: 1.6;
+}
+
+.accueil_fonctionnalites_grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.accueil_fonctionnalite_bloc {
+  background: #f7f7f7;
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.accueil_fonctionnalite_titre {
+  font-size: 1.1em;
+}
+
+.accueil_fonctionnalite_texte {
+  color: #666;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+/* --- Footer --- */
+.site_footer {
+  background: #1f2430;
+  color: #eee;
+  padding: 40px 24px 20px;
+  margin: 0;
+  width: 100%;
+}
+
+.site_footer_contenu {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.site_footer_bloc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.site_footer_logo {
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+.site_footer_signature {
+  color: #aaa;
+  font-size: 0.85em;
+}
+
+.site_footer_liens,
+.site_footer_reseaux {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.site_footer_lien,
+.site_footer_lien_reseau {
+  color: #ddd;
+  text-decoration: none;
+  font-size: 0.9em;
+}
+
+.site_footer_lien:hover,
+.site_footer_lien_reseau:hover {
+  text-decoration: underline;
+}
+
+.site_footer_copyright {
+  text-align: center;
+  color: #888;
+  font-size: 0.8em;
+  margin-top: 24px;
+}
+
+@media (max-width: 600px) {
+  .site_footer_contenu {
+    flex-direction: column;
+    text-align: center;
+  }
+  .site_footer_liens,
+  .site_footer_reseaux {
+    justify-content: center;
+  }
 }
