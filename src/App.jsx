@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
+import { useAuth } from './context/AuthContext.jsx'
+import { supabase } from './lib/supabaseClient'
 
 
 // --- Réglages Pomodoro par défaut, utilisés au premier lancement
@@ -13,11 +15,11 @@ const REGLAGES_PAR_DEFAUT = {
 };
 
 const CLE_STOCKAGE_REGLAGES = 'pomodoro_reglages';
-const CLE_STOCKAGE_TACHES = 'pomodoro_taches';
 const CLE_STOCKAGE_MUSIQUE = 'pomodoro_musique_ambiance';
 const CLE_STOCKAGE_PREREGLAGES = 'pomodoro_prereglages';
 const CLE_STOCKAGE_POINTS_POMODORO = 'pomodoro_points_tracker';
 const CLE_STOCKAGE_HISTORIQUE_JOURS = 'pomodoro_historique_jours';
+const CLE_STOCKAGE_PHOTO_PROFIL = 'pomodoro_photo_profil';
 
 // Position par défaut du lecteur de musique flottant, calculée en fonction
 // de la taille de la fenêtre pour rester visible sur la plupart des écrans
@@ -53,13 +55,36 @@ function formaterDateNote (dateIso) {
 }
 
 
-function Navbar({ onAccueil, onCourse, onConnexion }){
+function Navbar({ onAccueil, onCourse, onConnexion, modeInvite }){
+  const { connecte, utilisateur, deconnexion } = useAuth();
+
+  // Pseudo affiché une fois connecté : priorité au pseudo renseigné à
+  // l'inscription (user_metadata), sinon repli sur l'email du compte.
+  const pseudoAffiche = utilisateur?.user_metadata?.pseudo || utilisateur?.email || '';
+
   return(
     <>
     <div className="navbar">
     <button onClick={onAccueil}>home</button>
     <button onClick={onCourse}>Course</button>
-    <button onClick={onConnexion}>Se connecter</button>
+    {connecte ? (
+      <div className="navbar_compte">
+        <button type="button" className="navbar_compte_bouton">
+          Connecté : {pseudoAffiche}
+        </button>
+        <div className="navbar_compte_menu">
+          <button type="button" className="navbar_compte_menu_item" onClick={deconnexion}>
+            Se déconnecter
+          </button>
+        </div>
+      </div>
+    ) : modeInvite ? (
+      <button onClick={onConnexion} title="Cliquer pour créer un compte ou te connecter">
+        Mode invité
+      </button>
+    ) : (
+      <button onClick={onConnexion}>Se connecter</button>
+    )}
     </div>
     </>
   );
@@ -182,17 +207,114 @@ function PiedDePage () {
 
 
 // --- Fenêtre "Se connecter" : bascule entre le formulaire de connexion et
-// celui de création de compte. Purement visuel pour l'instant : aucune
-// valeur n'est stockée ni envoyée nulle part.
-function ModalConnexion ({ ouvert, fermer }) {
-  const [vue, setVue] = useState('connexion'); // 'connexion' | 'creation'
+// celui de création de compte. Branchée sur Supabase Auth via useAuth() :
+// connexion email/mot de passe, inscription, et connexion Google (OAuth).
+function ModalConnexion ({ ouvert, fermer, vueInitiale = 'connexion' }) {
+  const { connexionAvecEmail, inscriptionAvecEmail, connexionAvecGoogle, connecte } = useAuth();
 
-  // Revient toujours sur le formulaire de connexion à chaque réouverture
+  const [vue, setVue] = useState(vueInitiale); // 'connexion' | 'creation'
+  const [envoiEnCours, setEnvoiEnCours] = useState(false);
+  const [erreur, setErreur] = useState(null);
+
+  // Champs du formulaire de connexion
+  const [emailConnexion, setEmailConnexion] = useState('');
+  const [motDePasseConnexion, setMotDePasseConnexion] = useState('');
+
+  // Champs du formulaire de création de compte
+  const [emailCreation, setEmailCreation] = useState('');
+  const [pseudoCreation, setPseudoCreation] = useState('');
+  const [dateNaissanceCreation, setDateNaissanceCreation] = useState('');
+  const [motDePasseCreation, setMotDePasseCreation] = useState('');
+  const [accepteReglement, setAccepteReglement] = useState(false);
+  const [accepteConditions, setAccepteConditions] = useState(false);
+
+  // Revient toujours sur le formulaire de connexion et remet tout à zéro
+  // à chaque réouverture de la modale
   useEffect(() => {
-    if (ouvert) setVue('connexion');
-  }, [ouvert]);
+    if (ouvert) {
+      setVue(vueInitiale);
+      setErreur(null);
+      setEnvoiEnCours(false);
+      setEmailConnexion('');
+      setMotDePasseConnexion('');
+      setEmailCreation('');
+      setPseudoCreation('');
+      setDateNaissanceCreation('');
+      setMotDePasseCreation('');
+      setAccepteReglement(false);
+      setAccepteConditions(false);
+    }
+  }, [ouvert, vueInitiale]);
+
+  // Ferme automatiquement la modale dès que l'utilisateur est authentifié
+  // (utile aussi bien pour email/mot de passe que pour le retour d'OAuth Google)
+  useEffect(() => {
+    if (ouvert && connecte) fermer();
+  }, [connecte, ouvert, fermer]);
 
   if (!ouvert) return null;
+
+  // Traduit les messages d'erreur Supabase les plus courants en français
+  const traduireErreur = (err) => {
+    const message = err?.message || '';
+    if (message.includes('Invalid login credentials')) return 'Identifiant ou mot de passe incorrect.';
+    if (message.includes('User already registered')) return 'Un compte existe déjà avec cet e-mail.';
+    if (message.includes('Password should be at least')) return 'Le mot de passe est trop court (6 caractères minimum).';
+    if (message.includes('Unable to validate email address')) return "Adresse e-mail invalide.";
+    return message || "Une erreur est survenue, réessaie.";
+  };
+
+  const soumettreConnexion = async (e) => {
+    e.preventDefault();
+    setErreur(null);
+    setEnvoiEnCours(true);
+    try {
+      await connexionAvecEmail(emailConnexion.trim(), motDePasseConnexion);
+      // La fermeture se fait via l'effet ci-dessus quand `connecte` passe à true
+    } catch (err) {
+      setErreur(traduireErreur(err));
+    } finally {
+      setEnvoiEnCours(false);
+    }
+  };
+
+  const soumettreCreation = async (e) => {
+    e.preventDefault();
+    setErreur(null);
+
+    if (!accepteReglement || !accepteConditions) {
+      setErreur("Merci d'accepter le règlement et les conditions d'utilisation.");
+      return;
+    }
+
+    setEnvoiEnCours(true);
+    try {
+      const { session } = await inscriptionAvecEmail(
+        emailCreation.trim(),
+        motDePasseCreation,
+        { pseudo: pseudoCreation.trim(), date_naissance: dateNaissanceCreation }
+      );
+      // Si la confirmation par e-mail est activée côté Supabase, aucune session
+      // n'est renvoyée immédiatement : on informe l'utilisateur au lieu de fermer.
+      if (!session) {
+        setErreur("Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse avant de te connecter.");
+      }
+    } catch (err) {
+      setErreur(traduireErreur(err));
+    } finally {
+      setEnvoiEnCours(false);
+    }
+  };
+
+  const cliquerGoogle = async () => {
+    setErreur(null);
+    try {
+      await connexionAvecGoogle();
+      // Redirection gérée par Supabase : la page quitte l'appli puis revient.
+    } catch (err) {
+      setErreur(traduireErreur(err));
+    }
+  };
 
   return (
     <div className="modal_fond" onClick={fermer}>
@@ -201,17 +323,44 @@ function ModalConnexion ({ ouvert, fermer }) {
 
         <div className="modal_contenu connexion_contenu">
           {vue === 'connexion' ? (
-            <>
+            <form onSubmit={soumettreConnexion}>
               <h3 className="connexion_titre">Se connecter</h3>
 
-              <input type="text" className="connexion_input" placeholder="Identifiant" />
-              <input type="password" className="connexion_input" placeholder="Mot de passe" />
+              <input
+                type="email"
+                className="connexion_input"
+                placeholder="E-mail"
+                value={emailConnexion}
+                onChange={(e) => setEmailConnexion(e.target.value)}
+                autoComplete="email"
+                required
+              />
+              <input
+                type="password"
+                className="connexion_input"
+                placeholder="Mot de passe"
+                value={motDePasseConnexion}
+                onChange={(e) => setMotDePasseConnexion(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+
+              {erreur && <p className="connexion_texte_erreur">{erreur}</p>}
+
+              <button type="submit" className="btn_primaire" disabled={envoiEnCours}>
+                {envoiEnCours ? 'Connexion...' : 'Se connecter'}
+              </button>
 
               <hr className="connexion_separateur" />
 
               <p className="connexion_texte_separateur">Se connecter avec</p>
 
-              <button type="button" className="btn_secondaire connexion_btn_google">
+              <button
+                type="button"
+                className="btn_secondaire connexion_btn_google"
+                onClick={cliquerGoogle}
+                disabled={envoiEnCours}
+              >
                 Se connecter avec Google
               </button>
 
@@ -220,34 +369,75 @@ function ModalConnexion ({ ouvert, fermer }) {
               <button
                 type="button"
                 className="btn_primaire connexion_btn_creer"
-                onClick={() => setVue('creation')}
+                onClick={() => { setVue('creation'); setErreur(null); }}
               >
                 Créer un compte
               </button>
-            </>
+            </form>
           ) : (
-            <>
+            <form onSubmit={soumettreCreation}>
               <h3 className="connexion_titre">Créer un compte</h3>
 
-              <input type="email" className="connexion_input" placeholder="E-mail" />
-              <input type="text" className="connexion_input" placeholder="Pseudo" />
-              <input type="date" className="connexion_input" placeholder="Date de naissance" />
-              <input type="password" className="connexion_input" placeholder="Mot de passe" />
+              <input
+                type="email"
+                className="connexion_input"
+                placeholder="E-mail"
+                value={emailCreation}
+                onChange={(e) => setEmailCreation(e.target.value)}
+                autoComplete="email"
+                required
+              />
+              <input
+                type="text"
+                className="connexion_input"
+                placeholder="Pseudo"
+                value={pseudoCreation}
+                onChange={(e) => setPseudoCreation(e.target.value)}
+                required
+              />
+              <input
+                type="date"
+                className="connexion_input"
+                placeholder="Date de naissance"
+                value={dateNaissanceCreation}
+                onChange={(e) => setDateNaissanceCreation(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                className="connexion_input"
+                placeholder="Mot de passe"
+                value={motDePasseCreation}
+                onChange={(e) => setMotDePasseCreation(e.target.value)}
+                autoComplete="new-password"
+                minLength={6}
+                required
+              />
 
               <label className="connexion_case">
-                <input type="checkbox" />
+                <input
+                  type="checkbox"
+                  checked={accepteReglement}
+                  onChange={(e) => setAccepteReglement(e.target.checked)}
+                />
                 J'accepte le règlement
               </label>
 
               <label className="connexion_case">
-                <input type="checkbox" />
+                <input
+                  type="checkbox"
+                  checked={accepteConditions}
+                  onChange={(e) => setAccepteConditions(e.target.checked)}
+                />
                 J'accepte les conditions d'utilisation
               </label>
 
-              <button type="button" className="btn_primaire connexion_btn_creer">
-                Créer un compte
+              {erreur && <p className="connexion_texte_erreur">{erreur}</p>}
+
+              <button type="submit" className="btn_primaire connexion_btn_creer" disabled={envoiEnCours}>
+                {envoiEnCours ? 'Création...' : 'Créer un compte'}
               </button>
-            </>
+            </form>
           )}
         </div>
       </div>
@@ -256,7 +446,39 @@ function ModalConnexion ({ ouvert, fermer }) {
 }
 
 
-function PanneauJoueur ({ pseudo, niveau, distance, position, ouvrirProfil }) {
+// --- Fenêtre de choix d'accès : affichée dès qu'un utilisateur non connecté
+// tente d'accéder à Home ou à Pomodoro (depuis la navbar ou le bouton
+// "Commencer à travailler"). Propose 3 options alignées horizontalement.
+function ModalChoixAcces ({ ouvert, fermer, onInscription, onInvite, onConnexion }) {
+  if (!ouvert) return null;
+
+  return (
+    <div className="modal_fond" onClick={fermer}>
+      <div className="modal_fenetre choix_acces_fenetre" onClick={(e) => e.stopPropagation()}>
+        <button className="modal_fermer" onClick={fermer} aria-label="Fermer">×</button>
+
+        <div className="modal_contenu choix_acces_contenu">
+          <h3 className="choix_acces_titre">Comment veux-tu continuer ?</h3>
+
+          <div className="choix_acces_options">
+            <button type="button" className="btn_secondaire choix_acces_option" onClick={onInscription}>
+              S'inscrire
+            </button>
+            <button type="button" className="btn_secondaire choix_acces_option" onClick={onInvite}>
+            invité
+            </button>
+            <button type="button" className="btn_primaire choix_acces_option" onClick={onConnexion}>
+              Se connecter
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+function PanneauJoueur ({ pseudo, niveau, distance, position, ouvrirProfil, photoProfil }) {
   return(
     <div className="joueur_info">
       <button
@@ -264,7 +486,17 @@ function PanneauJoueur ({ pseudo, niveau, distance, position, ouvrirProfil }) {
         onClick={ouvrirProfil}
         aria-label="Ouvrir le profil"
       >
-        <span className="joueur_photo_icone">👤</span>
+        {photoProfil?.dataUrl ? (
+          <img
+            src={photoProfil.dataUrl}
+            alt={`Photo de profil de ${pseudo}`}
+            className="joueur_photo_img"
+            style={{ objectPosition: `${photoProfil.position.x}% ${photoProfil.position.y}%` }}
+            draggable={false}
+          />
+        ) : (
+          <span className="joueur_photo_icone">👤</span>
+        )}
       </button>
 
       <div className="joueur_details">
@@ -292,7 +524,7 @@ function PanneauJoueur ({ pseudo, niveau, distance, position, ouvrirProfil }) {
 // L'onglet actif est un simple état React ; aucun rechargement de page,
 // aucune donnée envoyée nulle part pour Stats/Social (structure prête pour
 // être complétée plus tard).
-function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPomodoro }) {
+function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPomodoro, photoProfil, setPhotoProfil }) {
   const [ongletActif, setOngletActif] = useState('profil');
 
   // Revient toujours sur l'onglet "Profil" à chaque réouverture de la modale
@@ -335,11 +567,18 @@ function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursP
               pseudo={pseudo}
               distanceTotale={distanceTotale}
               historiqueJoursPomodoro={historiqueJoursPomodoro}
+              photoProfil={photoProfil}
             />
           )}
           {ongletActif === 'stats' && <OngletStats />}
           {ongletActif === 'social' && <OngletSocial />}
-          {ongletActif === 'parametres' && <OngletParametres pseudo={pseudo} />}
+          {ongletActif === 'parametres' && (
+            <OngletParametres
+              pseudo={pseudo}
+              photoProfil={photoProfil}
+              setPhotoProfil={setPhotoProfil}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -348,7 +587,7 @@ function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursP
 
 // --- Onglet "Profil" : identité, médailles (emplacement réservé) et
 // heatmap mensuelle des jours avec au moins un Pomodoro terminé.
-function OngletProfil ({ pseudo, distanceTotale, historiqueJoursPomodoro }) {
+function OngletProfil ({ pseudo, distanceTotale, historiqueJoursPomodoro, photoProfil }) {
   return (
     <div className="profil_onglet_panneau profil_onglet_panneau--profil">
       <div className="profil_layout">
@@ -370,7 +609,17 @@ function OngletProfil ({ pseudo, distanceTotale, historiqueJoursPomodoro }) {
         <div className="profil_colonne_infos">
           <div className="profil_entete">
             <div className="profil_photo">
-              <span className="profil_photo_icone">👤</span>
+              {photoProfil?.dataUrl ? (
+                <img
+                  src={photoProfil.dataUrl}
+                  alt={`Photo de profil de ${pseudo}`}
+                  className="profil_photo_img"
+                  style={{ objectPosition: `${photoProfil.position.x}% ${photoProfil.position.y}%` }}
+                  draggable={false}
+                />
+              ) : (
+                <span className="profil_photo_icone">👤</span>
+              )}
             </div>
             <span className="profil_pseudo">{pseudo}</span>
           </div>
@@ -558,12 +807,27 @@ function OngletSocial () {
 // Purement front-end pour l'instant : aucune donnée n'est envoyée à un
 // serveur, "Enregistrer les modifications" est un emplacement réservé
 // prêt à être branché sur une vraie API plus tard.
-function OngletParametres ({ pseudo }) {
+function OngletParametres ({ pseudo, photoProfil, setPhotoProfil }) {
+  const { deconnexion } = useAuth();
+
   // Photo de profil : image choisie localement (data URL) + position en
   // pourcentage (utilisée comme object-position) pour permettre à
-  // l'utilisateur de recentrer la photo dans le cadre.
-  const [photoDataUrl, setPhotoDataUrl] = useState(null);
-  const [positionPhoto, setPositionPhoto] = useState({ x: 50, y: 50 });
+  // l'utilisateur de recentrer la photo dans le cadre. L'état est remonté
+  // dans App (photoProfil / setPhotoProfil) pour être partagé avec le
+  // panneau joueur et la modale de profil.
+  const photoDataUrl = photoProfil?.dataUrl ?? null;
+  const positionPhoto = photoProfil?.position ?? { x: 50, y: 50 };
+  const setPhotoDataUrl = (dataUrl) =>
+    setPhotoProfil((prec) => ({ dataUrl, position: prec?.position ?? { x: 50, y: 50 } }));
+  const setPositionPhoto = (nouvellePositionOuFn) =>
+    setPhotoProfil((prec) => {
+      const positionActuelle = prec?.position ?? { x: 50, y: 50 };
+      const nouvellePosition =
+        typeof nouvellePositionOuFn === 'function'
+          ? nouvellePositionOuFn(positionActuelle)
+          : nouvellePositionOuFn;
+      return { dataUrl: prec?.dataUrl ?? null, position: nouvellePosition };
+    });
 
   const [email, setEmail] = useState('');
   const [motDePasseActuel, setMotDePasseActuel] = useState('');
@@ -652,7 +916,16 @@ function OngletParametres ({ pseudo }) {
 
       {/* --- Photo de profil : choix depuis le PC + repositionnement --- */}
       <div className="parametres_section">
-        <h4 className="profil_section_titre">Photo de profil</h4>
+        <div className="parametres_section_entete">
+          <h4 className="profil_section_titre">Photo de profil</h4>
+          <button
+            type="button"
+            className="btn_primaire parametres_btn_enregistrer"
+            onClick={enregistrerModifications}
+          >
+            Enregistrer les modifications
+          </button>
+        </div>
 
         <div
           className="parametres_photo_zone"
@@ -810,13 +1083,16 @@ function OngletParametres ({ pseudo }) {
         )}
       </div>
 
-      <button
-        type="button"
-        className="btn_primaire parametres_btn_enregistrer"
-        onClick={enregistrerModifications}
-      >
-        Enregistrer les modifications
-      </button>
+      {/* --- Déconnexion --- */}
+      <div className="parametres_section">
+        <button
+          type="button"
+          className="btn_secondaire parametres_btn_deconnexion"
+          onClick={deconnexion}
+        >
+          Se déconnecter
+        </button>
+      </div>
     </div>
   );
 }
@@ -3401,14 +3677,96 @@ function App() {
   // Navigation ultra simple entre la vitrine d'accueil et l'appli Pomodoro,
   // sans routeur : on affiche l'un ou l'autre selon cet état.
   const [pageActuelle, setPageActuelle] = useState('accueil');
-  // Fenêtre "Se connecter" ouverte depuis la navbar
+  // Fenêtre "Se connecter" / "S'inscrire" ouverte depuis la navbar ou la
+  // fenêtre de choix d'accès. `vueConnexionInitiale` détermine si elle
+  // s'ouvre directement sur le formulaire de connexion ou de création.
   const [connexionOuverte, setConnexionOuverte] = useState(false);
+  const [vueConnexionInitiale, setVueConnexionInitiale] = useState('connexion');
+  // Fenêtre de choix d'accès (S'inscrire / Continuer en invité / Se connecter),
+  // affichée dès qu'un utilisateur non connecté tente d'accéder à une page.
+  const [choixAccesOuvert, setChoixAccesOuvert] = useState(false);
+  // Vrai après avoir choisi "Continuer en tant qu'invité" ; réinitialisé
+  // dès qu'un vrai compte se connecte ou se déconnecte.
+  const [modeInvite, setModeInvite] = useState(false);
+  const { connecte, utilisateur } = useAuth();
+
+  // Dès qu'un utilisateur se connecte réellement (email/mdp, création de
+  // compte ou Google), on quitte le mode invité et on l'emmène sur Pomodoro.
+  // À l'inverse, une vraie déconnexion (transition connecté -> déconnecté)
+  // ramène automatiquement sur l'accueil.
+  const etaitConnecteRef = useRef(connecte);
+  useEffect(() => {
+    const etaitConnecte = etaitConnecteRef.current;
+    etaitConnecteRef.current = connecte;
+
+    if (connecte) {
+      setModeInvite(false);
+      setChoixAccesOuvert(false);
+      setPageActuelle('pomodoro');
+    } else if (etaitConnecte) {
+      setModeInvite(false);
+      setPageActuelle('accueil');
+    }
+  }, [connecte]);
+
+  // Ouvre la fenêtre de choix d'accès à la place d'une navigation directe
+  // tant que l'utilisateur n'est pas réellement connecté (le mode invité
+  // ne suffit pas : on redemande à chaque clic sur Home ou Pomodoro).
+  const demanderAcces = () => setChoixAccesOuvert(true);
+
+  const allerAccueil = () => {
+    if (connecte) setPageActuelle('accueil');
+    else demanderAcces();
+  };
+
+  const allerPomodoro = () => {
+    if (connecte) setPageActuelle('pomodoro');
+    else demanderAcces();
+  };
+
+  const choisirInscription = () => {
+    setChoixAccesOuvert(false);
+    setVueConnexionInitiale('creation');
+    setConnexionOuverte(true);
+  };
+
+  const choisirConnexion = () => {
+    setChoixAccesOuvert(false);
+    setVueConnexionInitiale('connexion');
+    setConnexionOuverte(true);
+  };
+
+  const choisirInvite = () => {
+    setChoixAccesOuvert(false);
+    setModeInvite(true);
+    setPageActuelle('pomodoro');
+  };
   // Vrai quand l'onglet Notes consulte une ancienne session (lecture seule) :
   // partagé avec le Chrono pour l'avertir que le temps de travail ne sera
   // pas comptabilisé dans cette session.
   const [modeLectureSession, setModeLectureSession] = useState(false);
   const [profilOuvert, setProfilOuvert] = useState(false);
   const [distanceTotale, setDistanceTotale] = useState(0);
+
+  // --- Photo de profil : partagée entre le panneau joueur, la modale de
+  // profil et l'onglet Paramètres. { dataUrl, position: { x, y } }.
+  // Récupérée depuis le localStorage au premier chargement.
+  const [photoProfil, setPhotoProfil] = useState(() => {
+    try {
+      const sauvegarde = localStorage.getItem(CLE_STOCKAGE_PHOTO_PROFIL);
+      return sauvegarde ? JSON.parse(sauvegarde) : { dataUrl: null, position: { x: 50, y: 50 } };
+    } catch {
+      return { dataUrl: null, position: { x: 50, y: 50 } };
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLE_STOCKAGE_PHOTO_PROFIL, JSON.stringify(photoProfil));
+    } catch {
+      // Stockage indisponible (ex: navigation privée) : on ignore silencieusement.
+    }
+  }, [photoProfil]);
   // Repère l'horodatage du dernier ajout de session comptabilisé, afin
   // d'ignorer un éventuel second déclenchement rapproché du même événement
   // de fin de session (voir ajouterDistanceSession ci-dessous).
@@ -3506,14 +3864,12 @@ function App() {
   // --- Tâches / Notes (liste + notes épinglées sur le fond principal) ---
   // L'état vit ici (et non dans le composant Note) afin que les notes
   // épinglées restent visibles même quand l'onglet "Notes" n'est pas actif.
-  const [taches, setTaches] = useState(() => {
-    try {
-      const sauvegarde = localStorage.getItem(CLE_STOCKAGE_TACHES);
-      return sauvegarde ? JSON.parse(sauvegarde) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Pour un compte connecté, les notes sont chargées depuis / synchronisées
+  // vers Supabase (table "taches", filtrée par user_id + RLS), voir les
+  // deux effets juste après ce state. Le mode invité n'a AUCUNE persistance :
+  // ses notes vivent uniquement en mémoire et disparaissent à la déconnexion,
+  // au retour au mode invité, ou à la fermeture de l'onglet.
+  const [taches, setTaches] = useState([]);
   // Id de la note pour laquelle une confirmation de désépinglage est demandée
   const [idADesepingler, setIdADesepingler] = useState(null);
 
@@ -3689,13 +4045,101 @@ function App() {
   // confirmation avant d'être effective.
   const sortieConfirmeeRef = useRef(false);
 
+  // Convertit une tâche de l'appli (camelCase) vers une ligne de la table
+  // Supabase "taches" (snake_case), et inversement. Voir le schéma SQL
+  // fourni séparément (table "taches" + policies RLS sur user_id).
+  const tacheVersLigneSupabase = (t, idUtilisateur) => ({
+    id: t.id,
+    user_id: idUtilisateur,
+    contenu: t.contenu,
+    tags: t.tags,
+    date_echeance: t.dateEcheance || null,
+    terminee: t.terminee,
+    epinglee: t.epinglee,
+    position: t.position,
+    ordre: t.ordre ?? null,
+    date_creation: t.dateCreation,
+    date_modification: t.dateModification,
+  });
+
+  const ligneSupabaseVersTache = (ligne) => ({
+    id: ligne.id,
+    contenu: ligne.contenu ?? '',
+    tags: ligne.tags ?? [],
+    dateEcheance: ligne.date_echeance ?? '',
+    terminee: !!ligne.terminee,
+    epinglee: !!ligne.epinglee,
+    position: ligne.position ?? null,
+    ...(ligne.ordre !== null && ligne.ordre !== undefined ? { ordre: ligne.ordre } : {}),
+    dateCreation: ligne.date_creation,
+    dateModification: ligne.date_modification,
+  });
+
+  // Charge les notes du compte connecté depuis Supabase. En mode invité ou
+  // après une déconnexion, la liste est immédiatement vidée : aucune note
+  // de compte ne doit fuiter vers l'invité, ni inversement.
   useEffect(() => {
-    try {
-      localStorage.setItem(CLE_STOCKAGE_TACHES, JSON.stringify(taches));
-    } catch {
-      // Stockage indisponible : on ignore silencieusement
+    if (!connecte || !utilisateur?.id) {
+      setTaches([]);
+      return;
     }
-  }, [taches]);
+
+    let annule = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('taches')
+          .select('*')
+          .eq('user_id', utilisateur.id)
+          .order('date_creation', { ascending: false });
+        if (error) throw error;
+        if (annule) return;
+        setTaches((data || []).map(ligneSupabaseVersTache));
+      } catch (err) {
+        if (!annule) console.error('Erreur de chargement des notes depuis Supabase :', err);
+      }
+    })();
+
+    return () => { annule = true; };
+  }, [connecte, utilisateur?.id]);
+
+  // Synchronise les notes vers Supabase pour un compte connecté (avec un
+  // court débounce pour éviter un appel réseau à chaque frappe). Les notes
+  // encore présentes localement sont enregistrées (upsert), celles qui ont
+  // été supprimées localement sont supprimées côté serveur.
+  useEffect(() => {
+    if (!connecte || !utilisateur?.id) return; // mode invité : rien à synchroniser
+
+    const idUtilisateur = utilisateur.id;
+    let annule = false;
+
+    const minuteur = setTimeout(async () => {
+      try {
+        if (taches.length > 0) {
+          const lignes = taches.map((t) => tacheVersLigneSupabase(t, idUtilisateur));
+          const { error: erreurUpsert } = await supabase.from('taches').upsert(lignes);
+          if (erreurUpsert) throw erreurUpsert;
+        }
+
+        const idsActuels = taches.map((t) => t.id);
+        let requeteSuppression = supabase.from('taches').delete().eq('user_id', idUtilisateur);
+        if (idsActuels.length > 0) {
+          requeteSuppression = requeteSuppression.not(
+            'id', 'in', `(${idsActuels.map((id) => `"${id}"`).join(',')})`
+          );
+        }
+        const { error: erreurSuppression } = await requeteSuppression;
+        if (erreurSuppression) throw erreurSuppression;
+      } catch (err) {
+        if (!annule) console.error('Erreur de synchronisation des notes vers Supabase :', err);
+      }
+    }, 800);
+
+    return () => {
+      annule = true;
+      clearTimeout(minuteur);
+    };
+  }, [taches, connecte, utilisateur?.id]);
 
   const ajouterTache = () => {
     const maintenant = new Date().toISOString();
@@ -3995,14 +4439,15 @@ function App() {
     <>
     {!modeConcentration && (
       <Navbar
-        onAccueil={() => setPageActuelle('accueil')}
-        onCourse={() => setPageActuelle('pomodoro')}
-        onConnexion={() => setConnexionOuverte(true)}
+        onAccueil={allerAccueil}
+        onCourse={allerPomodoro}
+        onConnexion={choisirConnexion}
+        modeInvite={modeInvite && !connecte}
       />
     )}
 
     {pageActuelle === 'accueil' ? (
-      <Accueil onCommencer={() => setPageActuelle('pomodoro')} />
+      <Accueil onCommencer={demanderAcces} />
     ) : (
     <>
     {!modeConcentration && (
@@ -4012,6 +4457,7 @@ function App() {
         distance={distanceTotale}
         position={0}
         ouvrirProfil={() => setProfilOuvert(true)}
+        photoProfil={photoProfil}
       />
     )}
 
@@ -4078,6 +4524,8 @@ function App() {
       pseudo={pseudoJoueur}
       distanceTotale={distanceTotale}
       historiqueJoursPomodoro={historiqueJoursPomodoro}
+      photoProfil={photoProfil}
+      setPhotoProfil={setPhotoProfil}
     />
 
     {/* Notes épinglées : widgets flottants affichés sur le fond principal */}
@@ -4136,9 +4584,18 @@ function App() {
     </>
     )}
 
+    <ModalChoixAcces
+      ouvert={choixAccesOuvert}
+      fermer={() => setChoixAccesOuvert(false)}
+      onInscription={choisirInscription}
+      onInvite={choisirInvite}
+      onConnexion={choisirConnexion}
+    />
+
     <ModalConnexion
       ouvert={connexionOuverte}
       fermer={() => setConnexionOuverte(false)}
+      vueInitiale={vueConnexionInitiale}
     />
     </>
   )
