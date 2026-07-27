@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import { useAuth } from './context/AuthContext.jsx'
-import { supabase } from './lib/supabaseClient'
+import { supabase } from './lib/SupabaseClient'
 
 
 // --- Réglages Pomodoro par défaut, utilisés au premier lancement
