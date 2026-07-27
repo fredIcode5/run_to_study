@@ -78,6 +78,22 @@ export function AuthProvider({ children }) {
     if (error) throw error
   }
 
+  // Enregistre la photo de profil (dataUrl + position de recadrage) dans les
+  // user_metadata Supabase de l'utilisateur connecté. supabase.auth.updateUser
+  // déclenche un événement USER_UPDATED capté par onAuthStateChange ci-dessus,
+  // donc `utilisateur` (et tout composant utilisant useAuth()) se met à jour
+  // automatiquement avec la nouvelle photo une fois l'enregistrement terminé.
+  // N'est utilisable que pour un utilisateur réellement connecté : un
+  // utilisateur en mode invité n'a pas de compte Supabase où persister quoi
+  // que ce soit.
+  const mettreAJourPhotoProfil = async (photoProfil) => {
+    const { data, error } = await supabase.auth.updateUser({
+      data: { photo_profil: photoProfil },
+    })
+    if (error) throw error
+    return data
+  }
+
   const valeur = {
     session,
     utilisateur,
@@ -87,6 +103,7 @@ export function AuthProvider({ children }) {
     inscriptionAvecEmail,
     connexionAvecGoogle,
     deconnexion,
+    mettreAJourPhotoProfil,
   }
 
   return <AuthContext.Provider value={valeur}>{children}</AuthContext.Provider>

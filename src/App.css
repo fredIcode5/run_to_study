@@ -1207,13 +1207,16 @@ select option{
   width: 56px;
   height: 56px;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: 14px;
   border: none;
+  padding: 0;
+  box-sizing: border-box;
   background: rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  overflow: hidden;
   transition: transform 0.2s ease, background 0.2s ease;
 }
 
@@ -1228,9 +1231,10 @@ select option{
 }
 
 .joueur_photo_img{
+  display: block;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
+  border-radius: 14px;
   object-fit: cover;
 }
 
@@ -1483,11 +1487,12 @@ select option{
   width: 72px;
   height: 72px;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: 16px;
   background: rgba(226, 71, 42, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .profil_photo_icone{
@@ -1498,7 +1503,7 @@ select option{
 .profil_photo_img{
   width: 100%;
   height: 100%;
-  border-radius: 50%;
+  border-radius: 16px;
   object-fit: cover;
 }
 
@@ -3729,6 +3734,11 @@ select option{
   inset: 0;
   opacity: 0;
   cursor: pointer;
+}
+
+.parametres_photo_erreur {
+  font-size: 0.8em;
+  color: #e2472a;
 }
 
 .parametres_champ_label {

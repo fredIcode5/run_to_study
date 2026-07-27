@@ -14,12 +14,52 @@ const REGLAGES_PAR_DEFAUT = {
   couleurBoutons: '#e2472a',
 };
 
-const CLE_STOCKAGE_REGLAGES = 'pomodoro_reglages';
-const CLE_STOCKAGE_MUSIQUE = 'pomodoro_musique_ambiance';
-const CLE_STOCKAGE_PREREGLAGES = 'pomodoro_prereglages';
-const CLE_STOCKAGE_POINTS_POMODORO = 'pomodoro_points_tracker';
-const CLE_STOCKAGE_HISTORIQUE_JOURS = 'pomodoro_historique_jours';
-const CLE_STOCKAGE_PHOTO_PROFIL = 'pomodoro_photo_profil';
+// --- Tolérance aux erreurs réseau ponctuelles ---
+// Certains environnements (antivirus avec inspection HTTPS, VPN, proxy
+// d'entreprise, connexions instables) provoquent parfois des échecs de
+// requête purement réseau (ERR_CONNECTION_RESET, ERR_HTTP2_PROTOCOL_ERROR,
+// "Failed to fetch"...) qui n'ont rien à voir avec les données envoyées :
+// une nouvelle tentative quelques centaines de ms plus tard réussit
+// généralement. `executerAvecRetry` réessaie automatiquement une fonction
+// asynchrone (typiquement un appel Supabase) plusieurs fois, avec un délai
+// croissant entre chaque tentative (backoff exponentiel), avant d'abandonner
+// et de laisser remonter l'erreur normalement.
+async function executerAvecRetry(fonctionAsync, { tentatives = 3, delaiBaseMs = 500 } = {}) {
+  let derniereErreur;
+  for (let essai = 0; essai < tentatives; essai++) {
+    try {
+      return await fonctionAsync();
+    } catch (erreur) {
+      derniereErreur = erreur;
+      const dernierEssai = essai === tentatives - 1;
+      if (dernierEssai) break;
+      const delai = delaiBaseMs * 2 ** essai; // 500ms, 1000ms, 2000ms...
+      await new Promise((resolve) => setTimeout(resolve, delai));
+    }
+  }
+  throw derniereErreur;
+}
+
+// Pause simple, utilisée pour échelonner des requêtes qui partiraient
+// sinon toutes en même temps (voir chargements initiaux dans App()).
+function attendre(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// --- Persistance des données utilisateur ---
+// Toutes les données propres à un compte (notes, préréglages, historique des
+// séances, sessions archivées, réglages courants, musique d'ambiance) sont
+// désormais chargées depuis Supabase et synchronisées vers Supabase, filtrées
+// par user_id + policies RLS (voir schema_supabase.sql). Le Local Storage
+// n'est plus utilisé pour aucune donnée utilisateur : il ne persisterait
+// aucune isolation entre comptes sur un même navigateur.
+// Le mode invité (non connecté) reste volontairement SANS persistance : ses
+// données ne vivent qu'en mémoire et disparaissent à la déconnexion / au
+// changement de compte / à la fermeture de l'onglet.
+
+// Valeur "vide" de la photo de profil : utilisée pour les invités (mode
+// invité, non connectés à un compte Supabase) et comme repli par défaut.
+const PHOTO_PROFIL_VIDE = { dataUrl: null, position: { x: 50, y: 50 } };
 
 // Position par défaut du lecteur de musique flottant, calculée en fonction
 // de la taille de la fenêtre pour rester visible sur la plupart des écrans
@@ -524,7 +564,7 @@ function PanneauJoueur ({ pseudo, niveau, distance, position, ouvrirProfil, phot
 // L'onglet actif est un simple état React ; aucun rechargement de page,
 // aucune donnée envoyée nulle part pour Stats/Social (structure prête pour
 // être complétée plus tard).
-function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPomodoro, photoProfil, setPhotoProfil }) {
+function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPomodoro, photoProfil, onEnregistrerPhotoProfil, enregistrementPhotoEnCours, erreurPhotoProfil }) {
   const [ongletActif, setOngletActif] = useState('profil');
 
   // Revient toujours sur l'onglet "Profil" à chaque réouverture de la modale
@@ -576,7 +616,9 @@ function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursP
             <OngletParametres
               pseudo={pseudo}
               photoProfil={photoProfil}
-              setPhotoProfil={setPhotoProfil}
+              onEnregistrerPhotoProfil={onEnregistrerPhotoProfil}
+              enregistrementPhotoEnCours={enregistrementPhotoEnCours}
+              erreurPhotoProfil={erreurPhotoProfil}
             />
           )}
         </div>
@@ -807,27 +849,25 @@ function OngletSocial () {
 // Purement front-end pour l'instant : aucune donnée n'est envoyée à un
 // serveur, "Enregistrer les modifications" est un emplacement réservé
 // prêt à être branché sur une vraie API plus tard.
-function OngletParametres ({ pseudo, photoProfil, setPhotoProfil }) {
-  const { deconnexion } = useAuth();
+function OngletParametres ({ pseudo, photoProfil, onEnregistrerPhotoProfil, enregistrementPhotoEnCours, erreurPhotoProfil }) {
+  const { deconnexion, connecte } = useAuth();
 
-  // Photo de profil : image choisie localement (data URL) + position en
-  // pourcentage (utilisée comme object-position) pour permettre à
-  // l'utilisateur de recentrer la photo dans le cadre. L'état est remonté
-  // dans App (photoProfil / setPhotoProfil) pour être partagé avec le
-  // panneau joueur et la modale de profil.
-  const photoDataUrl = photoProfil?.dataUrl ?? null;
-  const positionPhoto = photoProfil?.position ?? { x: 50, y: 50 };
-  const setPhotoDataUrl = (dataUrl) =>
-    setPhotoProfil((prec) => ({ dataUrl, position: prec?.position ?? { x: 50, y: 50 } }));
-  const setPositionPhoto = (nouvellePositionOuFn) =>
-    setPhotoProfil((prec) => {
-      const positionActuelle = prec?.position ?? { x: 50, y: 50 };
-      const nouvellePosition =
-        typeof nouvellePositionOuFn === 'function'
-          ? nouvellePositionOuFn(positionActuelle)
-          : nouvellePositionOuFn;
-      return { dataUrl: prec?.dataUrl ?? null, position: nouvellePosition };
-    });
+  // Photo de profil : brouillon local (image choisie + position de
+  // recadrage en %, utilisée comme object-position). On édite ce brouillon
+  // librement dans cet onglet (choix de fichier, glisser pour recentrer)
+  // sans rien enregistrer ; l'envoi vers Supabase (et donc la mise à jour
+  // du panneau joueur / de la modale de profil) n'a lieu qu'au clic sur
+  // "Enregistrer les modifications". Un invité n'a pas de compte Supabase :
+  // les contrôles de photo lui sont donc masqués plus bas (voir JSX).
+  const [photoDataUrl, setPhotoDataUrl] = useState(photoProfil?.dataUrl ?? null);
+  const [positionPhoto, setPositionPhoto] = useState(photoProfil?.position ?? { x: 50, y: 50 });
+
+  // Resynchronise le brouillon si la photo enregistrée change depuis
+  // l'extérieur (ex: chargement des user_metadata après connexion).
+  useEffect(() => {
+    setPhotoDataUrl(photoProfil?.dataUrl ?? null);
+    setPositionPhoto(photoProfil?.position ?? { x: 50, y: 50 });
+  }, [photoProfil]);
 
   const [email, setEmail] = useState('');
   const [motDePasseActuel, setMotDePasseActuel] = useState('');
@@ -898,13 +938,15 @@ function OngletParametres ({ pseudo, photoProfil, setPhotoProfil }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const enregistrerModifications = () => {
-    // Emplacement réservé : aucun appel serveur pour l'instant. Structure
-    // prête à être connectée à une vraie API de mise à jour de profil
-    // (envoi de la photo, du recadrage, de l'e-mail, du mot de passe...).
+  const enregistrerModifications = async () => {
+    // La photo de profil est réellement enregistrée sur Supabase (seulement
+    // pour un utilisateur connecté, jamais pour un invité). Le reste
+    // (e-mail, mot de passe, infos personnelles) reste un emplacement
+    // réservé, prêt à être branché sur une vraie API plus tard.
+    if (connecte) {
+      await onEnregistrerPhotoProfil({ dataUrl: photoDataUrl, position: positionPhoto });
+    }
     console.log('Modifications des paramètres (placeholder) :', {
-      photoDataUrl,
-      positionPhoto,
       email,
       dateNaissance,
       sexe,
@@ -922,42 +964,56 @@ function OngletParametres ({ pseudo, photoProfil, setPhotoProfil }) {
             type="button"
             className="btn_primaire parametres_btn_enregistrer"
             onClick={enregistrerModifications}
+            disabled={enregistrementPhotoEnCours}
           >
-            Enregistrer les modifications
+            {enregistrementPhotoEnCours ? 'Enregistrement...' : 'Enregistrer les modifications'}
           </button>
         </div>
 
-        <div
-          className="parametres_photo_zone"
-          ref={zonePhotoRef}
-          onMouseDown={demarrerGlissement}
-        >
-          {photoDataUrl ? (
-            <img
-              src={photoDataUrl}
-              alt={`Photo de profil de ${pseudo}`}
-              className="parametres_photo_apercu"
-              style={{ objectPosition: `${positionPhoto.x}% ${positionPhoto.y}%` }}
-              draggable={false}
-            />
-          ) : (
-            <span className="parametres_photo_icone_defaut">👤</span>
-          )}
-        </div>
+        {connecte ? (
+          <>
+            <div
+              className="parametres_photo_zone"
+              ref={zonePhotoRef}
+              onMouseDown={demarrerGlissement}
+            >
+              {photoDataUrl ? (
+                <img
+                  src={photoDataUrl}
+                  alt={`Photo de profil de ${pseudo}`}
+                  className="parametres_photo_apercu"
+                  style={{ objectPosition: `${positionPhoto.x}% ${positionPhoto.y}%` }}
+                  draggable={false}
+                />
+              ) : (
+                <span className="parametres_photo_icone_defaut">👤</span>
+              )}
+            </div>
 
-        {photoDataUrl && (
-          <p className="parametres_photo_aide">Glissez la photo pour la recentrer</p>
+            {photoDataUrl && (
+              <p className="parametres_photo_aide">Glissez la photo pour la recentrer</p>
+            )}
+
+            <label className="btn_secondaire parametres_photo_btn_choisir">
+              Choisir une photo depuis mon PC
+              <input
+                type="file"
+                accept="image/*"
+                onChange={gererChoixPhoto}
+                className="parametres_photo_input_fichier"
+              />
+            </label>
+
+            {erreurPhotoProfil && (
+              <p className="parametres_photo_erreur">{erreurPhotoProfil}</p>
+            )}
+          </>
+        ) : (
+          <p className="parametres_photo_aide">
+            Connecte-toi avec un compte pour choisir et enregistrer une photo de profil. En mode
+            invité, aucune photo n'est affichée.
+          </p>
         )}
-
-        <label className="btn_secondaire parametres_photo_btn_choisir">
-          Choisir une photo depuis mon PC
-          <input
-            type="file"
-            accept="image/*"
-            onChange={gererChoixPhoto}
-            className="parametres_photo_input_fichier"
-          />
-        </label>
       </div>
 
       {/* --- Compte : e-mail et mot de passe --- */}
@@ -1673,23 +1729,69 @@ function genererNumeroSession(sessionsExistantes) {
   return String(suivant).padStart(4, '0');
 }
 
-/** Charge les sessions déjà sauvegardées (localStorage). */
-function chargerSessionsSauvegardees() {
-  try {
-    const brut = window.localStorage.getItem('sessions_sauvegardees');
-    return brut ? JSON.parse(brut) : [];
-  } catch (e) {
-    return [];
-  }
+// --- Persistance des sessions archivées : table Supabase "sessions_notes"
+// (filtrée par user_id + RLS, voir schema_supabase.sql). Un compte connecté
+// ne voit jamais les sessions archivées d'un autre compte. Le mode invité
+// n'a aucune persistance : ses sessions archivées ne vivent qu'en mémoire.
+
+// Convertit une ligne de la table Supabase "prereglages" vers l'objet
+// préréglage utilisé par l'application (fusionné avec sa colonne jsonb
+// "configuration").
+function ligneSupabaseVersPrereglage(ligne) {
+  const config = ligne.configuration || {};
+  return {
+    id: ligne.id,
+    nom: ligne.nom,
+    couleurFondAppliquee: config.couleurFondAppliquee ?? null,
+    imageFond: config.imageFond ?? null,
+    reglages: config.reglages ?? null,
+    musiqueAmbiance: config.musiqueAmbiance ?? null,
+  };
 }
 
-/** Persiste la liste des sessions sauvegardées (localStorage). */
-function sauvegarderSessionsDansStockage(sessions) {
-  try {
-    window.localStorage.setItem('sessions_sauvegardees', JSON.stringify(sessions));
-  } catch (e) {
-    // Stockage indisponible (mode privé, quota dépassé, etc.) : on ignore silencieusement
-  }
+function sessionArchiveeVersLigneSupabase(session, idUtilisateur) {
+  return {
+    id: session.id,
+    user_id: idUtilisateur,
+    titre: session.titre,
+    numero: session.numero,
+    date_creation_session: session.dateCreation || null,
+    notes: session.notes,
+  };
+}
+
+function ligneSupabaseVersSessionArchivee(ligne) {
+  const dateArchivage = ligne.date_archivage ? new Date(ligne.date_archivage) : null;
+  return {
+    id: ligne.id,
+    titre: ligne.titre ?? '',
+    numero: ligne.numero ?? '',
+    date: dateArchivage ? dateArchivage.toLocaleDateString() : '',
+    heure: dateArchivage
+      ? dateArchivage.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '',
+    dateCreation: ligne.date_creation_session ?? ligne.date_archivage,
+    notes: ligne.notes ?? [],
+  };
+}
+
+/** Charge depuis Supabase les sessions archivées de l'utilisateur connecté. */
+async function chargerSessionsSauvegardeesDepuisSupabase(idUtilisateur) {
+  const { data, error } = await supabase
+    .from('sessions_notes')
+    .select('*')
+    .eq('user_id', idUtilisateur)
+    .order('date_archivage', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(ligneSupabaseVersSessionArchivee);
+}
+
+/** Insère une nouvelle session archivée dans Supabase pour l'utilisateur connecté. */
+async function enregistrerSessionArchiveeDansSupabase(session, idUtilisateur) {
+  const { error } = await executerAvecRetry(() => supabase
+    .from('sessions_notes')
+    .insert(sessionArchiveeVersLigneSupabase(session, idUtilisateur)));
+  if (error) throw error;
 }
 
 // ==========================================================================
@@ -1726,17 +1828,55 @@ function PomodoroTracker ({ points }) {
 }
 
 function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre, pointsPomodoro, modeLecture, setModeLecture }) {
+  const { connecte, utilisateur } = useAuth();
+
   const [idAgrandie, setIdAgrandie] = useState(null);
 
-  // Sessions déjà sauvegardées (chargées une seule fois au montage)
-  const [sessionsSauvegardees, setSessionsSauvegardees] = useState(() =>
-    chargerSessionsSauvegardees()
-  );
+  // Sessions archivées : chargées depuis Supabase (table "sessions_notes",
+  // filtrée par user_id + RLS) pour un compte connecté. Le mode invité n'a
+  // aucune persistance : la liste reste vide et vit uniquement en mémoire.
+  const [sessionsSauvegardees, setSessionsSauvegardees] = useState([]);
+  // Repère l'utilisateur pour lequel le chargement Supabase est terminé, afin
+  // d'éviter d'enregistrer une session sous le mauvais compte pendant la
+  // fenêtre de temps où l'on bascule d'un utilisateur à un autre.
+  const sessionsChargeesPourRef = useRef(null);
 
-  // Session en cours
-  const [numeroSession, setNumeroSession] = useState(() =>
-    genererNumeroSession(chargerSessionsSauvegardees())
-  );
+  useEffect(() => {
+    let annule = false;
+
+    if (!connecte || !utilisateur?.id) {
+      setSessionsSauvegardees([]);
+      sessionsChargeesPourRef.current = 'invite';
+      return;
+    }
+
+    sessionsChargeesPourRef.current = null; // chargement en cours
+    (async () => {
+      try {
+        // Léger décalage pour ne pas partir exactement en même temps que les
+        // 4 autres chargements initiaux (taches, prereglages, seances_pomodoro,
+        // preferences_utilisateur), qui réduit le risque d'erreurs réseau liées
+        // à trop de requêtes HTTP2 simultanées vers le même hôte.
+        await attendre(80);
+        if (annule) return;
+        const sessions = await executerAvecRetry(() => chargerSessionsSauvegardeesDepuisSupabase(utilisateur.id));
+        if (annule) return;
+        setSessionsSauvegardees(sessions);
+        sessionsChargeesPourRef.current = utilisateur.id;
+      } catch (err) {
+        if (!annule) console.error('Erreur de chargement des sessions archivées depuis Supabase :', err);
+      }
+    })();
+
+    return () => { annule = true; };
+  }, [connecte, utilisateur?.id]);
+
+  // Session en cours : le numéro dépend des sessions déjà archivées, donc il
+  // est recalculé dès que celles-ci sont (re)chargées (changement de compte).
+  const [numeroSession, setNumeroSession] = useState('0001');
+  useEffect(() => {
+    setNumeroSession(genererNumeroSession(sessionsSauvegardees));
+  }, [sessionsSauvegardees]);
   const [titreSession, setTitreSession] = useState('');
 
   // Date de création de la session en cours, utilisée pour le compteur de
@@ -1901,7 +2041,14 @@ const tachesListe = sourceTaches
 
     const sessionsMisesAJour = [...sessionsSauvegardees, sessionArchivee];
     setSessionsSauvegardees(sessionsMisesAJour);
-    sauvegarderSessionsDansStockage(sessionsMisesAJour);
+
+    // Mode invité, ou changement de compte encore en cours de chargement :
+    // rien à enregistrer côté serveur (pas de compte cible fiable).
+    if (connecte && utilisateur?.id && sessionsChargeesPourRef.current === utilisateur.id) {
+      enregistrerSessionArchiveeDansSupabase(sessionArchivee, utilisateur.id).catch((err) => {
+        console.error("Erreur d'enregistrement de la session archivée vers Supabase :", err);
+      });
+    }
 
     repartirSurNouvelleSession(sessionsMisesAJour);
   };
@@ -1958,7 +2105,12 @@ const tachesListe = sourceTaches
     const sessionsMisesAJour = [...sessionsSauvegardees, sessionArchivee];
 
     setSessionsSauvegardees(sessionsMisesAJour);
-    sauvegarderSessionsDansStockage(sessionsMisesAJour);
+
+    if (connecte && utilisateur?.id && sessionsChargeesPourRef.current === utilisateur.id) {
+      enregistrerSessionArchiveeDansSupabase(sessionArchivee, utilisateur.id).catch((err) => {
+        console.error("Erreur d'enregistrement de la session archivée vers Supabase :", err);
+      });
+    }
   };
 
   // Filtre les sessions sauvegardées selon la barre de recherche (titre ou numéro)
@@ -3671,9 +3823,6 @@ function BarreDefilante ({ actif }) {
 function App() {
   const [panelOuvert, setPanelOuvert] = useState(true);
   const [enMarche, setEnMarche] = useState(false);
-  // Pseudo affiché à la fois dans le panneau joueur et la modale de profil
-  // (en dur pour l'instant, en attendant un vrai système de compte)
-  const pseudoJoueur = 'Pseudo';
   // Navigation ultra simple entre la vitrine d'accueil et l'appli Pomodoro,
   // sans routeur : on affiche l'un ou l'autre selon cet état.
   const [pageActuelle, setPageActuelle] = useState('accueil');
@@ -3688,7 +3837,15 @@ function App() {
   // Vrai après avoir choisi "Continuer en tant qu'invité" ; réinitialisé
   // dès qu'un vrai compte se connecte ou se déconnecte.
   const [modeInvite, setModeInvite] = useState(false);
-  const { connecte, utilisateur } = useAuth();
+  const { connecte, utilisateur, mettreAJourPhotoProfil } = useAuth();
+
+  // Pseudo affiché à la fois dans le panneau joueur et la modale de profil :
+  // priorité au pseudo choisi par l'utilisateur à la création de son compte
+  // (stocké dans user_metadata), repli sur l'email si aucun pseudo n'a été
+  // renseigné, et repli final sur "Invité" en mode invité / non connecté.
+  const pseudoJoueur = connecte
+    ? (utilisateur?.user_metadata?.pseudo || utilisateur?.email || 'Pseudo')
+    : 'Invité';
 
   // Dès qu'un utilisateur se connecte réellement (email/mdp, création de
   // compte ou Google), on quitte le mode invité et on l'emmène sur Pomodoro.
@@ -3750,67 +3907,86 @@ function App() {
 
   // --- Photo de profil : partagée entre le panneau joueur, la modale de
   // profil et l'onglet Paramètres. { dataUrl, position: { x, y } }.
-  // Récupérée depuis le localStorage au premier chargement.
-  const [photoProfil, setPhotoProfil] = useState(() => {
-    try {
-      const sauvegarde = localStorage.getItem(CLE_STOCKAGE_PHOTO_PROFIL);
-      return sauvegarde ? JSON.parse(sauvegarde) : { dataUrl: null, position: { x: 50, y: 50 } };
-    } catch {
-      return { dataUrl: null, position: { x: 50, y: 50 } };
-    }
-  });
+  // Source de vérité = Supabase (user_metadata.photo_profil), donc :
+  //  - un utilisateur en mode invité (non connecté) n'a jamais de photo :
+  //    on affiche systématiquement la valeur vide, quoi qu'il ait pu choisir
+  //    avant de se déconnecter ou pendant qu'il navigue en invité.
+  //  - un utilisateur connecté voit la photo enregistrée sur son compte.
+  const photoProfil = connecte
+    ? (utilisateur?.user_metadata?.photo_profil ?? PHOTO_PROFIL_VIDE)
+    : PHOTO_PROFIL_VIDE;
 
-  useEffect(() => {
+  const [enregistrementPhotoEnCours, setEnregistrementPhotoEnCours] = useState(false);
+  const [erreurPhotoProfil, setErreurPhotoProfil] = useState(null);
+
+  // Envoie la nouvelle photo de profil (dataUrl + recadrage) à Supabase.
+  // Appelée uniquement pour un utilisateur réellement connecté : un invité
+  // n'a pas de compte où l'enregistrer (voir OngletParametres, qui masque
+  // d'ailleurs entièrement ces contrôles pour les invités).
+  const enregistrerPhotoProfil = async (nouvellePhotoProfil) => {
+    if (!connecte) return;
+    setEnregistrementPhotoEnCours(true);
+    setErreurPhotoProfil(null);
     try {
-      localStorage.setItem(CLE_STOCKAGE_PHOTO_PROFIL, JSON.stringify(photoProfil));
+      await mettreAJourPhotoProfil(nouvellePhotoProfil);
     } catch {
-      // Stockage indisponible (ex: navigation privée) : on ignore silencieusement.
+      setErreurPhotoProfil("Impossible d'enregistrer la photo de profil. Réessayez.");
+    } finally {
+      setEnregistrementPhotoEnCours(false);
     }
-  }, [photoProfil]);
+  };
   // Repère l'horodatage du dernier ajout de session comptabilisé, afin
   // d'ignorer un éventuel second déclenchement rapproché du même événement
   // de fin de session (voir ajouterDistanceSession ci-dessous).
   const dernierAjoutSessionRef = useRef(0);
 
-  // --- Pomodoro Tracker : historique des séances de travail terminées
-  // (jusqu'à 10 points, chacun représentant une séance Pomodoro accomplie) ---
-  const [pointsPomodoro, setPointsPomodoro] = useState(() => {
-    try {
-      const sauvegarde = localStorage.getItem(CLE_STOCKAGE_POINTS_POMODORO);
-      return sauvegarde ? JSON.parse(sauvegarde) : [];
-    } catch {
-      return [];
-    }
-  });
+  // --- Pomodoro Tracker : simple compteur éphémère de la session en cours
+  // (jusqu'à 10 points, remis à zéro à chaque nouvelle session de notes ou
+  // changement de compte). N'est PAS une donnée persistante : il n'a donc
+  // pas besoin d'être synchronisé vers Supabase, mais DOIT être réinitialisé
+  // au changement d'utilisateur pour ne jamais laisser le tracker d'un
+  // compte visible chez un autre (isolation stricte, cf. historiqueJoursPomodoro
+  // ci-dessous pour l'historique réellement persistant).
+  const [pointsPomodoro, setPointsPomodoro] = useState([]);
+  useEffect(() => {
+    setPointsPomodoro([]);
+  }, [connecte, utilisateur?.id]);
+
+  // --- Historique complet des séances Pomodoro terminées, utilisé par la
+  // heatmap de l'onglet "Profil". Chargé depuis / synchronisé vers Supabase
+  // (table "seances_pomodoro", filtrée par user_id + RLS) pour un compte
+  // connecté : chaque séance terminée y est insérée (voir
+  // ajouterDistanceSession ci-dessous). Mode invité : en mémoire uniquement.
+  const [historiqueJoursPomodoro, setHistoriqueJoursPomodoro] = useState([]);
+  const seancesChargeesPourRef = useRef(null);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(CLE_STOCKAGE_POINTS_POMODORO, JSON.stringify(pointsPomodoro));
-    } catch {
-      // Stockage indisponible : on ignore silencieusement
+    if (!connecte || !utilisateur?.id) {
+      setHistoriqueJoursPomodoro([]);
+      seancesChargeesPourRef.current = 'invite';
+      return;
     }
-  }, [pointsPomodoro]);
 
-  // --- Historique des jours avec au moins un Pomodoro terminé, utilisé par
-  // la heatmap de l'onglet "Profil" (contrairement à pointsPomodoro, non
-  // plafonné : on garde tout l'historique, un jour pouvant apparaître
-  // plusieurs fois si plusieurs séances ont eu lieu le même jour) ---
-  const [historiqueJoursPomodoro, setHistoriqueJoursPomodoro] = useState(() => {
-    try {
-      const sauvegarde = localStorage.getItem(CLE_STOCKAGE_HISTORIQUE_JOURS);
-      return sauvegarde ? JSON.parse(sauvegarde) : [];
-    } catch {
-      return [];
-    }
-  });
+    seancesChargeesPourRef.current = null;
+    let annule = false;
+    (async () => {
+      try {
+        const { data, error } = await executerAvecRetry(() => supabase
+          .from('seances_pomodoro')
+          .select('*')
+          .eq('user_id', utilisateur.id)
+          .order('date_creation', { ascending: true }));
+        if (error) throw error;
+        if (annule) return;
+        setHistoriqueJoursPomodoro((data || []).map((ligne) => formaterJourIso(new Date(ligne.date_creation))));
+        seancesChargeesPourRef.current = utilisateur.id;
+      } catch (err) {
+        if (!annule) console.error('Erreur de chargement de l\'historique des séances depuis Supabase :', err);
+      }
+    })();
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(CLE_STOCKAGE_HISTORIQUE_JOURS, JSON.stringify(historiqueJoursPomodoro));
-    } catch {
-      // Stockage indisponible : on ignore silencieusement
-    }
-  }, [historiqueJoursPomodoro]);
+    return () => { annule = true; };
+  }, [connecte, utilisateur?.id]);
 
   // --- États : personnalisation de l'arrière-plan ---
   const [couleurFondInput, setCouleurFondInput] = useState('');
@@ -3818,18 +3994,10 @@ function App() {
   const [imageFond, setImageFond] = useState(null);
 
   // --- Réglages Pomodoro (durées + couleurs) ---
-  // Initialisation "paresseuse" : lecture du localStorage une seule fois,
-  // au tout premier rendu, pour restaurer les réglages sauvegardés.
-  const [reglages, setReglages] = useState(() => {
-    try {
-      const sauvegarde = localStorage.getItem(CLE_STOCKAGE_REGLAGES);
-      if (!sauvegarde) return REGLAGES_PAR_DEFAUT;
-      const parsed = JSON.parse(sauvegarde);
-      return { ...REGLAGES_PAR_DEFAUT, ...parsed };
-    } catch {
-      return REGLAGES_PAR_DEFAUT;
-    }
-  });
+  // Restaurés depuis Supabase pour un compte connecté (voir plus bas, table
+  // "preferences_utilisateur"). Valeur par défaut le temps du chargement,
+  // ou pour un invité (aucune persistance en mode invité).
+  const [reglages, setReglages] = useState(REGLAGES_PAR_DEFAUT);
 
   const ajouterDistanceSession = (metres) => {
     const maintenant = Date.now();
@@ -3859,6 +4027,27 @@ function App() {
     // de l'onglet "Profil" : un jour est actif dès qu'au moins une séance
     // de travail y a été terminée.
     setHistoriqueJoursPomodoro((prev) => [...prev, formaterJourIso(new Date(maintenant))]);
+
+    // Persiste la séance dans Supabase pour un compte connecté (dont le
+    // chargement initial de l'historique est bien terminé). En mode invité,
+    // ou pendant la fenêtre de changement de compte, la séance ne vit
+    // qu'en mémoire pour cette session de navigation.
+    if (connecte && utilisateur?.id && seancesChargeesPourRef.current === utilisateur.id) {
+      executerAvecRetry(() => supabase
+        .from('seances_pomodoro')
+        .insert({
+          id: `seance_${maintenant}_${Math.floor(Math.random() * 100000)}`,
+          user_id: utilisateur.id,
+          duree: reglages.dureeTravail,
+          date_creation: new Date(maintenant).toISOString(),
+        }))
+        .then(({ error }) => {
+          if (error) console.error("Erreur d'enregistrement de la séance vers Supabase :", error);
+        })
+        .catch((error) => {
+          console.error("Erreur d'enregistrement de la séance vers Supabase :", error);
+        });
+    }
   };
 
   // --- Tâches / Notes (liste + notes épinglées sur le fond principal) ---
@@ -3870,6 +4059,14 @@ function App() {
   // ses notes vivent uniquement en mémoire et disparaissent à la déconnexion,
   // au retour au mode invité, ou à la fermeture de l'onglet.
   const [taches, setTaches] = useState([]);
+  // Repère l'utilisateur pour lequel le chargement Supabase des notes est
+  // terminé ('invite' en mode invité). Tant que cette valeur ne correspond
+  // pas à l'utilisateur courant, l'effet de synchronisation ci-dessous ne
+  // doit RIEN écrire : sans cette garde, les notes encore en mémoire de
+  // l'utilisateur précédent pourraient être enregistrées sous le user_id du
+  // nouvel utilisateur pendant la fenêtre de temps entre connexion/déconnexion
+  // et la fin du chargement de ses propres notes.
+  const tachesChargeesPourRef = useRef(null);
   // Id de la note pour laquelle une confirmation de désépinglage est demandée
   const [idADesepingler, setIdADesepingler] = useState(null);
 
@@ -3879,38 +4076,91 @@ function App() {
   // du widget flottant, et état de lecture (enLecture / boucle). Centraliser
   // cet état dans App permet au panneau Réglages d'afficher les informations
   // détaillées de la piste, en plus du lecteur flottant lui-même.
-  const [musiqueAmbiance, setMusiqueAmbiance] = useState(() => {
-    try {
-      const sauvegarde = localStorage.getItem(CLE_STOCKAGE_MUSIQUE);
-      if (!sauvegarde) return null;
-      const parsed = JSON.parse(sauvegarde);
-      return {
-        boucle: false,
-        position: null,
-        ...parsed,
-        // On ne restaure jamais l'état "en lecture" au rechargement : la
-        // plupart des navigateurs bloquent de toute façon la lecture
-        // automatique sans interaction préalable de l'utilisateur.
-        enLecture: false,
-      };
-    } catch {
-      return null;
-    }
-  });
+  // Restaurée depuis Supabase pour un compte connecté (voir plus bas). Reste
+  // à `null` en mode invité : aucune persistance pour un invité.
+  const [musiqueAmbiance, setMusiqueAmbiance] = useState(null);
   const [choixMusiqueOuvert, setChoixMusiqueOuvert] = useState(false);
-  const [lecteurMusiqueVisible, setLecteurMusiqueVisible] = useState(Boolean(musiqueAmbiance));
+  const [lecteurMusiqueVisible, setLecteurMusiqueVisible] = useState(false);
+
+  // --- Préférences utilisateur (réglages courants, musique d'ambiance,
+  // couleur/image de fond) : chargées depuis / synchronisées vers Supabase
+  // (table "preferences_utilisateur", une ligne par utilisateur, filtrée par
+  // user_id + RLS). Isolation stricte entre comptes, comme pour les notes,
+  // préréglages, et historique des séances ci-dessus/ci-dessous.
+  const preferencesChargeesPourRef = useRef(null);
 
   useEffect(() => {
-    try {
-      if (musiqueAmbiance) {
-        localStorage.setItem(CLE_STOCKAGE_MUSIQUE, JSON.stringify(musiqueAmbiance));
-      } else {
-        localStorage.removeItem(CLE_STOCKAGE_MUSIQUE);
-      }
-    } catch {
-      // Stockage indisponible : on ignore silencieusement
+    if (!connecte || !utilisateur?.id) {
+      // Mode invité : repli sur les valeurs par défaut, aucune persistance.
+      setReglages(REGLAGES_PAR_DEFAUT);
+      setMusiqueAmbiance(null);
+      setLecteurMusiqueVisible(false);
+      setCouleurFondAppliquee(null);
+      setImageFond(null);
+      preferencesChargeesPourRef.current = 'invite';
+      return;
     }
-  }, [musiqueAmbiance]);
+
+    preferencesChargeesPourRef.current = null;
+    let annule = false;
+    (async () => {
+      try {
+        await attendre(160);
+        if (annule) return;
+        const { data, error } = await executerAvecRetry(() => supabase
+          .from('preferences_utilisateur')
+          .select('*')
+          .eq('user_id', utilisateur.id)
+          .maybeSingle());
+        if (error) throw error;
+        if (annule) return;
+
+        const config = data?.configuration || {};
+        setReglages({ ...REGLAGES_PAR_DEFAUT, ...(config.reglages || {}) });
+        setCouleurFondAppliquee(config.couleurFondAppliquee ?? null);
+        setImageFond(config.imageFond ?? null);
+        if (config.musiqueAmbiance) {
+          setMusiqueAmbiance({ boucle: false, position: null, ...config.musiqueAmbiance, enLecture: false });
+          setLecteurMusiqueVisible(true);
+        } else {
+          setMusiqueAmbiance(null);
+          setLecteurMusiqueVisible(false);
+        }
+        preferencesChargeesPourRef.current = utilisateur.id;
+      } catch (err) {
+        if (!annule) console.error('Erreur de chargement des préférences depuis Supabase :', err);
+      }
+    })();
+
+    return () => { annule = true; };
+  }, [connecte, utilisateur?.id]);
+
+  useEffect(() => {
+    if (!connecte || !utilisateur?.id) return;
+    if (preferencesChargeesPourRef.current !== utilisateur.id) return;
+
+    const idUtilisateur = utilisateur.id;
+    let annule = false;
+    const minuteur = setTimeout(async () => {
+      try {
+        const { error } = await executerAvecRetry(() => supabase.from('preferences_utilisateur').upsert({
+          user_id: idUtilisateur,
+          configuration: {
+            reglages,
+            musiqueAmbiance: musiqueAmbiance ? { ...musiqueAmbiance, enLecture: false } : null,
+            couleurFondAppliquee,
+            imageFond,
+          },
+          date_modification: new Date().toISOString(),
+        }));
+        if (error) throw error;
+      } catch (err) {
+        if (!annule) console.error('Erreur de synchronisation des préférences vers Supabase :', err);
+      }
+    }, 800);
+
+    return () => { annule = true; clearTimeout(minuteur); };
+  }, [reglages, musiqueAmbiance, couleurFondAppliquee, imageFond, connecte, utilisateur?.id]);
 
   const validerMusiqueAmbiance = (musique) => {
     setMusiqueAmbiance({
@@ -3936,22 +4186,74 @@ function App() {
 
   // --- Préréglages : configurations complètes sauvegardées (fond, couleurs,
   // durées du minuteur, musique d'ambiance) ---
-  const [prereglages, setPrereglages] = useState(() => {
-    try {
-      const sauvegarde = localStorage.getItem(CLE_STOCKAGE_PREREGLAGES);
-      return sauvegarde ? JSON.parse(sauvegarde) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Chargés depuis / synchronisés vers Supabase (table "prereglages", filtrée
+  // par user_id + RLS) pour un compte connecté. Mode invité : en mémoire
+  // uniquement, comme pour les notes (voir plus haut).
+  const [prereglages, setPrereglages] = useState([]);
+  const prereglagesChargesPourRef = useRef(null);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(CLE_STOCKAGE_PREREGLAGES, JSON.stringify(prereglages));
-    } catch {
-      // Stockage indisponible : on ignore silencieusement
+    if (!connecte || !utilisateur?.id) {
+      setPrereglages([]);
+      prereglagesChargesPourRef.current = 'invite';
+      return;
     }
-  }, [prereglages]);
+
+    prereglagesChargesPourRef.current = null;
+    let annule = false;
+    (async () => {
+      try {
+        await attendre(240);
+        if (annule) return;
+        const { data, error } = await executerAvecRetry(() => supabase
+          .from('prereglages')
+          .select('*')
+          .eq('user_id', utilisateur.id)
+          .order('date_creation', { ascending: true }));
+        if (error) throw error;
+        if (annule) return;
+        setPrereglages((data || []).map(ligneSupabaseVersPrereglage));
+        prereglagesChargesPourRef.current = utilisateur.id;
+      } catch (err) {
+        if (!annule) console.error('Erreur de chargement des préréglages depuis Supabase :', err);
+      }
+    })();
+
+    return () => { annule = true; };
+  }, [connecte, utilisateur?.id]);
+
+  useEffect(() => {
+    if (!connecte || !utilisateur?.id) return;
+    if (prereglagesChargesPourRef.current !== utilisateur.id) return;
+
+    const idUtilisateur = utilisateur.id;
+    let annule = false;
+    const minuteur = setTimeout(async () => {
+      try {
+        if (prereglages.length > 0) {
+          const lignes = prereglages.map((p) => prereglageVersLigneSupabase(p, idUtilisateur));
+          const { error: erreurUpsert } = await executerAvecRetry(() => supabase.from('prereglages').upsert(lignes));
+          if (erreurUpsert) throw erreurUpsert;
+        }
+
+        const idsActuels = prereglages.map((p) => p.id);
+        const { error: erreurSuppression } = await executerAvecRetry(() => {
+          let requeteSuppression = supabase.from('prereglages').delete().eq('user_id', idUtilisateur);
+          if (idsActuels.length > 0) {
+            requeteSuppression = requeteSuppression.not(
+              'id', 'in', `(${idsActuels.map((id) => `"${id}"`).join(',')})`
+            );
+          }
+          return requeteSuppression;
+        });
+        if (erreurSuppression) throw erreurSuppression;
+      } catch (err) {
+        if (!annule) console.error('Erreur de synchronisation des préréglages vers Supabase :', err);
+      }
+    }, 800);
+
+    return () => { annule = true; clearTimeout(minuteur); };
+  }, [prereglages, connecte, utilisateur?.id]);
 
   // Modale de création / renommage : idPrereglageEnEdition à null = mode
   // création, sinon on édite le nom du préréglage correspondant
@@ -4045,6 +4347,23 @@ function App() {
   // confirmation avant d'être effective.
   const sortieConfirmeeRef = useRef(false);
 
+  // Convertit un préréglage de l'appli vers une ligne de la table Supabase
+  // "prereglages" (et inversement) : la configuration complète (fond,
+  // réglages, musique) est stockée telle quelle dans la colonne jsonb
+  // "configuration".
+  const prereglageVersLigneSupabase = (p, idUtilisateur) => ({
+    id: p.id,
+    user_id: idUtilisateur,
+    nom: p.nom,
+    configuration: {
+      couleurFondAppliquee: p.couleurFondAppliquee ?? null,
+      imageFond: p.imageFond ?? null,
+      reglages: p.reglages ?? null,
+      musiqueAmbiance: p.musiqueAmbiance ?? null,
+    },
+    date_modification: new Date().toISOString(),
+  });
+
   // Convertit une tâche de l'appli (camelCase) vers une ligne de la table
   // Supabase "taches" (snake_case), et inversement. Voir le schéma SQL
   // fourni séparément (table "taches" + policies RLS sur user_id).
@@ -4081,20 +4400,25 @@ function App() {
   useEffect(() => {
     if (!connecte || !utilisateur?.id) {
       setTaches([]);
+      tachesChargeesPourRef.current = 'invite';
       return;
     }
 
+    tachesChargeesPourRef.current = null; // chargement en cours pour ce compte
     let annule = false;
     (async () => {
       try {
-        const { data, error } = await supabase
+        await attendre(320);
+        if (annule) return;
+        const { data, error } = await executerAvecRetry(() => supabase
           .from('taches')
           .select('*')
           .eq('user_id', utilisateur.id)
-          .order('date_creation', { ascending: false });
+          .order('date_creation', { ascending: false }));
         if (error) throw error;
         if (annule) return;
         setTaches((data || []).map(ligneSupabaseVersTache));
+        tachesChargeesPourRef.current = utilisateur.id;
       } catch (err) {
         if (!annule) console.error('Erreur de chargement des notes depuis Supabase :', err);
       }
@@ -4109,6 +4433,10 @@ function App() {
   // été supprimées localement sont supprimées côté serveur.
   useEffect(() => {
     if (!connecte || !utilisateur?.id) return; // mode invité : rien à synchroniser
+    // Chargement initial pas encore terminé pour CET utilisateur (ex : juste
+    // après une connexion) : on ne synchronise rien pour éviter d'écraser les
+    // notes du compte avec un état encore issu du compte précédent.
+    if (tachesChargeesPourRef.current !== utilisateur.id) return;
 
     const idUtilisateur = utilisateur.id;
     let annule = false;
@@ -4117,18 +4445,20 @@ function App() {
       try {
         if (taches.length > 0) {
           const lignes = taches.map((t) => tacheVersLigneSupabase(t, idUtilisateur));
-          const { error: erreurUpsert } = await supabase.from('taches').upsert(lignes);
+          const { error: erreurUpsert } = await executerAvecRetry(() => supabase.from('taches').upsert(lignes));
           if (erreurUpsert) throw erreurUpsert;
         }
 
         const idsActuels = taches.map((t) => t.id);
-        let requeteSuppression = supabase.from('taches').delete().eq('user_id', idUtilisateur);
-        if (idsActuels.length > 0) {
-          requeteSuppression = requeteSuppression.not(
-            'id', 'in', `(${idsActuels.map((id) => `"${id}"`).join(',')})`
-          );
-        }
-        const { error: erreurSuppression } = await requeteSuppression;
+        const { error: erreurSuppression } = await executerAvecRetry(() => {
+          let requeteSuppression = supabase.from('taches').delete().eq('user_id', idUtilisateur);
+          if (idsActuels.length > 0) {
+            requeteSuppression = requeteSuppression.not(
+              'id', 'in', `(${idsActuels.map((id) => `"${id}"`).join(',')})`
+            );
+          }
+          return requeteSuppression;
+        });
         if (erreurSuppression) throw erreurSuppression;
       } catch (err) {
         if (!annule) console.error('Erreur de synchronisation des notes vers Supabase :', err);
@@ -4318,15 +4648,8 @@ function App() {
     }
   }, [couleurFondAppliquee, imageFond]);
 
-  // Sauvegarde automatique des réglages Pomodoro dans le localStorage
-  // à chaque modification, pour être restaurés au rechargement de la page.
-  useEffect(() => {
-    try {
-      localStorage.setItem(CLE_STOCKAGE_REGLAGES, JSON.stringify(reglages));
-    } catch {
-      // Stockage indisponible (navigation privée, quota dépassé...) : on ignore silencieusement
-    }
-  }, [reglages]);
+  // (Les réglages Pomodoro sont désormais synchronisés vers Supabase par
+  // l'effet de préférences ci-dessus ; plus aucune sauvegarde localStorage.)
 
   // Application en temps réel des couleurs choisies via des variables CSS globales.
   // Le fichier App.css les consomme via var(--couleur-chrono), var(--couleur-poignee),
@@ -4525,7 +4848,9 @@ function App() {
       distanceTotale={distanceTotale}
       historiqueJoursPomodoro={historiqueJoursPomodoro}
       photoProfil={photoProfil}
-      setPhotoProfil={setPhotoProfil}
+      onEnregistrerPhotoProfil={enregistrerPhotoProfil}
+      enregistrementPhotoEnCours={enregistrementPhotoEnCours}
+      erreurPhotoProfil={erreurPhotoProfil}
     />
 
     {/* Notes épinglées : widgets flottants affichés sur le fond principal */}
