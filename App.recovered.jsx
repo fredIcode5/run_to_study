@@ -1,23 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import { useAuth } from './context/AuthContext.jsx'
-import {
-  chargerProfil,
-  sauvegarderProfil,
-  sauvegarderPhotoProfil,
-  sauvegarderPreferences,
-  chargerNotes,
-  sauvegarderNotes,
-  chargerPrereglages,
-  sauvegarderPrereglages,
-  chargerHistorique,
-  ajouterJourHistorique,
-  chargerSessionsArchivees,
-  sauvegarderSessionArchivee,
-  chargerRecompenses,
-  ajouterRecompense,
-  mettreAJourRecompense,
-} from './lib/firebaseDataService'
+import { supabase } from './lib/SupabaseClient'
 
 
 // --- Réglages Pomodoro par défaut, utilisés au premier lancement
@@ -30,19 +14,48 @@ const REGLAGES_PAR_DEFAUT = {
   couleurBoutons: '#e2472a',
 };
 
-// ==========================================================================
-// Persistance des données utilisateur : Supabase
-// ==========================================================================
-// Toutes les données applicatives (notes, préréglages, historique des
-// séances, sessions archivées, préférences, photo de profil) sont
-// enregistrées et récupérées depuis des tables Supabase protégées par RLS.
-// Chaque donnée est rattachée à l'utilisateur connecté via son user.id.
-//
-// Le mode invité (non connecté) reste SANS persistance : ses données ne
-// vivent qu'en mémoire et disparaissent à la déconnexion, au changement
-// de compte, ou à la fermeture de l'onglet.
-//
-// Voir src/lib/supabaseDataService.js pour toutes les opérations CRUD.
+// --- Tolérance aux erreurs réseau ponctuelles ---
+// Certains environnements (antivirus avec inspection HTTPS, VPN, proxy
+// d'entreprise, connexions instables) provoquent parfois des échecs de
+// requête purement réseau (ERR_CONNECTION_RESET, ERR_HTTP2_PROTOCOL_ERROR,
+// "Failed to fetch"...) qui n'ont rien à voir avec les données envoyées :
+// une nouvelle tentative quelques centaines de ms plus tard réussit
+// généralement. `executerAvecRetry` réessaie automatiquement une fonction
+// asynchrone (typiquement un appel Supabase) plusieurs fois, avec un délai
+// croissant entre chaque tentative (backoff exponentiel), avant d'abandonner
+// et de laisser remonter l'erreur normalement.
+async function executerAvecRetry(fonctionAsync, { tentatives = 3, delaiBaseMs = 500 } = {}) {
+  let derniereErreur;
+  for (let essai = 0; essai < tentatives; essai++) {
+    try {
+      return await fonctionAsync();
+    } catch (erreur) {
+      derniereErreur = erreur;
+      const dernierEssai = essai === tentatives - 1;
+      if (dernierEssai) break;
+      const delai = delaiBaseMs * 2 ** essai; // 500ms, 1000ms, 2000ms...
+      await new Promise((resolve) => setTimeout(resolve, delai));
+    }
+  }
+  throw derniereErreur;
+}
+
+// Pause simple, utilisée pour échelonner des requêtes qui partiraient
+// sinon toutes en même temps (voir chargements initiaux dans App()).
+function attendre(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// --- Persistance des données utilisateur ---
+// Toutes les données propres à un compte (notes, préréglages, historique des
+// séances, sessions archivées, réglages courants, musique d'ambiance) sont
+// désormais chargées depuis Supabase et synchronisées vers Supabase, filtrées
+// par user_id + policies RLS (voir schema_supabase.sql). Le Local Storage
+// n'est plus utilisé pour aucune donnée utilisateur : il ne persisterait
+// aucune isolation entre comptes sur un même navigateur.
+// Le mode invité (non connecté) reste volontairement SANS persistance : ses
+// données ne vivent qu'en mémoire et disparaissent à la déconnexion / au
+// changement de compte / à la fermeture de l'onglet.
 
 // Valeur "vide" de la photo de profil : utilisée pour les invités (mode
 // invité, non connectés à un compte Supabase) et comme repli par défaut.
@@ -628,7 +641,7 @@ function CarteRecompenseEpinglee ({ recompense, actions }) {
             <h3 className="recompense_titre_gain">Obtenu !</h3>
             {recompense.type === 'coins' ? (
               <div className="recompense_gain_visuel">
-                <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: '64px', height: '64px', color: '#fbbf24' }}>
+                <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: '48px', height: '48px', color: '#fbbf24' }}>
                   <circle cx="12" cy="12" r="10" fill="#fbbf24"/>
                   <text x="50%" y="50%" textAnchor="middle" dy=".3em" fontSize="12" fontWeight="bold" fill="#b45309">C</text>
                 </svg>
@@ -701,13 +714,6 @@ function PanneauJoueur ({ pseudo, niveau, distance, position, ouvrirProfil, phot
         <div className="joueur_identite">
           <span className="joueur_pseudo">{pseudo}</span>
           <span className="joueur_niveau">Niv. {niveau}</span>
-          <div className="joueur_coins" title="Coins gagnés">
-            <svg className="icone_coin" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="12" r="10" fill="#fbbf24"/>
-              <text x="50%" y="50%" textAnchor="middle" dy=".3em" fontSize="12" fontWeight="bold" fill="#b45309">C</text>
-            </svg>
-            <span>{coins}</span>
-          </div>
         </div>
 
         <div className="joueur_stats">
@@ -743,8 +749,6 @@ function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursP
     { id: 'profil', label: 'Profil' },
     { id: 'stats', label: 'Stats' },
     { id: 'social', label: 'Social' },
-    { id: 'progression', label: 'Progression' },
-    { id: 'boutique', label: 'Boutique' },
     { id: 'parametres', label: 'Paramètres' },
   ];
 
@@ -788,8 +792,6 @@ function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursP
               erreurPhotoProfil={erreurPhotoProfil}
             />
           )}
-          {ongletActif === 'progression' && <OngletProgression distanceTotale={distanceTotale} />}
-          {ongletActif === 'boutique' && <OngletBoutique coins={coins} />}
         </div>
       </div>
     </div>
@@ -1161,44 +1163,16 @@ function OngletParametres ({ pseudo, photoProfil, onEnregistrerPhotoProfil, enre
   const zonePhotoRef = useRef(null);
   const glissementRef = useRef(null); // { startX, startY, startPosX, startPosY } pendant un glissement
 
-  // Charge le fichier choisi par l'utilisateur (depuis son PC), le compresse
-  // via un canvas pour éviter d'envoyer des payloads massifs à Supabase (ce qui
-  // provoque des erreurs réseau ERR_HTTP2_PROTOCOL_ERROR / CONNECTION_RESET),
-  // et le convertit en data URL.
+  // Charge le fichier choisi par l'utilisateur (depuis son PC) en data URL
+  // pour un aperçu immédiat, sans passer par un serveur.
   const gererChoixPhoto = (evenement) => {
     const fichier = evenement.target.files?.[0];
     if (!fichier) return;
 
     const lecteur = new FileReader();
-    lecteur.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        // Redimensionnement à 400px maximum pour la photo de profil
-        const MAX_TAILLE = 400;
-        let largeur = img.width;
-        let hauteur = img.height;
-
-        if (largeur > hauteur && largeur > MAX_TAILLE) {
-          hauteur *= MAX_TAILLE / largeur;
-          largeur = MAX_TAILLE;
-        } else if (hauteur > MAX_TAILLE) {
-          largeur *= MAX_TAILLE / hauteur;
-          hauteur = MAX_TAILLE;
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = largeur;
-        canvas.height = hauteur;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, largeur, hauteur);
-        
-        // Compression en WebP ou JPEG (qualité 0.8) pour réduire drastiquement la taille (moins de 100ko)
-        const dataUrlCompresser = canvas.toDataURL('image/jpeg', 0.8);
-        
-        setPhotoDataUrl(dataUrlCompresser);
-        setPositionPhoto({ x: 50, y: 50 }); // recentre par défaut à chaque nouvelle photo
-      };
-      img.src = e.target.result;
+    lecteur.onload = () => {
+      setPhotoDataUrl(lecteur.result);
+      setPositionPhoto({ x: 50, y: 50 }); // recentre par défaut à chaque nouvelle photo
     };
     lecteur.readAsDataURL(fichier);
   };
@@ -2036,9 +2010,70 @@ function genererNumeroSession(sessionsExistantes) {
   return String(suivant).padStart(4, '0');
 }
 
-// --- Sessions archivées : persistées dans Supabase (table « sessions_notes »).
-// Un compte connecté ne voit jamais les sessions archivées d'un autre compte.
-// Le mode invité n'a aucune persistance : ses sessions vivent en mémoire.
+// --- Persistance des sessions archivées : table Supabase "sessions_notes"
+// (filtrée par user_id + RLS, voir schema_supabase.sql). Un compte connecté
+// ne voit jamais les sessions archivées d'un autre compte. Le mode invité
+// n'a aucune persistance : ses sessions archivées ne vivent qu'en mémoire.
+
+// Convertit une ligne de la table Supabase "prereglages" vers l'objet
+// préréglage utilisé par l'application (fusionné avec sa colonne jsonb
+// "configuration").
+function ligneSupabaseVersPrereglage(ligne) {
+  const config = ligne.configuration || {};
+  return {
+    id: ligne.id,
+    nom: ligne.nom,
+    couleurFondAppliquee: config.couleurFondAppliquee ?? null,
+    imageFond: config.imageFond ?? null,
+    reglages: config.reglages ?? null,
+    musiqueAmbiance: config.musiqueAmbiance ?? null,
+  };
+}
+
+function sessionArchiveeVersLigneSupabase(session, idUtilisateur) {
+  return {
+    id: session.id,
+    user_id: idUtilisateur,
+    titre: session.titre,
+    numero: session.numero,
+    date_creation_session: session.dateCreation || null,
+    notes: session.notes,
+  };
+}
+
+function ligneSupabaseVersSessionArchivee(ligne) {
+  const dateArchivage = ligne.date_archivage ? new Date(ligne.date_archivage) : null;
+  return {
+    id: ligne.id,
+    titre: ligne.titre ?? '',
+    numero: ligne.numero ?? '',
+    date: dateArchivage ? dateArchivage.toLocaleDateString() : '',
+    heure: dateArchivage
+      ? dateArchivage.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '',
+    dateCreation: ligne.date_creation_session ?? ligne.date_archivage,
+    notes: ligne.notes ?? [],
+  };
+}
+
+/** Charge depuis Supabase les sessions archivées de l'utilisateur connecté. */
+async function chargerSessionsSauvegardeesDepuisSupabase(idUtilisateur) {
+  const { data, error } = await supabase
+    .from('sessions_notes')
+    .select('*')
+    .eq('user_id', idUtilisateur)
+    .order('date_archivage', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(ligneSupabaseVersSessionArchivee);
+}
+
+/** Insère une nouvelle session archivée dans Supabase pour l'utilisateur connecté. */
+async function enregistrerSessionArchiveeDansSupabase(session, idUtilisateur) {
+  const { error } = await executerAvecRetry(() => supabase
+    .from('sessions_notes')
+    .insert(sessionArchiveeVersLigneSupabase(session, idUtilisateur)));
+  if (error) throw error;
+}
 
 // ==========================================================================
 // Composant principal
@@ -2078,29 +2113,42 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
 
   const [idAgrandie, setIdAgrandie] = useState(null);
 
-  // Sessions archivées : chargées depuis Supabase (table « sessions_notes »)
-  // pour un compte connecté. Le mode invité n'a aucune persistance : la liste
-  // reste vide et vit uniquement en mémoire.
+  // Sessions archivées : chargées depuis Supabase (table "sessions_notes",
+  // filtrée par user_id + RLS) pour un compte connecté. Le mode invité n'a
+  // aucune persistance : la liste reste vide et vit uniquement en mémoire.
   const [sessionsSauvegardees, setSessionsSauvegardees] = useState([]);
-  // Repère l'utilisateur pour lequel le chargement est terminé, afin
+  // Repère l'utilisateur pour lequel le chargement Supabase est terminé, afin
   // d'éviter d'enregistrer une session sous le mauvais compte pendant la
   // fenêtre de temps où l'on bascule d'un utilisateur à un autre.
   const sessionsChargeesPourRef = useRef(null);
 
   useEffect(() => {
+    let annule = false;
+
     if (!connecte || !utilisateur?.id) {
       setSessionsSauvegardees([]);
       sessionsChargeesPourRef.current = 'invite';
       return;
     }
-    let annule = false;
+
+    sessionsChargeesPourRef.current = null; // chargement en cours
     (async () => {
-      const data = await chargerSessionsArchivees(utilisateur.id);
-      if (!annule) {
-        setSessionsSauvegardees(data);
+      try {
+        // Léger décalage pour ne pas partir exactement en même temps que les
+        // 4 autres chargements initiaux (taches, prereglages, seances_pomodoro,
+        // preferences_utilisateur), qui réduit le risque d'erreurs réseau liées
+        // à trop de requêtes HTTP2 simultanées vers le même hôte.
+        await attendre(80);
+        if (annule) return;
+        const sessions = await executerAvecRetry(() => chargerSessionsSauvegardeesDepuisSupabase(utilisateur.id));
+        if (annule) return;
+        setSessionsSauvegardees(sessions);
         sessionsChargeesPourRef.current = utilisateur.id;
+      } catch (err) {
+        if (!annule) console.error('Erreur de chargement des sessions archivées depuis Supabase :', err);
       }
     })();
+
     return () => { annule = true; };
   }, [connecte, utilisateur?.id]);
 
@@ -2276,9 +2324,11 @@ const tachesListe = sourceTaches
     setSessionsSauvegardees(sessionsMisesAJour);
 
     // Mode invité, ou changement de compte encore en cours de chargement :
-    // rien à enregistrer dans Supabase (pas de compte cible fiable).
+    // rien à enregistrer côté serveur (pas de compte cible fiable).
     if (connecte && utilisateur?.id && sessionsChargeesPourRef.current === utilisateur.id) {
-      sauvegarderSessionArchivee(utilisateur.id, sessionArchivee);
+      enregistrerSessionArchiveeDansSupabase(sessionArchivee, utilisateur.id).catch((err) => {
+        console.error("Erreur d'enregistrement de la session archivée vers Supabase :", err);
+      });
     }
 
     repartirSurNouvelleSession(sessionsMisesAJour);
@@ -2338,7 +2388,9 @@ const tachesListe = sourceTaches
     setSessionsSauvegardees(sessionsMisesAJour);
 
     if (connecte && utilisateur?.id && sessionsChargeesPourRef.current === utilisateur.id) {
-      sauvegarderSessionArchivee(utilisateur.id, sessionArchivee);
+      enregistrerSessionArchiveeDansSupabase(sessionArchivee, utilisateur.id).catch((err) => {
+        console.error("Erreur d'enregistrement de la session archivée vers Supabase :", err);
+      });
     }
   };
 
@@ -2524,16 +2576,6 @@ const tachesListe = sourceTaches
           onAnnuler={() => setConfirmationOuverte(false)}
         />
       )}
-
-      {rechercheOuverte && (
-      <FenetreAnciennesSessions
-      sessions={sessionsFiltrees}
-      recherche={recherche}
-      onChangerRecherche={setRecherche}
-      fermer={() => setRechercheOuverte(false)}
-      onConsulter={consulterSession}
-    />
-      )}
     </div>
   );
 }
@@ -2578,75 +2620,6 @@ function DialogueNouvelleSession({ onEnregistrer, onSupprimer, onAnnuler }) {
   );
 }
 
-// ==========================================================================
-// Fenêtre : consulter les anciennes sessions
-// ==========================================================================
-
-function FenetreAnciennesSessions({ sessions, recherche, onChangerRecherche, fermer, onConsulter }) {
-  return (
-    <div className="session_historique_fond" onClick={fermer}>
-      <div className="session_historique_fenetre" onClick={(e) => e.stopPropagation()}>
-        <div className="session_historique_entete">
-          <h3 className="session_historique_titre">Anciennes sessions</h3>
-          <button type="button" className="session_historique_fermer" onClick={fermer}>
-            ✕
-          </button>
-        </div>
-
-        <input
-          type="text"
-          placeholder="Rechercher par titre ou numéro..."
-          value={recherche}
-          onChange={(e) => onChangerRecherche(e.target.value)}
-          className="session_recherche_input"
-        />
-
-        <div className="session_historique_liste">
-          {sessions.length === 0 ? (
-            <p className="session_ligne_vide">Aucune session trouvée.</p>
-          ) : (
-            <table className="sessions_tableau">
-              <thead>
-                <tr>
-                  <th>Titre</th>
-                  <th>Numéro</th>
-                  <th>Date</th>
-                  <th>Heure</th>
-                  <th>Progression</th>
-                  <th>Nombre de notes</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sessions.map((s) => (
-                  <tr key={s.id}>
-                    <td className="session_titre_cellule">{s.titre}</td>
-                    <td>
-                      <span className="session_numero_badge">#{s.numero}</span>
-                    </td>
-                    <td>{s.date}</td>
-                    <td>{s.heure}</td>
-                    <td>
-                      <span className="session_progression_badge">
-                        {s.notes.filter((n) => n.terminee).length} / {s.notes.length}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="session_notes_badge">{s.notes.length}</span>
-                    </td>
-                    <td>
-                    <button type="button" className="session_action_btn" onClick={() => onConsulter(s)} >Consulter </button>
-                  </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 
 // ======================================================================
@@ -3661,35 +3634,7 @@ function ModalCreerSalon ({ ouvert, fermer }) {
   const gererImage = (fichier) => {
     if (!fichier) return;
     const lecteur = new FileReader();
-    lecteur.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        // Redimensionnement à 1920px maximum (Full HD) pour éviter
-        // les payloads trop lourds vers Supabase
-        const MAX_TAILLE = 1920;
-        let largeur = img.width;
-        let hauteur = img.height;
-
-        if (largeur > hauteur && largeur > MAX_TAILLE) {
-          hauteur *= MAX_TAILLE / largeur;
-          largeur = MAX_TAILLE;
-        } else if (hauteur > MAX_TAILLE) {
-          largeur *= MAX_TAILLE / hauteur;
-          hauteur = MAX_TAILLE;
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = largeur;
-        canvas.height = hauteur;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, largeur, hauteur);
-        
-        // Compression en JPEG qualité 0.8
-        const dataUrlCompresser = canvas.toDataURL('image/jpeg', 0.8);
-        setImageFond(dataUrlCompresser);
-      };
-      img.src = e.target.result;
-    };
+    lecteur.onload = () => setImageFond(lecteur.result);
     lecteur.readAsDataURL(fichier);
   };
 
@@ -3926,57 +3871,8 @@ function Salon_course () {
 }
 
 
-// --- Onglet "Récompenses" (dans BlocDeux) ---
-function OngletRecompenses({ recompenses, onOuvrirRecompense }) {
-  return (
-    <div className="recompense_liste_conteneur">
-      <h3 className="recompense_liste_titre">Mes Récompenses</h3>
-      <div className="recompense_liste">
-        {recompenses.length === 0 ? (
-          <p className="recompense_liste_vide">Aucune récompense pour le moment.</p>
-        ) : (
-          recompenses.map(r => (
-            <div key={r.id} className={`recompense_item ${r.etat === 'ouverte' ? 'recompense_item_ouverte' : 'recompense_item_fermee'}`}>
-              {r.etat === 'non_ouverte' ? (
-                <>
-                  <div className="recompense_item_visuel_ferme">?</div>
-                  <div className="recompense_item_infos">
-                    <span className="recompense_item_statut">Non ouverte</span>
-                    <span className="recompense_item_date">{new Date(r.dateCreation).toLocaleDateString()}</span>
-                  </div>
-                  <button className="btn_primaire recompense_item_btn_ouvrir" onClick={() => onOuvrirRecompense(r.id)}>
-                    Ouvrir
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="recompense_item_visuel_ouvert">
-                    {r.type === 'coins' ? (
-                      <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: '32px', height: '32px', color: '#fbbf24' }}>
-                        <circle cx="12" cy="12" r="10" fill="#fbbf24"/>
-                        <text x="50%" y="50%" textAnchor="middle" dy=".3em" fontSize="12" fontWeight="bold" fill="#b45309">C</text>
-                      </svg>
-                    ) : (
-                      <span className="recompense_item_badge">🏆</span>
-                    )}
-                  </div>
-                  <div className="recompense_item_infos">
-                    <span className="recompense_item_nom">{r.type === 'coins' ? `+${r.valeur} Coins` : r.valeur}</span>
-                    <span className="recompense_item_statut">Ouverte le {new Date(r.dateCreation).toLocaleDateString()}</span>
-                  </div>
-                </>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
 const ONGLETS_POIGNEE = [
   { id: 1, icone: '📝', label: 'Notes', notif: true },
-  { id: 4, icone: '🎁', label: 'Récompenses', notif: true },
   { id: 2, icone: '⚙️', label: 'Réglages', notif: true },
   { id: 3, icone: '🏁', label: 'Salon de course', notif: true },
 ];
@@ -4012,9 +3908,7 @@ function BlocDeux ({
   onOuvrirRenommagePrereglage,
   onDemanderSuppressionPrereglage,
   onRemplacerPrereglage,
-  onOuvrirCreationPrereglage,
-  recompenses,
-  onOuvrirRecompense
+  onOuvrirCreationPrereglage
 }) {
   const [vueActive, setVueActive] = useState(1);
 
@@ -4094,12 +3988,6 @@ function BlocDeux ({
             />
           )}
           {vueActive === 3 && <Salon_course/>}
-          {vueActive === 4 && (
-            <OngletRecompenses 
-              recompenses={recompenses}
-              onOuvrirRecompense={onOuvrirRecompense}
-            />
-          )}
         </div>
       </div>
     </div>
@@ -4151,21 +4039,14 @@ function App() {
   // Vrai après avoir choisi "Continuer en tant qu'invité" ; réinitialisé
   // dès qu'un vrai compte se connecte ou se déconnecte.
   const [modeInvite, setModeInvite] = useState(false);
-  
-  const [coins, setCoins] = useState(0);
-  const [recompenses, setRecompenses] = useState([]);
-  const [tempsTotalPomodoro, setTempsTotalPomodoro] = useState(0);
-  const [carteRecompenseOuverte, setCarteRecompenseOuverte] = useState(false);
-  const [recompenseCourante, setRecompenseCourante] = useState(null);
-  
-  const { connecte, utilisateur } = useAuth();
+  const { connecte, utilisateur, mettreAJourPhotoProfil } = useAuth();
 
   // Pseudo affiché à la fois dans le panneau joueur et la modale de profil :
   // priorité au pseudo choisi par l'utilisateur à la création de son compte
   // (stocké dans user_metadata), repli sur l'email si aucun pseudo n'a été
   // renseigné, et repli final sur "Invité" en mode invité / non connecté.
   const pseudoJoueur = connecte
-    ? (utilisateur?.displayName || utilisateur?.email || 'Pseudo')
+    ? (utilisateur?.user_metadata?.pseudo || utilisateur?.email || 'Pseudo')
     : 'Invité';
 
   // Dès qu'un utilisateur se connecte réellement (email/mdp, création de
@@ -4192,24 +4073,9 @@ function App() {
   // ne suffit pas : on redemande à chaque clic sur Home ou Pomodoro).
   const demanderAcces = () => setChoixAccesOuvert(true);
 
-  const [confirmationAccueilOuverte, setConfirmationAccueilOuverte] = useState(false);
-
   const allerAccueil = () => {
-    if (connecte) {
-      setPageActuelle('accueil');
-    } else if (modeInvite) {
-      setConfirmationAccueilOuverte(true);
-    } else {
-      demanderAcces();
-    }
-  };
-
-  const gererCommencer = () => {
-    if (connecte) {
-      setPageActuelle('pomodoro');
-    } else {
-      demanderAcces();
-    }
+    if (connecte) setPageActuelle('accueil');
+    else demanderAcces();
   };
 
   const allerPomodoro = () => {
@@ -4234,67 +4100,40 @@ function App() {
     setModeInvite(true);
     setPageActuelle('pomodoro');
   };
-
-  const quitterModeInvite = () => {
-    // Nettoyage des données temporaires de l'invité
-    setTaches([]);
-    setPointsPomodoro([]);
-    setHistoriqueJoursPomodoro([]);
-    setReglages(REGLAGES_PAR_DEFAUT);
-    setMusiqueAmbiance(null);
-    setLecteurMusiqueVisible(false);
-    setCouleurFondAppliquee(null);
-    setImageFond(null);
-    setModeInvite(false);
-    
-    // Fermeture de la modale et redirection
-    setConfirmationAccueilOuverte(false);
-    setPageActuelle('accueil');
-  };
   // Vrai quand l'onglet Notes consulte une ancienne session (lecture seule) :
   // partagé avec le Chrono pour l'avertir que le temps de travail ne sera
   // pas comptabilisé dans cette session.
   const [modeLectureSession, setModeLectureSession] = useState(false);
   const [profilOuvert, setProfilOuvert] = useState(false);
+  const [ongletProfilActif, setOngletProfilActif] = useState('profil');
   const [distanceTotale, setDistanceTotale] = useState(0);
 
   // --- Photo de profil : partagée entre le panneau joueur, la modale de
   // profil et l'onglet Paramètres. { dataUrl, position: { x, y } }.
-  // Source de vérité = Supabase (table « preferences_utilisateur »), donc :
+  // Source de vérité = Supabase (user_metadata.photo_profil), donc :
   //  - un utilisateur en mode invité (non connecté) n'a jamais de photo :
-  //    on affiche systématiquement la valeur vide.
-  //  - un utilisateur connecté voit la photo enregistrée dans son profil.
-  const [photoProfil, setPhotoProfil] = useState(PHOTO_PROFIL_VIDE);
-
-  useEffect(() => {
-    if (!connecte || !utilisateur?.id) {
-      setPhotoProfil(PHOTO_PROFIL_VIDE);
-      return;
-    }
-    let annule = false;
-    (async () => {
-      const profil = await chargerProfil(utilisateur.id);
-      if (!annule) setPhotoProfil(profil?.photo_profil ?? PHOTO_PROFIL_VIDE);
-    })();
-    return () => { annule = true; };
-  }, [connecte, utilisateur?.id]);
+  //    on affiche systématiquement la valeur vide, quoi qu'il ait pu choisir
+  //    avant de se déconnecter ou pendant qu'il navigue en invité.
+  //  - un utilisateur connecté voit la photo enregistrée sur son compte.
+  const photoProfil = connecte
+    ? (utilisateur?.user_metadata?.photo_profil ?? PHOTO_PROFIL_VIDE)
+    : PHOTO_PROFIL_VIDE;
 
   const [enregistrementPhotoEnCours, setEnregistrementPhotoEnCours] = useState(false);
   const [erreurPhotoProfil, setErreurPhotoProfil] = useState(null);
 
-  // Enregistre la nouvelle photo de profil (dataUrl + recadrage) dans
-  // Supabase. Appelée uniquement pour un utilisateur réellement connecté :
-  // un invité n'a pas de compte où la persister (voir OngletParametres,
-  // qui masque d'ailleurs entièrement ces contrôles pour les invités).
+  // Envoie la nouvelle photo de profil (dataUrl + recadrage) à Supabase.
+  // Appelée uniquement pour un utilisateur réellement connecté : un invité
+  // n'a pas de compte où l'enregistrer (voir OngletParametres, qui masque
+  // d'ailleurs entièrement ces contrôles pour les invités).
   const enregistrerPhotoProfil = async (nouvellePhotoProfil) => {
-    if (!connecte || !utilisateur?.id) return;
+    if (!connecte) return;
     setEnregistrementPhotoEnCours(true);
     setErreurPhotoProfil(null);
     try {
-      await sauvegarderPhotoProfil(utilisateur.id, nouvellePhotoProfil);
-      setPhotoProfil(nouvellePhotoProfil);
-    } catch (err) {
-      setErreurPhotoProfil(`Impossible d'enregistrer la photo : ${err?.message || 'Erreur inconnue'}`);
+      await mettreAJourPhotoProfil(nouvellePhotoProfil);
+    } catch {
+      setErreurPhotoProfil("Impossible d'enregistrer la photo de profil. Réessayez.");
     } finally {
       setEnregistrementPhotoEnCours(false);
     }
@@ -4318,9 +4157,9 @@ function App() {
 
   // --- Historique complet des séances Pomodoro terminées, utilisé par la
   // heatmap de l'onglet "Profil". Chargé depuis / synchronisé vers Supabase
-  // (table « seances_pomodoro ») pour un compte connecté : chaque séance
-  // terminée y est ajoutée (voir ajouterDistanceSession ci-dessous). Mode
-  // invité : en mémoire uniquement.
+  // (table "seances_pomodoro", filtrée par user_id + RLS) pour un compte
+  // connecté : chaque séance terminée y est insérée (voir
+  // ajouterDistanceSession ci-dessous). Mode invité : en mémoire uniquement.
   const [historiqueJoursPomodoro, setHistoriqueJoursPomodoro] = useState([]);
   const seancesChargeesPourRef = useRef(null);
 
@@ -4330,14 +4169,25 @@ function App() {
       seancesChargeesPourRef.current = 'invite';
       return;
     }
+
+    seancesChargeesPourRef.current = null;
     let annule = false;
     (async () => {
-      const historique = await chargerHistorique(utilisateur.id);
-      if (!annule) {
-        setHistoriqueJoursPomodoro(historique);
+      try {
+        const { data, error } = await executerAvecRetry(() => supabase
+          .from('seances_pomodoro')
+          .select('*')
+          .eq('user_id', utilisateur.id)
+          .order('date_creation', { ascending: true }));
+        if (error) throw error;
+        if (annule) return;
+        setHistoriqueJoursPomodoro((data || []).map((ligne) => formaterJourIso(new Date(ligne.date_creation))));
         seancesChargeesPourRef.current = utilisateur.id;
+      } catch (err) {
+        if (!annule) console.error('Erreur de chargement de l\'historique des séances depuis Supabase :', err);
       }
     })();
+
     return () => { annule = true; };
   }, [connecte, utilisateur?.id]);
 
@@ -4365,34 +4215,6 @@ function App() {
     dernierAjoutSessionRef.current = maintenant;
 
     setDistanceTotale((prev) => prev + metres);
-    
-    // Génération aléatoire de Coins en fonction du temps travaillé
-    const minutesTravaillees = reglages.dureeTravail;
-    const gainAleatoire = minutesTravaillees * (Math.floor(Math.random() * 5) + 1); // 1 à 5 coins par minute
-    setCoins(prev => prev + gainAleatoire);
-    
-    // Suivi du temps total et déclenchement de la carte récompense
-    setTempsTotalPomodoro(prev => {
-      const nouveauTotal = prev + minutesTravaillees;
-      if (Math.floor(nouveauTotal / 60) > Math.floor(prev / 60)) {
-        // Ajouter une nouvelle carte récompense
-        if (connecte && utilisateur?.id) {
-          const gainAleatoireType = Math.random() > 0.5 ? 'coins' : 'badge';
-          const nouvelleValeur = gainAleatoireType === 'coins' ? (Math.floor(Math.random() * 100) + 50) : 'Pomodoro Expert';
-          const gain = {
-            type: gainAleatoireType,
-            valeur: nouvelleValeur,
-            etat: 'non_ouverte',
-            afficheeSurTableau: true,
-            position: { x: window.innerWidth / 2 - 150, y: window.innerHeight / 2 - 200 }
-          };
-          ajouterRecompense(utilisateur.id, gain).then(rep => {
-            setRecompenses(current => [...current, rep]);
-          });
-        }
-      }
-      return nouveauTotal;
-    });
 
     // Chaque séance de travail terminée ajoute un point au Pomodoro Tracker
     // (durée de la séance = réglage courant en minutes), limité à 10 points
@@ -4407,35 +4229,44 @@ function App() {
     // Alimente aussi l'historique (non plafonné) utilisé par la heatmap
     // de l'onglet "Profil" : un jour est actif dès qu'au moins une séance
     // de travail y a été terminée.
-    setHistoriqueJoursPomodoro((prev) => {
-      const jourAujourdhui = formaterJourIso(new Date(maintenant));
-      const misAJour = [...prev, jourAujourdhui];
+    setHistoriqueJoursPomodoro((prev) => [...prev, formaterJourIso(new Date(maintenant))]);
 
-      // Persiste le jour dans Supabase pour un compte connecté (dont le
-      // chargement initial est bien terminé). En mode invité, ou pendant la
-      // fenêtre de changement de compte, la séance ne vit qu'en mémoire.
-      if (connecte && utilisateur?.id && seancesChargeesPourRef.current === utilisateur.id) {
-        ajouterJourHistorique(utilisateur.id, jourAujourdhui);
-      }
-
-      return misAJour;
-    });
+    // Persiste la séance dans Supabase pour un compte connecté (dont le
+    // chargement initial de l'historique est bien terminé). En mode invité,
+    // ou pendant la fenêtre de changement de compte, la séance ne vit
+    // qu'en mémoire pour cette session de navigation.
+    if (connecte && utilisateur?.id && seancesChargeesPourRef.current === utilisateur.id) {
+      executerAvecRetry(() => supabase
+        .from('seances_pomodoro')
+        .insert({
+          id: `seance_${maintenant}_${Math.floor(Math.random() * 100000)}`,
+          user_id: utilisateur.id,
+          duree: reglages.dureeTravail,
+          date_creation: new Date(maintenant).toISOString(),
+        }))
+        .then(({ error }) => {
+          if (error) console.error("Erreur d'enregistrement de la séance vers Supabase :", error);
+        })
+        .catch((error) => {
+          console.error("Erreur d'enregistrement de la séance vers Supabase :", error);
+        });
+    }
   };
 
   // --- Tâches / Notes (liste + notes épinglées sur le fond principal) ---
   // L'état vit ici (et non dans le composant Note) afin que les notes
   // épinglées restent visibles même quand l'onglet "Notes" n'est pas actif.
   // Pour un compte connecté, les notes sont chargées depuis / synchronisées
-  // vers Supabase (table « taches »), voir les deux effets juste après ce
-  // state. Le mode invité n'a AUCUNE persistance : ses notes vivent
-  // uniquement en mémoire et disparaissent à la déconnexion, au retour au
-  // mode invité, ou à la fermeture de l'onglet.
+  // vers Supabase (table "taches", filtrée par user_id + RLS), voir les
+  // deux effets juste après ce state. Le mode invité n'a AUCUNE persistance :
+  // ses notes vivent uniquement en mémoire et disparaissent à la déconnexion,
+  // au retour au mode invité, ou à la fermeture de l'onglet.
   const [taches, setTaches] = useState([]);
-  // Repère l'utilisateur pour lequel le chargement local des notes est
+  // Repère l'utilisateur pour lequel le chargement Supabase des notes est
   // terminé ('invite' en mode invité). Tant que cette valeur ne correspond
   // pas à l'utilisateur courant, l'effet de synchronisation ci-dessous ne
   // doit RIEN écrire : sans cette garde, les notes encore en mémoire de
-  // l'utilisateur précédent pourraient être enregistrées sous l'id du
+  // l'utilisateur précédent pourraient être enregistrées sous le user_id du
   // nouvel utilisateur pendant la fenêtre de temps entre connexion/déconnexion
   // et la fin du chargement de ses propres notes.
   const tachesChargeesPourRef = useRef(null);
@@ -4456,8 +4287,9 @@ function App() {
 
   // --- Préférences utilisateur (réglages courants, musique d'ambiance,
   // couleur/image de fond) : chargées depuis / synchronisées vers Supabase
-  // (table « preferences_utilisateur »). Isolation stricte entre comptes,
-  // comme pour les notes, préréglages et historique des séances.
+  // (table "preferences_utilisateur", une ligne par utilisateur, filtrée par
+  // user_id + RLS). Isolation stricte entre comptes, comme pour les notes,
+  // préréglages, et historique des séances ci-dessus/ci-dessous.
   const preferencesChargeesPourRef = useRef(null);
 
   useEffect(() => {
@@ -4471,49 +4303,39 @@ function App() {
       preferencesChargeesPourRef.current = 'invite';
       return;
     }
+
+    preferencesChargeesPourRef.current = null;
     let annule = false;
     (async () => {
-      const profil = await chargerProfil(utilisateur.id);
-      const recompensesData = await chargerRecompenses(utilisateur.id);
-      if (annule) return;
-      setRecompenses(recompensesData);
-      const config = profil?.preferences || {};
-      setReglages({ ...REGLAGES_PAR_DEFAUT, ...(config.reglages || {}) });
-      setCouleurFondAppliquee(config.couleurFondAppliquee ?? null);
-      setImageFond(config.imageFond ?? null);
-      
-      // Restauration Coins et temps total
-      setCoins(profil?.coins ?? 0);
-      setTempsTotalPomodoro(profil?.temps_total_pomodoro ?? 0);
+      try {
+        await attendre(160);
+        if (annule) return;
+        const { data, error } = await executerAvecRetry(() => supabase
+          .from('preferences_utilisateur')
+          .select('*')
+          .eq('user_id', utilisateur.id)
+          .maybeSingle());
+        if (error) throw error;
+        if (annule) return;
 
-      if (config.musiqueAmbiance) {
-        setMusiqueAmbiance({ boucle: false, position: null, ...config.musiqueAmbiance, enLecture: false });
-        setLecteurMusiqueVisible(true);
-      } else {
-        setMusiqueAmbiance(null);
-        setLecteurMusiqueVisible(false);
+        const config = data?.configuration || {};
+        setReglages({ ...REGLAGES_PAR_DEFAUT, ...(config.reglages || {}) });
+        setCouleurFondAppliquee(config.couleurFondAppliquee ?? null);
+        setImageFond(config.imageFond ?? null);
+        if (config.musiqueAmbiance) {
+          setMusiqueAmbiance({ boucle: false, position: null, ...config.musiqueAmbiance, enLecture: false });
+          setLecteurMusiqueVisible(true);
+        } else {
+          setMusiqueAmbiance(null);
+          setLecteurMusiqueVisible(false);
+        }
+        preferencesChargeesPourRef.current = utilisateur.id;
+      } catch (err) {
+        if (!annule) console.error('Erreur de chargement des préférences depuis Supabase :', err);
       }
-      preferencesChargeesPourRef.current = utilisateur.id;
     })();
-    return () => { annule = true; };
-  }, [connecte, utilisateur?.id]);
 
-  // Génération d'une carte test à chaque connexion
-  useEffect(() => {
-    if (connecte && utilisateur?.id) {
-      const ajouterCarteTest = async () => {
-        const gain = {
-          type: 'badge',
-          valeur: 'Badge Novice',
-          etat: 'non_ouverte',
-          afficheeSurTableau: true,
-          position: { x: window.innerWidth / 2 - 150, y: window.innerHeight / 2 - 200 }
-        };
-        const nouvelleRecompense = await ajouterRecompense(utilisateur.id, gain);
-        setRecompenses(prev => [...prev, nouvelleRecompense]);
-      };
-      ajouterCarteTest();
-    }
+    return () => { annule = true; };
   }, [connecte, utilisateur?.id]);
 
   useEffect(() => {
@@ -4521,25 +4343,27 @@ function App() {
     if (preferencesChargeesPourRef.current !== utilisateur.id) return;
 
     const idUtilisateur = utilisateur.id;
-    // Léger débounce pour éviter une écriture Firestore à chaque frappe /
-    // déplacement de curseur (ex : réglage des couleurs).
-    const minuteur = setTimeout(() => {
-      // Sauvegarde des préférences
-      sauvegarderPreferences(idUtilisateur, {
-        reglages,
-        musiqueAmbiance: musiqueAmbiance ? { ...musiqueAmbiance, enLecture: false } : null,
-        couleurFondAppliquee,
-        imageFond,
-      });
-      // Sauvegarde des coins et temps (via sauvegarderProfil)
-      sauvegarderProfil(idUtilisateur, {
-        coins: coins,
-        temps_total_pomodoro: tempsTotalPomodoro
-      });
-    }, 300);
+    let annule = false;
+    const minuteur = setTimeout(async () => {
+      try {
+        const { error } = await executerAvecRetry(() => supabase.from('preferences_utilisateur').upsert({
+          user_id: idUtilisateur,
+          configuration: {
+            reglages,
+            musiqueAmbiance: musiqueAmbiance ? { ...musiqueAmbiance, enLecture: false } : null,
+            couleurFondAppliquee,
+            imageFond,
+          },
+          date_modification: new Date().toISOString(),
+        }));
+        if (error) throw error;
+      } catch (err) {
+        if (!annule) console.error('Erreur de synchronisation des préférences vers Supabase :', err);
+      }
+    }, 800);
 
-    return () => clearTimeout(minuteur);
-  }, [reglages, musiqueAmbiance, couleurFondAppliquee, imageFond, coins, tempsTotalPomodoro, connecte, utilisateur?.id]);
+    return () => { annule = true; clearTimeout(minuteur); };
+  }, [reglages, musiqueAmbiance, couleurFondAppliquee, imageFond, connecte, utilisateur?.id]);
 
   const validerMusiqueAmbiance = (musique) => {
     setMusiqueAmbiance({
@@ -4565,8 +4389,9 @@ function App() {
 
   // --- Préréglages : configurations complètes sauvegardées (fond, couleurs,
   // durées du minuteur, musique d'ambiance) ---
-  // Chargés depuis / synchronisés vers Supabase (table « prereglages »)
-  // pour un compte connecté. Mode invité : en mémoire uniquement.
+  // Chargés depuis / synchronisés vers Supabase (table "prereglages", filtrée
+  // par user_id + RLS) pour un compte connecté. Mode invité : en mémoire
+  // uniquement, comme pour les notes (voir plus haut).
   const [prereglages, setPrereglages] = useState([]);
   const prereglagesChargesPourRef = useRef(null);
 
@@ -4576,14 +4401,27 @@ function App() {
       prereglagesChargesPourRef.current = 'invite';
       return;
     }
+
+    prereglagesChargesPourRef.current = null;
     let annule = false;
     (async () => {
-      const data = await chargerPrereglages(utilisateur.id);
-      if (!annule) {
-        setPrereglages(data);
+      try {
+        await attendre(240);
+        if (annule) return;
+        const { data, error } = await executerAvecRetry(() => supabase
+          .from('prereglages')
+          .select('*')
+          .eq('user_id', utilisateur.id)
+          .order('date_creation', { ascending: true }));
+        if (error) throw error;
+        if (annule) return;
+        setPrereglages((data || []).map(ligneSupabaseVersPrereglage));
         prereglagesChargesPourRef.current = utilisateur.id;
+      } catch (err) {
+        if (!annule) console.error('Erreur de chargement des préréglages depuis Supabase :', err);
       }
     })();
+
     return () => { annule = true; };
   }, [connecte, utilisateur?.id]);
 
@@ -4591,7 +4429,33 @@ function App() {
     if (!connecte || !utilisateur?.id) return;
     if (prereglagesChargesPourRef.current !== utilisateur.id) return;
 
-    sauvegarderPrereglages(utilisateur.id, prereglages);
+    const idUtilisateur = utilisateur.id;
+    let annule = false;
+    const minuteur = setTimeout(async () => {
+      try {
+        if (prereglages.length > 0) {
+          const lignes = prereglages.map((p) => prereglageVersLigneSupabase(p, idUtilisateur));
+          const { error: erreurUpsert } = await executerAvecRetry(() => supabase.from('prereglages').upsert(lignes));
+          if (erreurUpsert) throw erreurUpsert;
+        }
+
+        const idsActuels = prereglages.map((p) => p.id);
+        const { error: erreurSuppression } = await executerAvecRetry(() => {
+          let requeteSuppression = supabase.from('prereglages').delete().eq('user_id', idUtilisateur);
+          if (idsActuels.length > 0) {
+            requeteSuppression = requeteSuppression.not(
+              'id', 'in', `(${idsActuels.map((id) => `"${id}"`).join(',')})`
+            );
+          }
+          return requeteSuppression;
+        });
+        if (erreurSuppression) throw erreurSuppression;
+      } catch (err) {
+        if (!annule) console.error('Erreur de synchronisation des préréglages vers Supabase :', err);
+      }
+    }, 800);
+
+    return () => { annule = true; clearTimeout(minuteur); };
   }, [prereglages, connecte, utilisateur?.id]);
 
   // Modale de création / renommage : idPrereglageEnEdition à null = mode
@@ -4686,6 +4550,53 @@ function App() {
   // confirmation avant d'être effective.
   const sortieConfirmeeRef = useRef(false);
 
+  // Convertit un préréglage de l'appli vers une ligne de la table Supabase
+  // "prereglages" (et inversement) : la configuration complète (fond,
+  // réglages, musique) est stockée telle quelle dans la colonne jsonb
+  // "configuration".
+  const prereglageVersLigneSupabase = (p, idUtilisateur) => ({
+    id: p.id,
+    user_id: idUtilisateur,
+    nom: p.nom,
+    configuration: {
+      couleurFondAppliquee: p.couleurFondAppliquee ?? null,
+      imageFond: p.imageFond ?? null,
+      reglages: p.reglages ?? null,
+      musiqueAmbiance: p.musiqueAmbiance ?? null,
+    },
+    date_modification: new Date().toISOString(),
+  });
+
+  // Convertit une tâche de l'appli (camelCase) vers une ligne de la table
+  // Supabase "taches" (snake_case), et inversement. Voir le schéma SQL
+  // fourni séparément (table "taches" + policies RLS sur user_id).
+  const tacheVersLigneSupabase = (t, idUtilisateur) => ({
+    id: t.id,
+    user_id: idUtilisateur,
+    contenu: t.contenu,
+    tags: t.tags,
+    date_echeance: t.dateEcheance || null,
+    terminee: t.terminee,
+    epinglee: t.epinglee,
+    position: t.position,
+    ordre: t.ordre ?? null,
+    date_creation: t.dateCreation,
+    date_modification: t.dateModification,
+  });
+
+  const ligneSupabaseVersTache = (ligne) => ({
+    id: ligne.id,
+    contenu: ligne.contenu ?? '',
+    tags: ligne.tags ?? [],
+    dateEcheance: ligne.date_echeance ?? '',
+    terminee: !!ligne.terminee,
+    epinglee: !!ligne.epinglee,
+    position: ligne.position ?? null,
+    ...(ligne.ordre !== null && ligne.ordre !== undefined ? { ordre: ligne.ordre } : {}),
+    dateCreation: ligne.date_creation,
+    dateModification: ligne.date_modification,
+  });
+
   // Charge les notes du compte connecté depuis Supabase. En mode invité ou
   // après une déconnexion, la liste est immédiatement vidée : aucune note
   // de compte ne doit fuiter vers l'invité, ni inversement.
@@ -4695,19 +4606,34 @@ function App() {
       tachesChargeesPourRef.current = 'invite';
       return;
     }
+
+    tachesChargeesPourRef.current = null; // chargement en cours pour ce compte
     let annule = false;
     (async () => {
-      const data = await chargerNotes(utilisateur.id);
-      if (!annule) {
-        setTaches(data);
+      try {
+        await attendre(320);
+        if (annule) return;
+        const { data, error } = await executerAvecRetry(() => supabase
+          .from('taches')
+          .select('*')
+          .eq('user_id', utilisateur.id)
+          .order('date_creation', { ascending: false }));
+        if (error) throw error;
+        if (annule) return;
+        setTaches((data || []).map(ligneSupabaseVersTache));
         tachesChargeesPourRef.current = utilisateur.id;
+      } catch (err) {
+        if (!annule) console.error('Erreur de chargement des notes depuis Supabase :', err);
       }
     })();
+
     return () => { annule = true; };
   }, [connecte, utilisateur?.id]);
 
   // Synchronise les notes vers Supabase pour un compte connecté (avec un
-  // court débounce pour éviter une écriture à chaque frappe).
+  // court débounce pour éviter un appel réseau à chaque frappe). Les notes
+  // encore présentes localement sont enregistrées (upsert), celles qui ont
+  // été supprimées localement sont supprimées côté serveur.
   useEffect(() => {
     if (!connecte || !utilisateur?.id) return; // mode invité : rien à synchroniser
     // Chargement initial pas encore terminé pour CET utilisateur (ex : juste
@@ -4716,11 +4642,36 @@ function App() {
     if (tachesChargeesPourRef.current !== utilisateur.id) return;
 
     const idUtilisateur = utilisateur.id;
-    const minuteur = setTimeout(() => {
-      sauvegarderNotes(idUtilisateur, taches);
-    }, 300);
+    let annule = false;
 
-    return () => clearTimeout(minuteur);
+    const minuteur = setTimeout(async () => {
+      try {
+        if (taches.length > 0) {
+          const lignes = taches.map((t) => tacheVersLigneSupabase(t, idUtilisateur));
+          const { error: erreurUpsert } = await executerAvecRetry(() => supabase.from('taches').upsert(lignes));
+          if (erreurUpsert) throw erreurUpsert;
+        }
+
+        const idsActuels = taches.map((t) => t.id);
+        const { error: erreurSuppression } = await executerAvecRetry(() => {
+          let requeteSuppression = supabase.from('taches').delete().eq('user_id', idUtilisateur);
+          if (idsActuels.length > 0) {
+            requeteSuppression = requeteSuppression.not(
+              'id', 'in', `(${idsActuels.map((id) => `"${id}"`).join(',')})`
+            );
+          }
+          return requeteSuppression;
+        });
+        if (erreurSuppression) throw erreurSuppression;
+      } catch (err) {
+        if (!annule) console.error('Erreur de synchronisation des notes vers Supabase :', err);
+      }
+    }, 800);
+
+    return () => {
+      annule = true;
+      clearTimeout(minuteur);
+    };
   }, [taches, connecte, utilisateur?.id]);
 
   const ajouterTache = () => {
@@ -4785,27 +4736,6 @@ function App() {
         : t
     )));
   };
-
-  const actionsPourRecompense = (recompenseId) => ({
-    onFermer: (id) => {
-      setRecompenses(prev => prev.map(r => r.id === id ? { ...r, afficheeSurTableau: false } : r));
-      if (connecte && utilisateur?.id) mettreAJourRecompense(utilisateur.id, id, { afficheeSurTableau: false });
-    },
-    onOuvrir: (id) => {
-      const recompense = recompenses.find(r => r.id === id);
-      if (recompense && recompense.etat === 'non_ouverte') {
-        setRecompenses(prev => prev.map(r => r.id === id ? { ...r, etat: 'ouverte' } : r));
-        if (recompense.type === 'coins') {
-          setCoins(prev => prev + recompense.valeur);
-        }
-        if (connecte && utilisateur?.id) mettreAJourRecompense(utilisateur.id, id, { etat: 'ouverte' });
-      }
-    },
-    onMettreAJourPosition: (pos) => {
-      setRecompenses(prev => prev.map(r => r.id === recompenseId ? { ...r, position: pos } : r));
-      if (connecte && utilisateur?.id) mettreAJourRecompense(utilisateur.id, recompenseId, { position: pos });
-    }
-  });
 
   // Épingle une tâche sur le fond principal, en cascade pour éviter
   // que toutes les notes n'apparaissent superposées au même endroit
@@ -4883,40 +4813,14 @@ function App() {
     setCouleurFondAppliquee(valeur.trim());
   };
 
-  // Lit le fichier choisi (image ou GIF), le compresse pour éviter les erreurs réseau
-  // dues à une payload trop lourde, et le convertit en data URL utilisable en CSS
+  // Lit le fichier choisi (image ou GIF) et le convertit en data URL utilisable en CSS
   const appliquerImageFond = (fichier) => {
     if (!fichier) return;
 
     const lecteur = new FileReader();
-    lecteur.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        // Redimensionnement à 1920px maximum
-        const MAX_TAILLE = 1920;
-        let largeur = img.width;
-        let hauteur = img.height;
-
-        if (largeur > hauteur && largeur > MAX_TAILLE) {
-          hauteur *= MAX_TAILLE / largeur;
-          largeur = MAX_TAILLE;
-        } else if (hauteur > MAX_TAILLE) {
-          largeur *= MAX_TAILLE / hauteur;
-          hauteur = MAX_TAILLE;
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = largeur;
-        canvas.height = hauteur;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, largeur, hauteur);
-        
-        // Compression en JPEG qualité 0.8
-        const dataUrlCompresser = canvas.toDataURL('image/jpeg', 0.8);
-        setCouleurFondAppliquee(null);
-        setImageFond(dataUrlCompresser);
-      };
-      img.src = e.target.result;
+    lecteur.onload = () => {
+      setCouleurFondAppliquee(null);
+      setImageFond(lecteur.result);
     };
     lecteur.readAsDataURL(fichier);
   };
@@ -4947,8 +4851,8 @@ function App() {
     }
   }, [couleurFondAppliquee, imageFond]);
 
-  // (Les réglages Pomodoro sont synchronisés vers Supabase par l'effet de
-  // préférences ci-dessus.)
+  // (Les réglages Pomodoro sont désormais synchronisés vers Supabase par
+  // l'effet de préférences ci-dessus ; plus aucune sauvegarde localStorage.)
 
   // Application en temps réel des couleurs choisies via des variables CSS globales.
   // Le fichier App.css les consomme via var(--couleur-chrono), var(--couleur-poignee),
@@ -5069,7 +4973,7 @@ function App() {
     )}
 
     {pageActuelle === 'accueil' ? (
-      <Accueil onCommencer={gererCommencer} />
+      <Accueil onCommencer={demanderAcces} />
     ) : (
     <>
     {!modeConcentration && (
@@ -5080,7 +4984,6 @@ function App() {
         position={0}
         ouvrirProfil={() => setProfilOuvert(true)}
         photoProfil={photoProfil}
-        coins={coins}
       />
     )}
 
@@ -5126,8 +5029,6 @@ function App() {
         onDemanderSuppressionPrereglage={demanderSuppressionPrereglage}
         onRemplacerPrereglage={remplacerPrereglage}
         onOuvrirCreationPrereglage={ouvrirCreationPrereglage}
-        recompenses={recompenses}
-        onOuvrirRecompense={(id) => actionsPourRecompense(id).onOuvrir(id)}
       />
     )}
 
@@ -5153,17 +5054,7 @@ function App() {
       onEnregistrerPhotoProfil={enregistrerPhotoProfil}
       enregistrementPhotoEnCours={enregistrementPhotoEnCours}
       erreurPhotoProfil={erreurPhotoProfil}
-      coins={coins}
     />
-
-    {/* Récompenses affichées sur le tableau */}
-    {recompenses.filter(r => r.afficheeSurTableau).map((recompense) => (
-      <CarteRecompenseEpinglee 
-        key={recompense.id} 
-        recompense={recompense} 
-        actions={actionsPourRecompense(recompense.id)} 
-      />
-    ))}
 
     {/* Notes épinglées : widgets flottants affichés sur le fond principal */}
     {notesEpinglees.map((tache) => (
@@ -5227,12 +5118,6 @@ function App() {
       onInscription={choisirInscription}
       onInvite={choisirInvite}
       onConnexion={choisirConnexion}
-    />
-
-    <ModalConfirmationAccueil 
-      ouvert={confirmationAccueilOuverte} 
-      fermer={() => setConfirmationAccueilOuverte(false)} 
-      onConfirmer={quitterModeInvite} 
     />
 
     <ModalConnexion

@@ -1,97 +1,67 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '../lib/SupabaseClient'
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
+  updateProfile
+} from 'firebase/auth'
+import { auth } from '../lib/firebase'
 
 const AuthContext = createContext(undefined)
 
-// --- Fournit l'état d'authentification (session, utilisateur) à toute
-// l'application, ainsi que les actions (connexion, inscription, déconnexion).
-// La session Supabase est écoutée en temps réel via onAuthStateChange,
-// donc tout composant utilisant useAuth() se met à jour automatiquement.
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [utilisateur, setUtilisateur] = useState(null)
   const [chargementAuth, setChargementAuth] = useState(true)
 
   useEffect(() => {
-    let annule = false
-
-    // Récupère la session existante au chargement (ex: utilisateur déjà
-    // connecté lors d'une précédente visite, token encore valide)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (annule) return
-      setSession(session)
-      setUtilisateur(session?.user ?? null)
+    const desabonner = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // App.jsx s'attend à `utilisateur.id` (héritage de Supabase). 
+        // Firebase utilise `uid`. On ajoute donc la propriété `id`.
+        user.id = user.uid
+        setUtilisateur(user)
+        setSession({ user })
+      } else {
+        setUtilisateur(null)
+        setSession(null)
+      }
       setChargementAuth(false)
     })
-
-    // Écoute tous les changements d'état : connexion, déconnexion,
-    // rafraîchissement de token, retour d'OAuth (Google)...
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_evenement, session) => {
-      setSession(session)
-      setUtilisateur(session?.user ?? null)
-      setChargementAuth(false)
-    })
-
-    return () => {
-      annule = true
-      subscription.unsubscribe()
-    }
+    return desabonner
   }, [])
 
   const connexionAvecEmail = async (email, motDePasse) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password: motDePasse,
-    })
-    if (error) throw error
-    return data
+    const userCredential = await signInWithEmailAndPassword(auth, email, motDePasse)
+    const user = userCredential.user
+    user.id = user.uid
+    return { user }
   }
 
-  // infosComplementaires (ex: { pseudo, date_naissance }) est stocké dans
-  // les user_metadata Supabase, accessible ensuite via utilisateur.user_metadata
   const inscriptionAvecEmail = async (email, motDePasse, infosComplementaires = {}) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password: motDePasse,
-      options: {
-        data: infosComplementaires,
-      },
-    })
-    if (error) throw error
-    return data
+    const userCredential = await createUserWithEmailAndPassword(auth, email, motDePasse)
+    const user = userCredential.user
+    user.id = user.uid
+    
+    // Si on a un pseudo, on peut le mettre à jour dans le profil Firebase
+    if (infosComplementaires.pseudo) {
+      await updateProfile(user, {
+        displayName: infosComplementaires.pseudo
+      })
+    }
+    return { user }
   }
 
   const connexionAvecGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin,
-      },
-    })
-    if (error) throw error
+    const provider = new GoogleAuthProvider()
+    await signInWithPopup(auth, provider)
   }
 
   const deconnexion = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
-  }
-
-  // Enregistre la photo de profil (dataUrl + position de recadrage) dans les
-  // user_metadata Supabase de l'utilisateur connecté. supabase.auth.updateUser
-  // déclenche un événement USER_UPDATED capté par onAuthStateChange ci-dessus,
-  // donc `utilisateur` (et tout composant utilisant useAuth()) se met à jour
-  // automatiquement avec la nouvelle photo une fois l'enregistrement terminé.
-  // N'est utilisable que pour un utilisateur réellement connecté : un
-  // utilisateur en mode invité n'a pas de compte Supabase où persister quoi
-  // que ce soit.
-  const mettreAJourPhotoProfil = async (photoProfil) => {
-    const { data, error } = await supabase.auth.updateUser({
-      data: { photo_profil: photoProfil },
-    })
-    if (error) throw error
-    return data
+    await signOut(auth)
   }
 
   const valeur = {
@@ -103,7 +73,6 @@ export function AuthProvider({ children }) {
     inscriptionAvecEmail,
     connexionAvecGoogle,
     deconnexion,
-    mettreAJourPhotoProfil,
   }
 
   return <AuthContext.Provider value={valeur}>{children}</AuthContext.Provider>

@@ -1,42 +1,43 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
-:root{
+:root {
   --radius-lg: 28px;
   --radius-md: 16px;
   --shadow-soft: 0 10px 30px rgba(31, 36, 48, 0.08);
   --shadow-float: 0 8px 24px rgba(31, 36, 48, 0.14);
 
   /* Couleurs personnalisables du minuteur Pomodoro.
-     Valeurs par défaut ici ; écrasées en JS via setProperty(...) */
+     Valeurs par dÃ©faut ici ; Ã©crasÃ©es en JS via setProperty(...) */
   --couleur-chrono: #1f2430;
   --couleur-poignee: #e2472a;
   --couleur-boutons: #e2472a;
 
-  /* Empêche les champs de formulaire natifs de basculer sur le rendu
-     "dark" du navigateur (texte blanc par défaut) quand le système est
-     en thème sombre : toute l'appli reste en thème clair, y compris les
-     contrôles de formulaire (voir règle globale input/textarea/select ci-dessous) */
+  /* EmpÃªche les champs de formulaire natifs de basculer sur le rendu
+     "dark" du navigateur (texte blanc par dÃ©faut) quand le systÃ¨me est
+     en thÃ¨me sombre : toute l'appli reste en thÃ¨me clair, y compris les
+     contrÃ´les de formulaire (voir rÃ¨gle globale input/textarea/select ci-dessous) */
   color-scheme: light;
 }
 
-*{
+* {
   box-sizing: border-box;
 }
 
-html, body{
+html,
+body {
   margin: 0;
   min-height: 100vh;
   overflow-x: hidden;
 }
 
-body{
+body {
   background: radial-gradient(circle at 50% 0%, #f5f6f8 0%, #eceef1 60%);
   font-family: 'Inter', system-ui, sans-serif;
   color: #1f2430;
   transition: background-color 0.3s ease;
 }
 
-#root{
+#root {
   max-width: none;
   margin: 0;
   padding: 0;
@@ -46,17 +47,17 @@ body{
 }
 
 /* ======================================================================
-   Lisibilité globale des champs de formulaire (contraste)
+   LisibilitÃ© globale des champs de formulaire (contraste)
    ------------------------------------------------------------------
-   Règle de base : tout champ de saisie (texte, nombre, date, recherche,
-   textarea, select) affiche un texte sombre et bien contrasté, quel que
-   soit le thème système de l'utilisateur (clair/sombre) ou l'état
-   (survol, focus, désactivé). Les règles plus spécifiques ci-dessous
-   ne font que préciser les couleurs de fond propres à chaque champ.
+   RÃ¨gle de base : tout champ de saisie (texte, nombre, date, recherche,
+   textarea, select) affiche un texte sombre et bien contrastÃ©, quel que
+   soit le thÃ¨me systÃ¨me de l'utilisateur (clair/sombre) ou l'Ã©tat
+   (survol, focus, dÃ©sactivÃ©). Les rÃ¨gles plus spÃ©cifiques ci-dessous
+   ne font que prÃ©ciser les couleurs de fond propres Ã  chaque champ.
    ====================================================================== */
 input,
 textarea,
-select{
+select {
   color: #1f2430;
   color-scheme: light;
   font-family: 'Inter', sans-serif;
@@ -64,32 +65,32 @@ select{
 }
 
 input::placeholder,
-textarea::placeholder{
+textarea::placeholder {
   color: #8b909a;
   opacity: 1;
 }
 
 input:disabled,
 textarea:disabled,
-select:disabled{
+select:disabled {
   color: #9aa0ab;
   background-color: #eceef1;
   cursor: not-allowed;
   opacity: 1;
 }
 
-select{
+select {
   color: #1f2430;
   background-color: #fff;
 }
 
-select option{
+select option {
   color: #1f2430;
   background-color: #fff;
 }
 
 /* --- Navbar flottante --- */
-.navbar{
+.navbar {
   position: fixed;
   top: 20px;
   left: 50%;
@@ -109,7 +110,7 @@ select option{
   z-index: 100;
 }
 
-.navbar button{
+.navbar button {
   border: none;
   font-family: 'Inter', sans-serif;
   font-size: 15px;
@@ -122,19 +123,19 @@ select option{
   transition: background 0.25s ease, color 0.25s ease;
 }
 
-.navbar button:hover{
+.navbar button:hover {
   background: rgba(226, 71, 42, 0.12);
   color: #b8371d;
 }
 
-/* --- Menu déroulant "Connecté : pseudo" : apparaît au survol, propose
-   "Se déconnecter". Le padding-top comble le petit espace entre le bouton
+/* --- Menu dÃ©roulant "ConnectÃ© : pseudo" : apparaÃ®t au survol, propose
+   "Se dÃ©connecter". Le padding-top comble le petit espace entre le bouton
    et le menu pour que le survol ne se coupe pas entre les deux. */
-.navbar_compte{
+.navbar_compte {
   position: relative;
 }
 
-.navbar_compte_menu{
+.navbar_compte_menu {
   display: none;
   position: absolute;
   top: 100%;
@@ -145,11 +146,11 @@ select option{
 }
 
 .navbar_compte:hover .navbar_compte_menu,
-.navbar_compte:focus-within .navbar_compte_menu{
+.navbar_compte:focus-within .navbar_compte_menu {
   display: block;
 }
 
-.navbar_compte_menu_item{
+.navbar_compte_menu_item {
   display: block;
   width: 100%;
   white-space: nowrap;
@@ -166,13 +167,13 @@ select option{
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.navbar_compte_menu_item:hover{
+.navbar_compte_menu_item:hover {
   background: rgba(226, 71, 42, 0.12);
   color: #b8371d;
 }
 
 /* --- Zone principale --- */
-.stage{
+.stage {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -180,7 +181,7 @@ select option{
   padding: 120px 24px 90px;
 }
 
-.chrono{
+.chrono {
   background: #ffffff00;
   border-radius: var(--radius-lg);
   padding: 64px 88px;
@@ -192,12 +193,12 @@ select option{
   transition: transform 0.45s cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-.stage--panel-ouvert .chrono{
+.stage--panel-ouvert .chrono {
   transform: translate(-260px, -200px);
 }
 
 /* Badge indiquant la phase (travail / pause) */
-.chrono_phase{
+.chrono_phase {
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 600;
@@ -207,17 +208,17 @@ select option{
   letter-spacing: 0.4px;
 }
 
-.chrono_phase--travail{
+.chrono_phase--travail {
   background: rgba(226, 71, 42, 0.12);
   color: #b8371d;
 }
 
-.chrono_phase--pause{
+.chrono_phase--pause {
   background: rgba(47, 111, 107, 0.12);
   color: #2f6f6b;
 }
 
-.chrono_affichage{
+.chrono_affichage {
   font-family: 'Space Grotesk', sans-serif;
   font-variant-numeric: tabular-nums;
   font-size: 72px;
@@ -226,13 +227,13 @@ select option{
   letter-spacing: 1px;
 }
 
-.chrono_controles{
+.chrono_controles {
   display: flex;
   flex-direction: row;
   gap: 16px;
 }
 
-.btn_primaire{
+.btn_primaire {
   background: var(--couleur-boutons);
   color: #fff;
   border: none;
@@ -246,18 +247,18 @@ select option{
   transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, background 0.2s ease;
 }
 
-.btn_primaire:hover{
+.btn_primaire:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 24px rgba(31, 36, 48, 0.35);
 }
 
-.btn_primaire:disabled{
+.btn_primaire:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
 }
 
-.btn_secondaire{
+.btn_secondaire {
   background: transparent;
   border: 2px solid #e4e6ea;
   color: #6b7280;
@@ -270,27 +271,27 @@ select option{
   transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
-.btn_secondaire:hover{
+.btn_secondaire:hover {
   border-color: #6b7280;
   color: #1f2430;
   background: #f5f6f8;
 }
 
 /* --- Compteur de distance sous le chrono (violet) --- */
-.chrono_distance{
+.chrono_distance {
   display: flex;
   align-items: baseline;
   gap: 8px;
 }
 
-.chrono_distance_valeur{
+.chrono_distance_valeur {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 20px;
   font-weight: 700;
   color: #7c3aed;
 }
 
-.chrono_distance_label{
+.chrono_distance_label {
   font-size: 12px;
   font-weight: 600;
   color: #7c3aed;
@@ -301,8 +302,8 @@ select option{
   letter-spacing: 0.4px;
 }
 
-/* --- Panneau latéral --- */
-.panel{
+/* --- Panneau latÃ©ral --- */
+.panel {
   position: fixed;
   top: 50%;
   right: 14px;
@@ -315,11 +316,11 @@ select option{
   transition: transform 0.45s cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-.panel--collapsed{
+.panel--collapsed {
   transform: translateY(-50%) translateX(670px);
 }
 
-.panel_poignee{
+.panel_poignee {
   width: 64px;
   flex-shrink: 0;
   background: var(--couleur-poignee);
@@ -334,7 +335,7 @@ select option{
   transition: background 0.2s ease;
 }
 
-.poignee_toggle{
+.poignee_toggle {
   width: 32px;
   height: 32px;
   flex-shrink: 0;
@@ -351,17 +352,17 @@ select option{
   transition: background 0.2s ease;
 }
 
-.poignee_toggle:hover{
+.poignee_toggle:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
-.poignee_carres{
+.poignee_carres {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.poignee_carre{
+.poignee_carre {
   position: relative;
   width: 36px;
   height: 36px;
@@ -377,21 +378,21 @@ select option{
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.poignee_carre:hover{
+.poignee_carre:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: translateY(-1px);
 }
 
-.poignee_carre.actif{
+.poignee_carre.actif {
   background: #fff;
   color: var(--couleur-poignee);
 }
 
-.poignee_carre_icone{
+.poignee_carre_icone {
   line-height: 1;
 }
 
-.poignee_notif{
+.poignee_notif {
   position: absolute;
   top: -3px;
   right: -3px;
@@ -402,11 +403,11 @@ select option{
   border: 2px solid var(--couleur-poignee);
 }
 
-.poignee_carre.actif .poignee_notif{
+.poignee_carre.actif .poignee_notif {
   border-color: #fff;
 }
 
-.panel_corps{
+.panel_corps {
   width: 656px;
   background: #ffffff;
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
@@ -416,14 +417,14 @@ select option{
   overflow: hidden;
 }
 
-.panel_controles{
+.panel_controles {
   display: flex;
   gap: 6px;
   padding: 16px;
   border-bottom: 1px solid #eef0f2;
 }
 
-.panel_controles button{
+.panel_controles button {
   flex: 1;
   background: transparent;
   border: none;
@@ -437,48 +438,50 @@ select option{
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.panel_controles button:hover{
+.panel_controles button:hover {
   background: #f5f6f8;
 }
 
-.panel_controles button.actif{
+.panel_controles button.actif {
   background: rgba(226, 71, 42, 0.12);
   color: #b8371d;
 }
 
-.panel_contenu{
+.panel_contenu {
   flex: 1;
   overflow: hidden;
   display: flex;
 }
 
-.panel_contenu > *{
+.panel_contenu>* {
   width: 100%;
 }
 
 /* --- Contenus du panneau --- */
-.note, .param{
+.note,
+.param {
   height: 100%;
   padding: 26px;
   overflow-y: auto;
 }
 
-.note{
+.note {
   background: rgba(226, 71, 42, 0.12);
 }
 
-.note h2, .param h2{
+.note h2,
+.param h2 {
   margin-top: 0;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 20px;
 }
 
-.param{
+.param {
   background: rgba(47, 111, 107, 0.09);
 }
 
-/* --- Sections du panneau Réglages (fond + Pomodoro + musique) --- */
-.param_section{
+/* --- Sections du panneau RÃ©glages (fond + Pomodoro + musique) --- */
+.param_section {
   margin-top: 24px;
   padding-top: 20px;
   border-top: 1px solid rgba(31, 36, 48, 0.1);
@@ -487,31 +490,31 @@ select option{
   gap: 18px;
 }
 
-.param_section_titre{
+.param_section_titre {
   margin: 0;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 16px;
   color: #1f2430;
 }
 
-.param_champ{
+.param_champ {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.param_label{
+.param_label {
   font-size: 13px;
   font-weight: 600;
   color: #6b7280;
 }
 
-.param_champ_ligne{
+.param_champ_ligne {
   display: flex;
   gap: 8px;
 }
 
-.param_input{
+.param_input {
   flex: 1;
   padding: 10px 12px;
   border-radius: 10px;
@@ -522,12 +525,12 @@ select option{
   color: #1f2430;
 }
 
-.param_input:focus{
+.param_input:focus {
   outline: 2px solid #e2472a;
   border-color: transparent;
 }
 
-.param_btn_valider{
+.param_btn_valider {
   padding: 10px 18px;
   border: none;
   border-radius: 10px;
@@ -539,11 +542,11 @@ select option{
   transition: background 0.2s ease;
 }
 
-.param_btn_valider:hover{
+.param_btn_valider:hover {
   background: #b8371d;
 }
 
-.param_file_input{
+.param_file_input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -551,7 +554,7 @@ select option{
   overflow: hidden;
 }
 
-.param_file_label{
+.param_file_label {
   display: inline-block;
   width: fit-content;
   padding: 10px 18px;
@@ -565,26 +568,26 @@ select option{
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.param_file_label:hover{
+.param_file_label:hover {
   background: #2f6f6b;
   color: #fff;
 }
 
-.param_file_nom{
+.param_file_nom {
   font-size: 12px;
   font-weight: 600;
   color: #2f6f6b;
 }
 
-/* Ligne "label + sélecteur de couleur" pour la section Pomodoro */
-.param_couleur_ligne{
+/* Ligne "label + sÃ©lecteur de couleur" pour la section Pomodoro */
+.param_couleur_ligne {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.param_couleur_input{
+.param_couleur_input {
   width: 44px;
   height: 36px;
   padding: 0;
@@ -595,16 +598,16 @@ select option{
   flex-shrink: 0;
 }
 
-.param_couleur_input::-webkit-color-swatch-wrapper{
+.param_couleur_input::-webkit-color-swatch-wrapper {
   padding: 4px;
 }
 
-.param_couleur_input::-webkit-color-swatch{
+.param_couleur_input::-webkit-color-swatch {
   border: none;
   border-radius: 6px;
 }
 
-.param_btn_reinit{
+.param_btn_reinit {
   align-self: flex-start;
   background: transparent;
   border: 2px solid #e4e6ea;
@@ -618,34 +621,34 @@ select option{
   transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
-.param_btn_reinit:hover{
+.param_btn_reinit:hover {
   border-color: #b8371d;
   color: #b8371d;
   background: rgba(226, 71, 42, 0.08);
 }
 
-/* --- Section "Musique d'ambiance" du panneau Réglages --- */
-.param_musique_texte{
+/* --- Section "Musique d'ambiance" du panneau RÃ©glages --- */
+.param_musique_texte {
   margin: 0;
   font-size: 13px;
   color: #6b7280;
   line-height: 1.5;
 }
 
-.param_musique_bloc{
+.param_musique_bloc {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-.param_musique_ligne{
+.param_musique_ligne {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
 }
 
-.param_musique_actuelle{
+.param_musique_actuelle {
   font-size: 12px;
   font-weight: 600;
   color: #2f6f6b;
@@ -658,8 +661,8 @@ select option{
   max-width: 220px;
 }
 
-/* Carte d'aperçu de la musique sélectionnée : miniature + titre/artiste */
-.param_musique_carte{
+/* Carte d'aperÃ§u de la musique sÃ©lectionnÃ©e : miniature + titre/artiste */
+.param_musique_carte {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -669,7 +672,7 @@ select option{
   box-shadow: var(--shadow-soft);
 }
 
-.param_musique_vignette{
+.param_musique_vignette {
   width: 64px;
   height: 64px;
   flex-shrink: 0;
@@ -681,26 +684,26 @@ select option{
   justify-content: center;
 }
 
-.param_musique_vignette img{
+.param_musique_vignette img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.param_musique_vignette_icone{
+.param_musique_vignette_icone {
   font-size: 26px;
   color: #fff;
 }
 
-.param_musique_carte_details{
+.param_musique_carte_details {
   display: flex;
   flex-direction: column;
   gap: 3px;
   min-width: 0;
 }
 
-.param_musique_carte_titre{
+.param_musique_carte_titre {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 14px;
   font-weight: 700;
@@ -710,7 +713,7 @@ select option{
   text-overflow: ellipsis;
 }
 
-.param_musique_carte_artiste{
+.param_musique_carte_artiste {
   font-size: 12px;
   color: #6b7280;
   white-space: nowrap;
@@ -718,8 +721,8 @@ select option{
   text-overflow: ellipsis;
 }
 
-/* Bloc d'informations détaillées (source, durée, état de lecture, boucle) */
-.param_musique_infos{
+/* Bloc d'informations dÃ©taillÃ©es (source, durÃ©e, Ã©tat de lecture, boucle) */
+.param_musique_infos {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -729,7 +732,7 @@ select option{
   box-shadow: var(--shadow-soft);
 }
 
-.param_musique_info_ligne{
+.param_musique_info_ligne {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -737,12 +740,12 @@ select option{
   font-size: 12px;
 }
 
-.param_musique_info_label{
+.param_musique_info_label {
   color: #6b7280;
   font-weight: 600;
 }
 
-.param_musique_info_valeur{
+.param_musique_info_valeur {
   color: #1f2430;
   font-weight: 600;
   text-align: right;
@@ -750,7 +753,7 @@ select option{
 
 .param_musique_badge_source,
 .param_musique_badge_etat,
-.param_musique_badge_boucle{
+.param_musique_badge_boucle {
   font-size: 10px;
   font-weight: 700;
   padding: 3px 9px;
@@ -759,27 +762,27 @@ select option{
   letter-spacing: 0.3px;
 }
 
-.param_musique_badge_source--youtube{
+.param_musique_badge_source--youtube {
   background: rgba(226, 71, 42, 0.12);
   color: #b8371d;
 }
 
-.param_musique_badge_source--spotify{
+.param_musique_badge_source--spotify {
   background: rgba(29, 185, 84, 0.14);
   color: #169c46;
 }
 
-.param_musique_badge_etat--lecture{
+.param_musique_badge_etat--lecture {
   background: rgba(47, 111, 107, 0.14);
   color: #2f6f6b;
 }
 
-.param_musique_badge_etat--pause{
+.param_musique_badge_etat--pause {
   background: rgba(107, 114, 128, 0.14);
   color: #6b7280;
 }
 
-.param_musique_badge_boucle{
+.param_musique_badge_boucle {
   background: rgba(124, 58, 237, 0.12);
   color: #7c3aed;
 }
@@ -788,7 +791,7 @@ select option{
    Section "Salons de course" (panneau coulissant)
    ====================================================================== */
 
-.salon_course{
+.salon_course {
   height: 100%;
   padding: 22px;
   overflow-y: auto;
@@ -798,7 +801,7 @@ select option{
   gap: 16px;
 }
 
-.salon_entete{
+.salon_entete {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -807,20 +810,20 @@ select option{
   flex-shrink: 0;
 }
 
-.salon_entete h2{
+.salon_entete h2 {
   margin: 0;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 20px;
   color: #1f2430;
 }
 
-.salon_actions_principales{
+.salon_actions_principales {
   display: flex;
   gap: 8px;
 }
 
 .salon_btn_rejoindre,
-.salon_btn_creer{
+.salon_btn_creer {
   border: none;
   font-family: 'Inter', sans-serif;
   font-size: 13px;
@@ -831,29 +834,29 @@ select option{
   transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.salon_btn_rejoindre{
+.salon_btn_rejoindre {
   background: #fff;
   color: #4c4ce0;
   border: 2px solid rgba(76, 76, 224, 0.35);
 }
 
-.salon_btn_rejoindre:hover{
+.salon_btn_rejoindre:hover {
   background: rgba(76, 76, 224, 0.08);
 }
 
-.salon_btn_creer{
+.salon_btn_creer {
   background: #4c4ce0;
   color: #fff;
   box-shadow: 0 6px 14px rgba(76, 76, 224, 0.3);
 }
 
-.salon_btn_creer:hover{
+.salon_btn_creer:hover {
   background: #3939b8;
   transform: translateY(-1px);
 }
 
-/* Encart de saisie du code de salon (affiché au clic sur "Rejoindre") */
-.salon_rejoindre_encart{
+/* Encart de saisie du code de salon (affichÃ© au clic sur "Rejoindre") */
+.salon_rejoindre_encart {
   display: flex;
   gap: 8px;
   background: #fff;
@@ -863,7 +866,7 @@ select option{
   flex-shrink: 0;
 }
 
-.salon_rejoindre_input{
+.salon_rejoindre_input {
   flex: 1;
   padding: 10px 12px;
   border-radius: 10px;
@@ -874,12 +877,12 @@ select option{
   background: #fff;
 }
 
-.salon_rejoindre_input:focus{
+.salon_rejoindre_input:focus {
   outline: 2px solid #4c4ce0;
   border-color: transparent;
 }
 
-.salon_rejoindre_valider{
+.salon_rejoindre_valider {
   border: none;
   background: #4c4ce0;
   color: #fff;
@@ -891,19 +894,19 @@ select option{
   transition: background 0.2s ease;
 }
 
-.salon_rejoindre_valider:hover{
+.salon_rejoindre_valider:hover {
   background: #3939b8;
 }
 
 /* Barre de recherche + filtres */
-.salon_recherche_zone{
+.salon_recherche_zone {
   display: flex;
   flex-direction: column;
   gap: 10px;
   flex-shrink: 0;
 }
 
-.salon_recherche_input{
+.salon_recherche_input {
   padding: 11px 14px;
   border-radius: 12px;
   border: 1px solid rgba(31, 36, 48, 0.15);
@@ -913,18 +916,18 @@ select option{
   color: #1f2430;
 }
 
-.salon_recherche_input:focus{
+.salon_recherche_input:focus {
   outline: 2px solid #4c4ce0;
   border-color: transparent;
 }
 
-.salon_filtres{
+.salon_filtres {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.salon_filtre_select{
+.salon_filtre_select {
   padding: 8px 12px;
   border-radius: 10px;
   border: 1px solid rgba(31, 36, 48, 0.15);
@@ -935,21 +938,21 @@ select option{
   cursor: pointer;
 }
 
-.salon_vide{
+.salon_vide {
   font-size: 13px;
   color: #6b7280;
   margin: 8px 2px;
 }
 
 /* Grille des cartes de salons */
-.salon_liste{
+.salon_liste {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 14px;
   align-content: start;
 }
 
-.salon_carte{
+.salon_carte {
   background: #fff;
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -960,13 +963,13 @@ select option{
   transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 
-.salon_carte:hover{
+.salon_carte:hover {
   box-shadow: var(--shadow-float);
   transform: translateY(-2px);
   border-color: rgba(76, 76, 224, 0.25);
 }
 
-.salon_carte_image{
+.salon_carte_image {
   height: 100px;
   background: linear-gradient(135deg, rgba(76, 76, 224, 0.15), rgba(226, 71, 42, 0.12));
   display: flex;
@@ -974,33 +977,33 @@ select option{
   justify-content: center;
 }
 
-.salon_carte_image_icone{
+.salon_carte_image_icone {
   font-size: 32px;
   opacity: 0.6;
 }
 
-.salon_carte_info{
+.salon_carte_info {
   padding: 12px 14px 14px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.salon_carte_nom{
+.salon_carte_nom {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 14px;
   font-weight: 700;
   color: #1f2430;
 }
 
-.salon_carte_meta{
+.salon_carte_meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
-.salon_carte_theme{
+.salon_carte_theme {
   font-size: 11px;
   font-weight: 600;
   color: #4c4ce0;
@@ -1009,21 +1012,21 @@ select option{
   border-radius: 999px;
 }
 
-.salon_carte_participants{
+.salon_carte_participants {
   font-size: 11px;
   font-weight: 700;
   color: #2f6f6b;
 }
 
-/* --- Modale de création de salon --- */
-.salon_modal_fond{
+/* --- Modale de crÃ©ation de salon --- */
+.salon_modal_fond {
   background: rgba(31, 36, 48, 0.45);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   padding: 24px;
 }
 
-.salon_modal_fenetre{
+.salon_modal_fenetre {
   width: 460px;
   max-width: 100%;
   min-height: auto;
@@ -1034,7 +1037,7 @@ select option{
   overflow-y: auto;
 }
 
-.salon_modal_contenu{
+.salon_modal_contenu {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -1042,31 +1045,31 @@ select option{
   text-align: left;
 }
 
-.salon_modal_titre{
+.salon_modal_titre {
   margin: 0;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 18px;
   color: #1f2430;
 }
 
-.salon_champ{
+.salon_champ {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.salon_label{
+.salon_label {
   font-size: 13px;
   font-weight: 600;
   color: #6b7280;
 }
 
-.salon_musique_choix{
+.salon_musique_choix {
   display: flex;
   gap: 6px;
 }
 
-.salon_musique_onglet{
+.salon_musique_onglet {
   flex: 1;
   border: 1px solid rgba(31, 36, 48, 0.15);
   background: transparent;
@@ -1080,23 +1083,23 @@ select option{
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-.salon_musique_onglet.actif{
+.salon_musique_onglet.actif {
   background: #4c4ce0;
   border-color: #4c4ce0;
   color: #fff;
 }
 
-.salon_spotify_zone{
+.salon_spotify_zone {
   display: flex;
 }
 
-.salon_spotify_zone--colonne{
+.salon_spotify_zone--colonne {
   flex-direction: column;
   gap: 12px;
   width: 100%;
 }
 
-.salon_btn_spotify{
+.salon_btn_spotify {
   border: none;
   background: #1db954;
   color: #fff;
@@ -1109,11 +1112,11 @@ select option{
   transition: background 0.2s ease;
 }
 
-.salon_btn_spotify:hover{
+.salon_btn_spotify:hover {
   background: #169c46;
 }
 
-.salon_btn_valider_creation{
+.salon_btn_valider_creation {
   border: none;
   background: #e2472a;
   color: #fff;
@@ -1126,12 +1129,12 @@ select option{
   transition: background 0.2s ease;
 }
 
-.salon_btn_valider_creation:hover{
+.salon_btn_valider_creation:hover {
   background: #b8371d;
 }
 
-/* --- Bande du bas : coureur GIF (au-dessus) + flèches défilantes (en dessous) --- */
-.bas_page{
+/* --- Bande du bas : coureur GIF (au-dessus) + flÃ¨ches dÃ©filantes (en dessous) --- */
+.bas_page {
   position: fixed;
   bottom: 0;
   left: 0;
@@ -1145,7 +1148,7 @@ select option{
   pointer-events: none;
 }
 
-.fleches_bande{
+.fleches_bande {
   width: 100%;
   overflow: hidden;
   background: #000000;
@@ -1153,7 +1156,7 @@ select option{
   -webkit-mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
 }
 
-.fleches_piste{
+.fleches_piste {
   display: flex;
   width: max-content;
   gap: 44px;
@@ -1163,30 +1166,36 @@ select option{
   animation: defiler 10s linear infinite;
 }
 
-.fleches_piste.arret{
+.fleches_piste.arret {
   animation-play-state: paused;
 }
 
-@keyframes defiler{
-  from{ transform: translateX(0); }
-  to{ transform: translateX(-50%); }
+@keyframes defiler {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
 }
 
-/* Coureur animé, placé au-dessus de la bande de flèches.
-   Agrandi pour être plus visible. Pas d'animation CSS ajoutée :
+/* Coureur animÃ©, placÃ© au-dessus de la bande de flÃ¨ches.
+   Agrandi pour Ãªtre plus visible. Pas d'animation CSS ajoutÃ©e :
    le GIF s'anime nativement image par image. */
-.coureur_defilant{
+.coureur_defilant {
   width: 100px;
   height: 50px;
   object-fit: contain;
   display: block;
   margin-left: -520px;
-  margin-bottom: 28px;;
+  margin-bottom: 28px;
+  ;
   transform: scale(3);
 }
 
 /* --- Panneau d'informations joueur --- */
-.joueur_info{
+.joueur_info {
   position: fixed;
   top: 20px;
   left: 20px;
@@ -1203,7 +1212,7 @@ select option{
   z-index: 95;
 }
 
-.joueur_photo{
+.joueur_photo {
   width: 56px;
   height: 56px;
   flex-shrink: 0;
@@ -1220,17 +1229,17 @@ select option{
   transition: transform 0.2s ease, background 0.2s ease;
 }
 
-.joueur_photo:hover{
+.joueur_photo:hover {
   transform: scale(1.06);
   background: rgba(226, 71, 42, 0.2);
 }
 
-.joueur_photo_icone{
+.joueur_photo_icone {
   font-size: 26px;
   line-height: 1;
 }
 
-.joueur_photo_img{
+.joueur_photo_img {
   display: block;
   width: 100%;
   height: 100%;
@@ -1238,26 +1247,26 @@ select option{
   object-fit: cover;
 }
 
-.joueur_details{
+.joueur_details {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.joueur_identite{
+.joueur_identite {
   display: flex;
   align-items: baseline;
   gap: 8px;
 }
 
-.joueur_pseudo{
+.joueur_pseudo {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 16px;
   font-weight: 700;
   color: #ffffff;
 }
 
-.joueur_niveau{
+.joueur_niveau {
   font-size: 12px;
   font-weight: 600;
   color: #ffffff;
@@ -1266,26 +1275,26 @@ select option{
   border-radius: 999px;
 }
 
-.joueur_stats{
+.joueur_stats {
   display: flex;
   align-items: center;
   gap: 14px;
 }
 
-.joueur_stat{
+.joueur_stat {
   display: flex;
   align-items: baseline;
   gap: 6px;
 }
 
-.joueur_stat_valeur{
+.joueur_stat_valeur {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 15px;
   font-weight: 600;
   color: #ffffff;
 }
 
-.joueur_stat_label{
+.joueur_stat_label {
   font-size: 11px;
   font-weight: 500;
   color: #ffffff;
@@ -1294,7 +1303,7 @@ select option{
 }
 
 /* --- Modale de profil --- */
-.modal_fond{
+.modal_fond {
   position: fixed;
   inset: 0;
   background: rgba(255, 255, 255, 0.35);
@@ -1307,7 +1316,7 @@ select option{
   z-index: 200;
 }
 
-.modal_fenetre{
+.modal_fenetre {
   position: relative;
   background: #ffffff;
   border-radius: var(--radius-lg);
@@ -1322,9 +1331,9 @@ select option{
 }
 
 /* Variante agrandie de .modal_fenetre pour la modale de profil (onglets
-   Profil / Stats / Social) : prend 70% de l'écran, avec des bornes pour
-   rester lisible sur très petits et très grands écrans. */
-.profil_modal_fenetre{
+   Profil / Stats / Social) : prend 70% de l'Ã©cran, avec des bornes pour
+   rester lisible sur trÃ¨s petits et trÃ¨s grands Ã©crans. */
+.profil_modal_fenetre {
   width: 70vw;
   height: 70vh;
   max-width: 1100px;
@@ -1337,7 +1346,7 @@ select option{
   overflow: hidden;
 }
 
-.modal_fermer{
+.modal_fermer {
   position: absolute;
   top: 14px;
   right: 14px;
@@ -1353,12 +1362,12 @@ select option{
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.modal_fermer:hover{
+.modal_fermer:hover {
   background: rgba(226, 71, 42, 0.12);
   color: #b8371d;
 }
 
-.modal_contenu{
+.modal_contenu {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 20px;
   font-weight: 600;
@@ -1369,28 +1378,28 @@ select option{
   gap: 10px;
 }
 
-/* Fenêtre de choix d'accès (S'inscrire / Invité / Se connecter) : plus large
-   et plus basse que .modal_fenetre pour accueillir 3 options côte à côte. */
-.choix_acces_fenetre{
+/* FenÃªtre de choix d'accÃ¨s (S'inscrire / InvitÃ© / Se connecter) : plus large
+   et plus basse que .modal_fenetre pour accueillir 3 options cÃ´te Ã  cÃ´te. */
+.choix_acces_fenetre {
   width: 640px;
   max-width: 92vw;
   min-height: 180px;
   padding: 40px 36px;
 }
 
-.choix_acces_contenu{
+.choix_acces_contenu {
   width: 100%;
   gap: 24px;
 }
 
-.choix_acces_titre{
+.choix_acces_titre {
   margin: 0;
   font-size: 20px;
   font-weight: 600;
   color: #282828;
 }
 
-.choix_acces_options{
+.choix_acces_options {
   display: flex;
   flex-direction: row;
   align-items: stretch;
@@ -1399,22 +1408,23 @@ select option{
   flex-wrap: wrap;
 }
 
-.choix_acces_option{
+.choix_acces_option {
   flex: 1 1 0;
   min-width: 150px;
   white-space: nowrap;
 }
 
-@media (max-width: 560px){
-  .choix_acces_options{
+@media (max-width: 560px) {
+  .choix_acces_options {
     flex-direction: column;
   }
-  .choix_acces_option{
+
+  .choix_acces_option {
     width: 100%;
   }
 }
 
-.modal_distance_totale{
+.modal_distance_totale {
   margin-top: 0;
   font-size: 14px;
   font-weight: 500;
@@ -1422,12 +1432,12 @@ select option{
   font-family: 'Inter', sans-serif;
 }
 
-.modal_distance_totale strong{
+.modal_distance_totale strong {
   color: #02b948;
 }
 
 /* --- Onglets de la modale de profil (Profil / Stats / Social) --- */
-.profil_onglets{
+.profil_onglets {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
@@ -1436,7 +1446,7 @@ select option{
   margin-bottom: 24px;
 }
 
-.profil_onglet_btn{
+.profil_onglet_btn {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 14px;
   font-weight: 600;
@@ -1449,41 +1459,41 @@ select option{
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.profil_onglet_btn:hover{
+.profil_onglet_btn:hover {
   background: rgba(226, 71, 42, 0.08);
   color: #b8371d;
 }
 
-.profil_onglet_btn--actif{
+.profil_onglet_btn--actif {
   background: #e2472a;
   color: #ffffff;
 }
 
-.profil_onglet_btn--actif:hover{
+.profil_onglet_btn--actif:hover {
   background: #e2472a;
   color: #ffffff;
 }
 
-.profil_onglet_contenu{
+.profil_onglet_contenu {
   flex: 1;
   overflow-y: auto;
   text-align: left;
 }
 
-.profil_onglet_panneau{
+.profil_onglet_panneau {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
-/* --- Onglet Profil : en-tête (photo + pseudo) --- */
-.profil_entete{
+/* --- Onglet Profil : en-tÃªte (photo + pseudo) --- */
+.profil_entete {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
-.profil_photo{
+.profil_photo {
   width: 72px;
   height: 72px;
   flex-shrink: 0;
@@ -1495,34 +1505,34 @@ select option{
   overflow: hidden;
 }
 
-.profil_photo_icone{
+.profil_photo_icone {
   font-size: 34px;
   line-height: 1;
 }
 
-.profil_photo_img{
+.profil_photo_img {
   width: 100%;
   height: 100%;
   border-radius: 16px;
   object-fit: cover;
 }
 
-.profil_pseudo{
+.profil_pseudo {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 22px;
   font-weight: 700;
   color: #1f2430;
 }
 
-/* --- Sections génériques réutilisées par les 3 onglets (Médailles,
-   Activité Pomodoro, futures sections Stats/Social) --- */
-.profil_section{
+/* --- Sections gÃ©nÃ©riques rÃ©utilisÃ©es par les 3 onglets (MÃ©dailles,
+   ActivitÃ© Pomodoro, futures sections Stats/Social) --- */
+.profil_section {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.profil_section_titre{
+.profil_section_titre {
   margin: 0;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 13px;
@@ -1532,22 +1542,22 @@ select option{
   letter-spacing: 0.5px;
 }
 
-/* --- Médailles : grille d'emplacements réservés --- */
-.profil_medailles_grille{
+/* --- MÃ©dailles : grille d'emplacements rÃ©servÃ©s --- */
+.profil_medailles_grille {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
   gap: 12px;
   min-height: 20px;
 }
 
-/* --- Heatmap Pomodoro (façon GitHub), onglet Profil --- */
-.heatmap_pomodoro{
+/* --- Heatmap Pomodoro (faÃ§on GitHub), onglet Profil --- */
+.heatmap_pomodoro {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.heatmap_pomodoro_mois{
+.heatmap_pomodoro_mois {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
@@ -1555,14 +1565,14 @@ select option{
   text-transform: capitalize;
 }
 
-.heatmap_pomodoro_grille{
+.heatmap_pomodoro_grille {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(18px, 1fr));
   gap: 5px;
   max-width: 420px;
 }
 
-.heatmap_pomodoro_case{
+.heatmap_pomodoro_case {
   width: 18px;
   height: 18px;
   border-radius: 4px;
@@ -1571,23 +1581,161 @@ select option{
   transition: transform 0.15s ease;
 }
 
-.heatmap_pomodoro_case:hover{
+.heatmap_pomodoro_case:hover {
   transform: scale(1.15);
 }
 
-.heatmap_pomodoro_case--actif{
+.heatmap_pomodoro_case--actif {
   background: #e2472a;
   border-color: #b8371d;
 }
 
-@media (max-width: 720px){
-  .profil_modal_fenetre{
+/* ======================================================================
+   Onglet Progression
+   ====================================================================== */
+.progression_titre {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  color: #1f2430;
+  margin: 0 0 8px 0;
+  text-align: center;
+}
+
+.progression_sous_titre {
+  font-size: 14px;
+  color: #6e7a8a;
+  text-align: center;
+  margin: 0 0 50px 0;
+}
+
+.progression_container {
+  position: relative;
+  width: 90%;
+  max-width: 650px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.progression_barre_fond {
+  position: absolute;
+  top: 48px;
+  /* AlignÃ© avec le centre des points */
+  left: 0;
+  width: 100%;
+  height: 12px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.progression_barre_remplissage {
+  height: 100%;
+  background: linear-gradient(90deg, #34d399, #10b981);
+  border-radius: 999px;
+  transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.progression_etapes {
+  position: relative;
+  width: 100%;
+  height: 110px;
+}
+
+.progression_etape {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 120px;
+  z-index: 10;
+}
+
+.progression_etape_haut {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 12px;
+  height: 34px;
+}
+
+.progression_etape_id {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #94a3b8;
+  transition: color 0.3s;
+}
+
+.progression_etape_distance {
+  font-size: 11px;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.progression_point {
+  width: 24px;
+  height: 24px;
+  background: #f8fafc;
+  border: 4px solid #cbd5e1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.progression_etape_bas {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.progression_etape_recompense {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  padding: 4px 10px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  transition: all 0.3s;
+}
+
+.progression_etape--atteint .progression_etape_id {
+  color: #1f2430;
+}
+
+.progression_etape--atteint .progression_etape_distance {
+  color: #64748b;
+}
+
+.progression_etape--atteint .progression_point {
+  background: #10b981;
+  border-color: #10b981;
+  transform: scale(1.2);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.progression_icone_valide {
+  width: 14px;
+  height: 14px;
+  color: #fff;
+}
+
+.progression_etape--atteint .progression_etape_recompense {
+  color: #059669;
+  background: #d1fae5;
+}
+
+@media (max-width: 720px) {
+  .profil_modal_fenetre {
     width: 92vw;
     height: 80vh;
     padding: 24px 20px;
   }
 
-  .profil_onglet_btn{
+  .profil_onglet_btn {
     padding: 8px 12px;
     font-size: 13px;
   }
@@ -1599,7 +1747,7 @@ select option{
 
 /* Le conteneur remplace le fond plein de .note par une teinte plus douce,
    pour laisser les cartes blanches ressortir */
-.todo_zone{
+.todo_zone {
   height: 100%;
   padding: 22px;
   overflow-y: auto;
@@ -1609,7 +1757,7 @@ select option{
   gap: 18px;
 }
 
-.todo_entete{
+.todo_entete {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1617,14 +1765,14 @@ select option{
   flex-shrink: 0;
 }
 
-.todo_entete h2{
+.todo_entete h2 {
   margin: 0;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 20px;
   color: #1f2430;
 }
 
-.todo_btn_ajouter{
+.todo_btn_ajouter {
   border: none;
   background: #e2472a;
   color: #fff;
@@ -1638,7 +1786,7 @@ select option{
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
-.carnet_carte_ajout{
+.carnet_carte_ajout {
   border: none;
   background: #e2472a;
   color: #fff;
@@ -1652,34 +1800,34 @@ select option{
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
-.todo_btn_ajouter:hover{
+.todo_btn_ajouter:hover {
   background: #b8371d;
   transform: translateY(-1px);
   box-shadow: 0 10px 18px rgba(226, 71, 42, 0.35);
 }
 
-.carnet_carte_ajout:hover{
+.carnet_carte_ajout:hover {
   background: #b8371d;
   transform: translateY(-1px);
   box-shadow: 0 10px 18px rgba(226, 71, 42, 0.35);
 }
 
-.todo_vide{
+.todo_vide {
   margin: 12px 2px;
   font-size: 13px;
   color: #6b7280;
   line-height: 1.5;
 }
 
-.todo_liste{
+.todo_liste {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 14px;
   align-content: start;
 }
 
-/* --- Carte tâche --- */
-.todo_carte{
+/* --- Carte tÃ¢che --- */
+.todo_carte {
   position: relative;
   background: #ffffff;
   border-radius: var(--radius-md);
@@ -1693,22 +1841,22 @@ select option{
   transition: box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
 }
 
-.todo_carte:hover{
+.todo_carte:hover {
   box-shadow: var(--shadow-float);
   border-color: rgba(226, 71, 42, 0.25);
 }
 
-.todo_carte--terminee{
+.todo_carte--terminee {
   opacity: 0.6;
   background: #f7f7f8;
 }
 
-.todo_carte--terminee .todo_contenu{
+.todo_carte--terminee .todo_contenu {
   text-decoration: line-through;
   color: #8b909a;
 }
 
-.todo_carte_suppr{
+.todo_carte_suppr {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -1729,26 +1877,27 @@ select option{
 }
 
 .todo_carte:hover .todo_carte_suppr,
-.todo_carte_suppr:focus-visible{
+.todo_carte_suppr:focus-visible {
   opacity: 1;
 }
 
-.todo_carte_suppr:hover{
+.todo_carte_suppr:hover {
   background: rgba(226, 71, 42, 0.15);
   color: #b8371d;
 }
 
-/* Barre supérieure : tags + date */
-.todo_carte_barre{
+/* Barre supÃ©rieure : tags + date */
+.todo_carte_barre {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding-right: 22px; /* laisse la place au bouton de suppression */
+  padding-right: 22px;
+  /* laisse la place au bouton de suppression */
 }
 
-.todo_tags{
+.todo_tags {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1757,7 +1906,7 @@ select option{
   min-width: 0;
 }
 
-.todo_tag{
+.todo_tag {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -1770,7 +1919,7 @@ select option{
   white-space: nowrap;
 }
 
-.todo_tag_suppr{
+.todo_tag_suppr {
   border: none;
   background: transparent;
   color: inherit;
@@ -1782,11 +1931,11 @@ select option{
   transition: opacity 0.15s ease;
 }
 
-.todo_tag_suppr:hover{
+.todo_tag_suppr:hover {
   opacity: 1;
 }
 
-.todo_tag_ajouter{
+.todo_tag_ajouter {
   border: 1px dashed rgba(31, 36, 48, 0.25);
   background: transparent;
   color: #6b7280;
@@ -1799,13 +1948,13 @@ select option{
   transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
-.todo_tag_ajouter:hover{
+.todo_tag_ajouter:hover {
   border-color: #e2472a;
   color: #b8371d;
   background: rgba(226, 71, 42, 0.06);
 }
 
-.todo_tag_input{
+.todo_tag_input {
   width: 88px;
   font-size: 11px;
   font-weight: 600;
@@ -1817,12 +1966,12 @@ select option{
   background: #fff;
 }
 
-.todo_tag_input:focus{
+.todo_tag_input:focus {
   outline: 2px solid #e2472a;
   border-color: transparent;
 }
 
-.todo_date{
+.todo_date {
   border: none;
   background: rgba(31, 36, 48, 0.05);
   color: #1f2430;
@@ -1835,17 +1984,17 @@ select option{
   flex-shrink: 0;
 }
 
-.todo_date:focus{
+.todo_date:focus {
   outline: 2px solid #e2472a;
 }
 
-.todo_date::-webkit-calendar-picker-indicator{
+.todo_date::-webkit-calendar-picker-indicator {
   filter: opacity(0.6);
   cursor: pointer;
 }
 
-/* Zone de texte éditable de la carte */
-.todo_contenu{
+/* Zone de texte Ã©ditable de la carte */
+.todo_contenu {
   width: 100%;
   min-height: 68px;
   resize: none;
@@ -1858,15 +2007,15 @@ select option{
   padding: 0;
 }
 
-.todo_contenu:focus{
+.todo_contenu:focus {
   outline: none;
 }
 
-.todo_contenu::placeholder{
+.todo_contenu::placeholder {
   color: #b6bac2;
 }
 
-.todo_carte_actions{
+.todo_carte_actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -1874,7 +2023,7 @@ select option{
   margin-top: 2px;
 }
 
-.todo_btn_epingler{
+.todo_btn_epingler {
   border: 1px solid rgba(124, 58, 237, 0.4);
   background: transparent;
   color: #7c3aed;
@@ -1888,11 +2037,11 @@ select option{
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-.todo_btn_epingler:hover{
+.todo_btn_epingler:hover {
   background: rgba(124, 58, 237, 0.1);
 }
 
-.todo_btn_terminer{
+.todo_btn_terminer {
   border: 1px solid rgba(47, 111, 107, 0.4);
   background: transparent;
   color: #2f6f6b;
@@ -1905,17 +2054,17 @@ select option{
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-.todo_btn_terminer:hover{
+.todo_btn_terminer:hover {
   background: rgba(47, 111, 107, 0.1);
 }
 
-.todo_btn_terminer.actif{
+.todo_btn_terminer.actif {
   background: #2f6f6b;
   border-color: #2f6f6b;
   color: #fff;
 }
 
-.todo_btn_agrandir{
+.todo_btn_agrandir {
   width: 30px;
   height: 30px;
   border: 1px solid rgba(31, 36, 48, 0.15);
@@ -1930,22 +2079,22 @@ select option{
   transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
-.todo_btn_agrandir:hover{
+.todo_btn_agrandir:hover {
   border-color: #e2472a;
   color: #b8371d;
   background: rgba(226, 71, 42, 0.06);
 }
 
-/* --- Modale d'agrandissement d'une tâche --- */
-/* Surcharge du fond plein-écran opaque de .modal_fond pour cette modale précise */
-.todo_modal_fond{
+/* --- Modale d'agrandissement d'une tÃ¢che --- */
+/* Surcharge du fond plein-Ã©cran opaque de .modal_fond pour cette modale prÃ©cise */
+.todo_modal_fond {
   background: rgba(31, 36, 48, 0.45);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   padding: 24px;
 }
 
-.todo_modal_fenetre{
+.todo_modal_fenetre {
   width: 560px;
   max-width: 100%;
   min-height: 320px;
@@ -1954,19 +2103,19 @@ select option{
   padding: 36px 30px 26px;
 }
 
-.todo_modal_contenu{
+.todo_modal_contenu {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.todo_contenu--modal{
+.todo_contenu--modal {
   min-height: 220px;
   font-size: 15px;
 }
 
-.todo_btn_supprimer_modal{
+.todo_btn_supprimer_modal {
   border: 1px solid rgba(226, 71, 42, 0.4);
   background: transparent;
   color: #b8371d;
@@ -1980,14 +2129,14 @@ select option{
   margin-left: auto;
 }
 
-.todo_btn_supprimer_modal:hover{
+.todo_btn_supprimer_modal:hover {
   background: #e2472a;
   color: #fff;
   border-color: #e2472a;
 }
 
-/* --- Note épinglée : widget flottant sur le fond principal, LECTURE SEULE --- */
-.note_epinglee{
+/* --- Note Ã©pinglÃ©e : widget flottant sur le fond principal, LECTURE SEULE --- */
+.note_epinglee {
   position: fixed;
   width: 260px;
   max-width: calc(100vw - 16px);
@@ -2004,23 +2153,23 @@ select option{
   z-index: 150;
 }
 
-.note_epinglee--terminee{
+.note_epinglee--terminee {
   opacity: 0.55;
 }
 
-.note_epinglee--terminee .note_epinglee_contenu_lecture{
+.note_epinglee--terminee .note_epinglee_contenu_lecture {
   text-decoration: line-through;
   color: #8b909a;
 }
 
-.note_epinglee_entete{
+.note_epinglee_entete {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
 }
 
-.note_epinglee_poignee{
+.note_epinglee_poignee {
   color: #9aa0ab;
   font-size: 13px;
   letter-spacing: 1px;
@@ -2032,14 +2181,14 @@ select option{
   flex-shrink: 0;
 }
 
-.note_epinglee_poignee:active{
+.note_epinglee_poignee:active {
   cursor: grabbing;
   background: rgba(31, 36, 48, 0.06);
 }
 
-/* Date de création / dernière modification, affichée entre la poignée et le
-   bouton de désépinglage */
-.note_epinglee_date{
+/* Date de crÃ©ation / derniÃ¨re modification, affichÃ©e entre la poignÃ©e et le
+   bouton de dÃ©sÃ©pinglage */
+.note_epinglee_date {
   flex: 1;
   min-width: 0;
   text-align: center;
@@ -2051,7 +2200,7 @@ select option{
   text-overflow: ellipsis;
 }
 
-.note_epinglee_fermer{
+.note_epinglee_fermer {
   width: 22px;
   height: 22px;
   flex-shrink: 0;
@@ -2068,13 +2217,13 @@ select option{
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.note_epinglee_fermer:hover{
+.note_epinglee_fermer:hover {
   background: rgba(226, 71, 42, 0.18);
   color: #b8371d;
 }
 
-/* Barre de lecture seule : tags + échéance, sans aucune interaction */
-.note_epinglee_barre_lecture{
+/* Barre de lecture seule : tags + Ã©chÃ©ance, sans aucune interaction */
+.note_epinglee_barre_lecture {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -2082,13 +2231,13 @@ select option{
   gap: 6px;
 }
 
-.note_epinglee_tags_lecture{
+.note_epinglee_tags_lecture {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.note_epinglee_tag_lecture{
+.note_epinglee_tag_lecture {
   background: rgba(47, 111, 107, 0.12);
   color: #2f6f6b;
   font-size: 11px;
@@ -2098,15 +2247,15 @@ select option{
   white-space: nowrap;
 }
 
-.note_epinglee_echeance_lecture{
+.note_epinglee_echeance_lecture {
   font-size: 11px;
   font-weight: 600;
   color: #6b7280;
   white-space: nowrap;
 }
 
-/* Contenu affiché en lecture seule (non éditable) */
-.note_epinglee_contenu_lecture{
+/* Contenu affichÃ© en lecture seule (non Ã©ditable) */
+.note_epinglee_contenu_lecture {
   width: 100%;
   min-height: 70px;
   max-height: 220px;
@@ -2121,13 +2270,13 @@ select option{
   user-select: text;
 }
 
-.note_epinglee_contenu_vide{
+.note_epinglee_contenu_vide {
   color: #9aa0ab;
   font-style: italic;
 }
 
-/* --- Modale de confirmation (désépinglage, sortie du mode concentration...) --- */
-.todo_confirm_fenetre{
+/* --- Modale de confirmation (dÃ©sÃ©pinglage, sortie du mode concentration...) --- */
+.todo_confirm_fenetre {
   width: 380px;
   max-width: 100%;
   min-height: auto;
@@ -2137,7 +2286,7 @@ select option{
   gap: 20px;
 }
 
-.todo_confirm_message{
+.todo_confirm_message {
   margin: 0;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 16px;
@@ -2147,13 +2296,13 @@ select option{
   line-height: 1.4;
 }
 
-.todo_confirm_actions{
+.todo_confirm_actions {
   display: flex;
   justify-content: center;
   gap: 12px;
 }
 
-.todo_btn_confirmer{
+.todo_btn_confirmer {
   border: none;
   background: #e2472a;
   color: #fff;
@@ -2166,21 +2315,21 @@ select option{
   transition: background 0.2s ease;
 }
 
-.todo_btn_confirmer:hover{
+.todo_btn_confirmer:hover {
   background: #b8371d;
 }
 
-.todo_btn_confirmer:disabled{
+.todo_btn_confirmer:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.todo_btn_confirmer:disabled:hover{
+.todo_btn_confirmer:disabled:hover {
   background: #e2472a;
 }
 
-/* --- Bouton "Mode concentration" (coin supérieur droit du fond principal) --- */
-.btn_mode_concentration{
+/* --- Bouton "Mode concentration" (coin supÃ©rieur droit du fond principal) --- */
+.btn_mode_concentration {
   position: fixed;
   top: 20px;
   right: 20px;
@@ -2198,14 +2347,14 @@ select option{
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.btn_mode_concentration:hover{
+.btn_mode_concentration:hover {
   background: #34394a;
   transform: translateY(-1px);
 }
 
-/* --- Interrupteur (toggle switch) utilisé pour confirmer la sortie
+/* --- Interrupteur (toggle switch) utilisÃ© pour confirmer la sortie
    du mode concentration --- */
-.switch_ligne{
+.switch_ligne {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2214,13 +2363,13 @@ select option{
   user-select: none;
 }
 
-.switch_label{
+.switch_label {
   font-size: 13px;
   font-weight: 600;
   color: #6b7280;
 }
 
-.switch{
+.switch {
   position: relative;
   width: 44px;
   height: 24px;
@@ -2230,11 +2379,11 @@ select option{
   flex-shrink: 0;
 }
 
-.switch--actif{
+.switch--actif {
   background: #2f6f6b;
 }
 
-.switch_bouton{
+.switch_bouton {
   position: absolute;
   top: 2px;
   left: 2px;
@@ -2246,15 +2395,15 @@ select option{
   transition: transform 0.2s ease;
 }
 
-.switch--actif .switch_bouton{
+.switch--actif .switch_bouton {
   transform: translateX(20px);
 }
 
 /* ======================================================================
-   Lecteur de musique d'ambiance : widget flottant "vinyle", déplaçable
-   librement par glisser-déposer (comme une note épinglée)
+   Lecteur de musique d'ambiance : widget flottant "vinyle", dÃ©plaÃ§able
+   librement par glisser-dÃ©poser (comme une note Ã©pinglÃ©e)
    ====================================================================== */
-.lecteur_vinyle{
+.lecteur_vinyle {
   position: fixed;
   width: 168px;
   background: rgba(31, 36, 48, 0.92);
@@ -2271,14 +2420,14 @@ select option{
   transition: box-shadow 0.2s ease, transform 0.15s ease;
 }
 
-/* État actif pendant le glisser-déposer : légère mise en avant animée */
-.lecteur_vinyle--glisse{
+/* Ã‰tat actif pendant le glisser-dÃ©poser : lÃ©gÃ¨re mise en avant animÃ©e */
+.lecteur_vinyle--glisse {
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
   transform: scale(1.03);
   transition: none;
 }
 
-.lecteur_vinyle_entete{
+.lecteur_vinyle_entete {
   width: 100%;
   display: flex;
   align-items: center;
@@ -2286,7 +2435,7 @@ select option{
   gap: 6px;
 }
 
-.lecteur_vinyle_poignee{
+.lecteur_vinyle_poignee {
   color: rgba(255, 255, 255, 0.55);
   font-size: 13px;
   letter-spacing: 1px;
@@ -2299,12 +2448,12 @@ select option{
   transition: background 0.15s ease;
 }
 
-.lecteur_vinyle_poignee:active{
+.lecteur_vinyle_poignee:active {
   cursor: grabbing;
   background: rgba(255, 255, 255, 0.12);
 }
 
-.lecteur_vinyle_fermer{
+.lecteur_vinyle_fermer {
   width: 22px;
   height: 22px;
   flex-shrink: 0;
@@ -2321,13 +2470,13 @@ select option{
   transition: background 0.2s ease;
 }
 
-.lecteur_vinyle_fermer:hover{
+.lecteur_vinyle_fermer:hover {
   background: rgba(226, 71, 42, 0.5);
 }
 
-/* Miniature carrée de la musique en cours : miniature YouTube ou pochette
-   Spotify (avec repli en dégradé + icône si aucune image n'est disponible) */
-.vinyle_miniature{
+/* Miniature carrÃ©e de la musique en cours : miniature YouTube ou pochette
+   Spotify (avec repli en dÃ©gradÃ© + icÃ´ne si aucune image n'est disponible) */
+.vinyle_miniature {
   width: 92px;
   height: 92px;
   border-radius: 14px;
@@ -2340,23 +2489,23 @@ select option{
   transition: box-shadow 0.2s ease;
 }
 
-.vinyle_miniature--lecture{
+.vinyle_miniature--lecture {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 0 0 3px var(--couleur-boutons);
 }
 
-.vinyle_miniature img{
+.vinyle_miniature img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.vinyle_miniature_icone{
+.vinyle_miniature_icone {
   font-size: 30px;
   color: #fff;
 }
 
-.lecteur_vinyle_titre{
+.lecteur_vinyle_titre {
   font-size: 12px;
   font-weight: 600;
   color: #fff;
@@ -2367,15 +2516,15 @@ select option{
   white-space: nowrap;
 }
 
-/* Rangée de contrôles : retour au début / lecture-pause / boucle */
-.lecteur_vinyle_controles{
+/* RangÃ©e de contrÃ´les : retour au dÃ©but / lecture-pause / boucle */
+.lecteur_vinyle_controles {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
 }
 
-.lecteur_vinyle_bouton{
+.lecteur_vinyle_bouton {
   width: 36px;
   height: 36px;
   border: none;
@@ -2391,11 +2540,11 @@ select option{
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
-.lecteur_vinyle_bouton:hover{
+.lecteur_vinyle_bouton:hover {
   transform: translateY(-1px);
 }
 
-.lecteur_vinyle_bouton_secondaire{
+.lecteur_vinyle_bouton_secondaire {
   width: 28px;
   height: 28px;
   flex-shrink: 0;
@@ -2411,15 +2560,15 @@ select option{
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.lecteur_vinyle_bouton_secondaire:hover{
+.lecteur_vinyle_bouton_secondaire:hover {
   background: rgba(255, 255, 255, 0.26);
 }
 
-.lecteur_vinyle_bouton_secondaire.actif{
+.lecteur_vinyle_bouton_secondaire.actif {
   background: var(--couleur-boutons);
 }
 
-.lecteur_vinyle_progression{
+.lecteur_vinyle_progression {
   width: 100%;
   height: 6px;
   border-radius: 999px;
@@ -2428,14 +2577,14 @@ select option{
   overflow: hidden;
 }
 
-.lecteur_vinyle_progression_remplie{
+.lecteur_vinyle_progression_remplie {
   height: 100%;
   background: var(--couleur-boutons);
   border-radius: 999px;
   transition: width 0.2s linear;
 }
 
-.lecteur_vinyle_temps{
+.lecteur_vinyle_temps {
   width: 100%;
   display: flex;
   justify-content: space-between;
@@ -2445,7 +2594,7 @@ select option{
   font-variant-numeric: tabular-nums;
 }
 
-.lecteur_vinyle_youtube_cache{
+.lecteur_vinyle_youtube_cache {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -2454,9 +2603,9 @@ select option{
   pointer-events: none;
 }
 
-/* --- Aperçu de la miniature dans la modale de choix de musique
-   (même style que la miniature carrée, en légèrement plus petit) --- */
-.choix_musique_apercu_ligne{
+/* --- AperÃ§u de la miniature dans la modale de choix de musique
+   (mÃªme style que la miniature carrÃ©e, en lÃ©gÃ¨rement plus petit) --- */
+.choix_musique_apercu_ligne {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -2465,7 +2614,7 @@ select option{
   padding: 10px;
 }
 
-.choix_musique_apercu_vignette{
+.choix_musique_apercu_vignette {
   width: 56px;
   height: 56px;
   flex-shrink: 0;
@@ -2477,26 +2626,26 @@ select option{
   justify-content: center;
 }
 
-.choix_musique_apercu_vignette img{
+.choix_musique_apercu_vignette img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.choix_musique_apercu_icone{
+.choix_musique_apercu_icone {
   font-size: 22px;
   color: #fff;
 }
 
-.choix_musique_apercu_details{
+.choix_musique_apercu_details {
   display: flex;
   flex-direction: column;
   gap: 3px;
   min-width: 0;
 }
 
-.choix_musique_apercu_titre{
+.choix_musique_apercu_titre {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 13px;
   font-weight: 700;
@@ -2506,7 +2655,7 @@ select option{
   text-overflow: ellipsis;
 }
 
-.choix_musique_apercu_artiste{
+.choix_musique_apercu_artiste {
   font-size: 11px;
   color: #6b7280;
   white-space: nowrap;
@@ -2515,26 +2664,26 @@ select option{
 }
 
 /* ======================================================================
-   Section "Préréglages" (carrousel de configurations complètes)
+   Section "PrÃ©rÃ©glages" (carrousel de configurations complÃ¨tes)
    ====================================================================== */
 
-/* Réutilise le même rythme vertical que les autres sections .param_section,
-   mais sans bordure supérieure : elle est la toute première section affichée */
-.prereglages_section{
+/* RÃ©utilise le mÃªme rythme vertical que les autres sections .param_section,
+   mais sans bordure supÃ©rieure : elle est la toute premiÃ¨re section affichÃ©e */
+.prereglages_section {
   margin-top: 0;
   padding-top: 0;
   border-top: none;
 }
 
-.prereglages_vide{
+.prereglages_vide {
   margin: 4px 2px 0;
   font-size: 13px;
   color: #6b7280;
   line-height: 1.5;
 }
 
-/* Carrousel horizontal : défilement gauche/droite, une carte = une config complète */
-.prereglages_scroll{
+/* Carrousel horizontal : dÃ©filement gauche/droite, une carte = une config complÃ¨te */
+.prereglages_scroll {
   display: flex;
   gap: 14px;
   overflow-x: auto;
@@ -2544,20 +2693,20 @@ select option{
   scroll-snap-type: x proximity;
 }
 
-.prereglages_scroll::-webkit-scrollbar{
+.prereglages_scroll::-webkit-scrollbar {
   height: 8px;
 }
 
-.prereglages_scroll::-webkit-scrollbar-thumb{
+.prereglages_scroll::-webkit-scrollbar-thumb {
   background: rgba(31, 36, 48, 0.15);
   border-radius: 999px;
 }
 
-.prereglages_scroll::-webkit-scrollbar-track{
+.prereglages_scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.prereglage_carte{
+.prereglage_carte {
   flex: 0 0 auto;
   width: 138px;
   border-radius: var(--radius-md);
@@ -2570,17 +2719,17 @@ select option{
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.prereglage_carte:hover{
+.prereglage_carte:hover {
   transform: translateY(-3px);
   box-shadow: var(--shadow-float);
   border-color: rgba(226, 71, 42, 0.35);
 }
 
-.prereglage_carte:active{
+.prereglage_carte:active {
   transform: translateY(-1px);
 }
 
-.prereglage_carte_apercu{
+.prereglage_carte_apercu {
   position: relative;
   width: 100%;
   height: 88px;
@@ -2592,8 +2741,8 @@ select option{
   justify-content: flex-end;
 }
 
-/* Petit dégradé discret en haut de l'aperçu pour garder les icônes d'action lisibles */
-.prereglage_carte_apercu::before{
+/* Petit dÃ©gradÃ© discret en haut de l'aperÃ§u pour garder les icÃ´nes d'action lisibles */
+.prereglage_carte_apercu::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -2601,7 +2750,7 @@ select option{
   pointer-events: none;
 }
 
-.prereglage_carte_actions{
+.prereglage_carte_actions {
   position: relative;
   display: flex;
   gap: 4px;
@@ -2612,12 +2761,12 @@ select option{
 }
 
 .prereglage_carte:hover .prereglage_carte_actions,
-.prereglage_action_btn:focus-visible{
+.prereglage_action_btn:focus-visible {
   opacity: 1;
   transform: translateY(0);
 }
 
-.prereglage_action_btn{
+.prereglage_action_btn {
   width: 22px;
   height: 22px;
   flex-shrink: 0;
@@ -2634,18 +2783,18 @@ select option{
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.prereglage_action_btn:hover{
+.prereglage_action_btn:hover {
   background: #e2472a;
   transform: scale(1.08);
 }
 
-.prereglage_carte_bande{
+.prereglage_carte_bande {
   padding: 9px 10px;
   background: #fff;
   border-top: 1px solid rgba(31, 36, 48, 0.06);
 }
 
-.prereglage_carte_nom{
+.prereglage_carte_nom {
   display: block;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 12px;
@@ -2656,142 +2805,219 @@ select option{
   text-overflow: ellipsis;
 }
 
-/* Bouton "Créer un préréglage", toujours en bas de la page du panneau Réglages */
-.prereglages_creation_section{
+/* Bouton "CrÃ©er un prÃ©rÃ©glage", toujours en bas de la page du panneau RÃ©glages */
+.prereglages_creation_section {
   gap: 0;
 }
 
-.prereglage_btn_creer{
+.prereglage_btn_creer {
   align-self: flex-start;
   box-shadow: 0 6px 14px rgba(226, 71, 42, 0.25);
 }
 
 /* --- Responsive --- */
-@media (max-width: 1000px){
-  .panel{
+@media (max-width: 1000px) {
+  .panel {
     width: 380px;
     height: 500px;
   }
-  .panel_poignee{ width: 56px; gap: 12px; }
-  .panel_corps{ width: 324px; }
-  .panel--collapsed{ transform: translateY(-50%) translateX(338px); }
-  .poignee_carre{ width: 32px; height: 32px; font-size: 14px; }
-  .poignee_toggle{ width: 28px; height: 28px; font-size: 16px; }
-  .todo_liste{
+
+  .panel_poignee {
+    width: 56px;
+    gap: 12px;
+  }
+
+  .panel_corps {
+    width: 324px;
+  }
+
+  .panel--collapsed {
+    transform: translateY(-50%) translateX(338px);
+  }
+
+  .poignee_carre {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .poignee_toggle {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+  }
+
+  .todo_liste {
     grid-template-columns: 1fr;
   }
-  .todo_modal_fenetre{
+
+  .todo_modal_fenetre {
     width: 100%;
   }
-  .salon_liste{
+
+  .salon_liste {
     grid-template-columns: 1fr;
   }
-  .prereglage_carte{
+
+  .prereglage_carte {
     width: 120px;
   }
-  .prereglage_carte_apercu{
+
+  .prereglage_carte_apercu {
     height: 76px;
   }
 }
 
-@media (max-width: 720px){
-  .chrono{
+@media (max-width: 720px) {
+  .chrono {
     padding: 40px 32px;
   }
-  .chrono_affichage{
+
+  .chrono_affichage {
     font-size: 46px;
   }
-  .stage{
+
+  .stage {
     padding-top: 100px;
   }
-  .panel{
+
+  .panel {
     right: 12px;
     width: 300px;
     height: 60vh;
   }
-  .panel_poignee{ width: 52px; gap: 10px; padding: 14px 0; }
-  .panel_corps{ width: 248px; }
-  .panel--collapsed{ transform: translateY(-50%) translateX(260px); }
-  .poignee_carres{ gap: 8px; }
-  .poignee_carre{ width: 30px; height: 30px; font-size: 13px; }
-  .poignee_toggle{ width: 26px; height: 26px; font-size: 15px; }
-  .poignee_notif{ width: 8px; height: 8px; }
-  .navbar{
+
+  .panel_poignee {
+    width: 52px;
+    gap: 10px;
+    padding: 14px 0;
+  }
+
+  .panel_corps {
+    width: 248px;
+  }
+
+  .panel--collapsed {
+    transform: translateY(-50%) translateX(260px);
+  }
+
+  .poignee_carres {
+    gap: 8px;
+  }
+
+  .poignee_carre {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+  }
+
+  .poignee_toggle {
+    width: 26px;
+    height: 26px;
+    font-size: 15px;
+  }
+
+  .poignee_notif {
+    width: 8px;
+    height: 8px;
+  }
+
+  .navbar {
     padding: 8px 10px;
   }
-  .navbar button{
+
+  .navbar button {
     padding: 8px 14px;
     font-size: 14px;
   }
-  .joueur_info{
+
+  .joueur_info {
     top: 12px;
     left: 12px;
     padding: 10px 14px 10px 10px;
     gap: 12px;
   }
-  .joueur_photo{
+
+  .joueur_photo {
     width: 44px;
     height: 44px;
   }
-  .joueur_stats{
+
+  .joueur_stats {
     flex-direction: column;
     align-items: flex-start;
     gap: 2px;
   }
-  .coureur_defilant{
+
+  .coureur_defilant {
     width: 90px;
   }
-  .todo_entete{
+
+  .todo_entete {
     flex-wrap: wrap;
   }
-  .todo_carte_barre{
+
+  .todo_carte_barre {
     flex-direction: column;
     align-items: flex-start;
   }
-  .todo_date{
+
+  .todo_date {
     align-self: flex-start;
   }
-  .note_epinglee{
+
+  .note_epinglee {
     width: 220px;
   }
-  .btn_mode_concentration{
+
+  .btn_mode_concentration {
     top: 12px;
     right: 12px;
     padding: 10px 14px;
     font-size: 12px;
   }
-  .salon_entete{
+
+  .salon_entete {
     flex-direction: column;
     align-items: flex-start;
   }
-  .salon_modal_fenetre{
+
+  .salon_modal_fenetre {
     width: 100%;
   }
-  .lecteur_vinyle{
+
+  .lecteur_vinyle {
     width: 140px;
     padding: 12px 12px 12px;
   }
-  .vinyle_miniature{
+
+  .vinyle_miniature {
     width: 76px;
     height: 76px;
   }
-  .prereglage_carte{
+
+  .prereglage_carte {
     width: 108px;
   }
-  .prereglage_carte_apercu{
+
+  .prereglage_carte_apercu {
     height: 68px;
   }
-  .prereglage_carte_bande{
+
+  .prereglage_carte_bande {
     padding: 7px 8px;
   }
-  .prereglage_carte_nom{
+
+  .prereglage_carte_nom {
     font-size: 11px;
   }
+
   .session_confirm_fenetre,
-  .session_historique_fenetre{
+  .session_historique_fenetre {
     width: 100%;
   }
-  .session_titre_input{
+
+  .session_titre_input {
     min-width: 0;
     width: 100%;
   }
@@ -2804,7 +3030,7 @@ select option{
   gap: 12px;
 }
 
-.salon_carte_btn_rejoindre{
+.salon_carte_btn_rejoindre {
   margin-top: 6px;
   border: none;
   background: #4c4ce0;
@@ -2819,113 +3045,114 @@ select option{
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.salon_carte_btn_rejoindre:hover{
+.salon_carte_btn_rejoindre:hover {
   background: #3939b8;
   transform: translateY(-1px);
 }
-.carnets_section{
-    margin:20px 0;
-}
 
-.carnets_titre{
-    margin-bottom:12px;
-    font-size:1rem;
-    font-weight:600;
-}
-
-.carnets_liste{
-    display:flex;
-    gap:12px;
-    overflow-x:auto;
-    padding-bottom:8px;
-    scrollbar-width:none;
-}
-
-.carnets_liste::-webkit-scrollbar{
-    display:none;
-}
-
-.carnet{
-    min-width:120px;
-    height:35px;
-
-    border:none;
-    border-radius:16px;
-
-    cursor:pointer;
-
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:center;
-
-    flex-shrink:0;
-
-    transition:.25s;
-}
-
-.carnet:hover{
-    transform:translateY(-3px);
-}
-
-.carte_ajout{
-    font-size:2rem;
-    font-weight:bold;
-}
-
-.carte_ajout span{
-    margin-top:6px;
-    font-size:.8rem;
-}
-
-.carnet_historique{
-    font-weight:600;
-}
-
-.todo_actions{
-    display:flex;
-    align-items:center;
-    gap:16px;
-    margin-top:20px;
-    margin-bottom:20px;
-}
-
-.todo_recherche{
-    flex:1;
-
-    height:46px;
-
-    padding:0 18px;
-
-    border-radius:14px;
-    border:none;
-
-    font-size:15px;
-
-    outline:none;
-
-    transition:.2s;
-}
-
-.todo_recherche:focus{
-    transform:scale(1.01);
-}
-
-.todo_btn_ajouter{
-    flex-shrink:0;
-}
-
-/* ======================================================================
-   Sessions (titre de session + boîte de confirmation + historique)
-   ====================================================================== */
-
-/* Bloc englobant la barre de session (titre, actions) et la liste d'actions secondaires */
-.session_section{
+.carnets_section {
   margin: 20px 0;
 }
 
-/* Intitulé "Session :#0001" */
-.session_titre{
+.carnets_titre {
+  margin-bottom: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.carnets_liste {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+}
+
+.carnets_liste::-webkit-scrollbar {
+  display: none;
+}
+
+.carnet {
+  min-width: 120px;
+  height: 35px;
+
+  border: none;
+  border-radius: 16px;
+
+  cursor: pointer;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  flex-shrink: 0;
+
+  transition: .25s;
+}
+
+.carnet:hover {
+  transform: translateY(-3px);
+}
+
+.carte_ajout {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.carte_ajout span {
+  margin-top: 6px;
+  font-size: .8rem;
+}
+
+.carnet_historique {
+  font-weight: 600;
+}
+
+.todo_actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.todo_recherche {
+  flex: 1;
+
+  height: 46px;
+
+  padding: 0 18px;
+
+  border-radius: 14px;
+  border: none;
+
+  font-size: 15px;
+
+  outline: none;
+
+  transition: .2s;
+}
+
+.todo_recherche:focus {
+  transform: scale(1.01);
+}
+
+.todo_btn_ajouter {
+  flex-shrink: 0;
+}
+
+/* ======================================================================
+   Sessions (titre de session + boÃ®te de confirmation + historique)
+   ====================================================================== */
+
+/* Bloc englobant la barre de session (titre, actions) et la liste d'actions secondaires */
+.session_section {
+  margin: 20px 0;
+}
+
+/* IntitulÃ© "Session :#0001" */
+.session_titre {
   margin: 0;
   height: 35px;
   display: flex;
@@ -2937,16 +3164,16 @@ select option{
   flex-shrink: 0;
 }
 
-/* Intitulé "vos notes" */
-.session_soustitre{
+/* IntitulÃ© "vos notes" */
+.session_soustitre {
   margin-bottom: 12px;
   font-size: 1rem;
   font-weight: 600;
   color: #1f2430;
 }
 
-/* Rangée des actions secondaires (créer un ordre / consulter les anciennes notes) */
-.session_liste_actions{
+/* RangÃ©e des actions secondaires (crÃ©er un ordre / consulter les anciennes notes) */
+.session_liste_actions {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2956,11 +3183,11 @@ select option{
   scrollbar-width: none;
 }
 
-.session_liste_actions::-webkit-scrollbar{
+.session_liste_actions::-webkit-scrollbar {
   display: none;
 }
 
-.session_action_btn{
+.session_action_btn {
   min-width: 120px;
   height: 35px;
   flex-shrink: 0;
@@ -2978,30 +3205,30 @@ select option{
   transition: transform 0.25s ease, border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
-.session_action_btn:hover{
+.session_action_btn:hover {
   transform: translateY(-3px);
   border-color: #e2472a;
   color: #b8371d;
   background: rgba(226, 71, 42, 0.06);
 }
 
-/* État actif du bouton "organiser" (mode organisation en cours) */
-.session_action_btn--actif{
+/* Ã‰tat actif du bouton "organiser" (mode organisation en cours) */
+.session_action_btn--actif {
   background: #e2472a;
   border-color: #e2472a;
   color: #fff;
   box-shadow: 0 6px 14px rgba(226, 71, 42, 0.3);
 }
 
-.session_action_btn--actif:hover{
+.session_action_btn--actif:hover {
   background: #b8371d;
   border-color: #b8371d;
   color: #fff;
   transform: translateY(-3px);
 }
 
-/* Message gris affiché à côté du bouton "organiser" quand le mode est actif */
-.session_organiser_message{
+/* Message gris affichÃ© Ã  cÃ´tÃ© du bouton "organiser" quand le mode est actif */
+.session_organiser_message {
   font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 500;
@@ -3011,34 +3238,34 @@ select option{
 }
 
 /* Conteneur d'une note dans la grille, pendant/hors mode organisation */
-.session_organiser_case{
+.session_organiser_case {
   position: relative;
 }
 
-/* En mode actif, la carte se comporte comme un bouton de sélection plutôt
-   qu'une zone éditable */
-.session_organiser_case--actif{
+/* En mode actif, la carte se comporte comme un bouton de sÃ©lection plutÃ´t
+   qu'une zone Ã©ditable */
+.session_organiser_case--actif {
   cursor: pointer;
 }
 
-.session_organiser_case--actif .todo_carte{
+.session_organiser_case--actif .todo_carte {
   transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 }
 
-.session_organiser_case--actif:hover .todo_carte{
+.session_organiser_case--actif:hover .todo_carte {
   border-color: rgba(226, 71, 42, 0.35);
   box-shadow: var(--shadow-float);
 }
 
-/* Note choisie en premier lors d'une interversion : mise en évidence tant
-   que la seconde note n'a pas été cliquée */
-.session_organiser_case--selection .todo_carte{
+/* Note choisie en premier lors d'une interversion : mise en Ã©vidence tant
+   que la seconde note n'a pas Ã©tÃ© cliquÃ©e */
+.session_organiser_case--selection .todo_carte {
   border-color: #e2472a;
   box-shadow: 0 0 0 2px rgba(226, 71, 42, 0.35);
 }
 
-/* Badge numéroté affiché en haut à gauche de la carte lorsqu'un ordre est attribué */
-.session_ordre_badge{
+/* Badge numÃ©rotÃ© affichÃ© en haut Ã  gauche de la carte lorsqu'un ordre est attribuÃ© */
+.session_ordre_badge {
   position: absolute;
   top: -8px;
   left: -8px;
@@ -3057,8 +3284,8 @@ select option{
   box-shadow: var(--shadow-soft);
 }
 
-/* Bouton "+ajouter une note" : crée directement une note, même famille que .todo_btn_ajouter */
-.note_btn_ajouter{
+/* Bouton "+ajouter une note" : crÃ©e directement une note, mÃªme famille que .todo_btn_ajouter */
+.note_btn_ajouter {
   border: none;
   background: #e2472a;
   color: #fff;
@@ -3078,14 +3305,14 @@ select option{
   box-sizing: border-box;
 }
 
-.note_btn_ajouter:hover{
+.note_btn_ajouter:hover {
   background: #b8371d;
   transform: translateY(-1px);
   box-shadow: 0 10px 18px rgba(226, 71, 42, 0.35);
 }
 
-/* Champ de saisie du titre, placé juste après "Session :#0001" */
-.session_titre_input{
+/* Champ de saisie du titre, placÃ© juste aprÃ¨s "Session :#0001" */
+.session_titre_input {
   width: 220px;
   min-width: 160px;
   height: 35px;
@@ -3102,18 +3329,18 @@ select option{
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.session_titre_input::placeholder{
+.session_titre_input::placeholder {
   color: #9aa0ab;
 }
 
-.session_titre_input:focus{
+.session_titre_input:focus {
   outline: none;
   border-color: transparent;
   box-shadow: 0 0 0 2px #e2472a;
 }
 
-/* --- Boîte de dialogue : que faire de la session en cours --- */
-.session_confirm_fond{
+/* --- BoÃ®te de dialogue : que faire de la session en cours --- */
+.session_confirm_fond {
   position: fixed;
   inset: 0;
   z-index: 210;
@@ -3126,7 +3353,7 @@ select option{
   padding: 24px;
 }
 
-.session_confirm_fenetre{
+.session_confirm_fenetre {
   width: 400px;
   max-width: 100%;
   background: #fff;
@@ -3140,7 +3367,7 @@ select option{
   text-align: center;
 }
 
-.session_confirm_titre{
+.session_confirm_titre {
   margin: 0;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 18px;
@@ -3148,7 +3375,7 @@ select option{
   color: #1f2430;
 }
 
-.session_confirm_texte{
+.session_confirm_texte {
   margin: 0;
   font-family: 'Inter', sans-serif;
   font-size: 13px;
@@ -3156,7 +3383,7 @@ select option{
   color: #6b7280;
 }
 
-.session_confirm_actions{
+.session_confirm_actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -3165,7 +3392,7 @@ select option{
   width: 100%;
 }
 
-.session_confirm_btn{
+.session_confirm_btn {
   border: none;
   font-family: 'Inter', sans-serif;
   font-size: 13px;
@@ -3176,46 +3403,46 @@ select option{
   transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
-/* Enregistrer : action principale, même ton que les boutons primaires de l'app */
-.session_confirm_btn--enregistrer{
+/* Enregistrer : action principale, mÃªme ton que les boutons primaires de l'app */
+.session_confirm_btn--enregistrer {
   background: #e2472a;
   color: #fff;
   box-shadow: 0 6px 14px rgba(226, 71, 42, 0.3);
 }
 
-.session_confirm_btn--enregistrer:hover{
+.session_confirm_btn--enregistrer:hover {
   background: #b8371d;
   transform: translateY(-1px);
 }
 
 /* Supprimer : action destructive, en contour pour bien la distinguer d'"Enregistrer" */
-.session_confirm_btn--supprimer{
+.session_confirm_btn--supprimer {
   background: transparent;
   border: 1px solid rgba(226, 71, 42, 0.4);
   color: #b8371d;
 }
 
-.session_confirm_btn--supprimer:hover{
+.session_confirm_btn--supprimer:hover {
   background: #e2472a;
   color: #fff;
   border-color: #e2472a;
 }
 
-/* Annuler : action neutre, cohérente avec .btn_secondaire */
-.session_confirm_btn--annuler{
+/* Annuler : action neutre, cohÃ©rente avec .btn_secondaire */
+.session_confirm_btn--annuler {
   background: transparent;
   border: 2px solid #e4e6ea;
   color: #6b7280;
 }
 
-.session_confirm_btn--annuler:hover{
+.session_confirm_btn--annuler:hover {
   border-color: #6b7280;
   color: #1f2430;
   background: #f5f6f8;
 }
 
-/* --- Fenêtre "Consulter les anciennes notes" --- */
-.session_historique_fond{
+/* --- FenÃªtre "Consulter les anciennes notes" --- */
+.session_historique_fond {
   position: fixed;
   inset: 0;
   z-index: 210;
@@ -3228,7 +3455,7 @@ select option{
   padding: 24px;
 }
 
-.session_historique_fenetre{
+.session_historique_fenetre {
   width: 640px;
   max-width: 100%;
   max-height: 82vh;
@@ -3242,7 +3469,7 @@ select option{
   overflow: hidden;
 }
 
-.session_historique_entete{
+.session_historique_entete {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3250,7 +3477,7 @@ select option{
   flex-shrink: 0;
 }
 
-.session_historique_titre{
+.session_historique_titre {
   margin: 0;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 18px;
@@ -3258,7 +3485,7 @@ select option{
   color: #1f2430;
 }
 
-.session_historique_fermer{
+.session_historique_fermer {
   width: 30px;
   height: 30px;
   flex-shrink: 0;
@@ -3275,12 +3502,12 @@ select option{
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.session_historique_fermer:hover{
+.session_historique_fermer:hover {
   background: rgba(226, 71, 42, 0.12);
   color: #b8371d;
 }
 
-.session_recherche_input{
+.session_recherche_input {
   flex-shrink: 0;
   padding: 11px 14px;
   border-radius: 12px;
@@ -3291,30 +3518,30 @@ select option{
   color: #1f2430;
 }
 
-.session_recherche_input:focus{
+.session_recherche_input:focus {
   outline: 2px solid #e2472a;
   border-color: transparent;
 }
 
-.session_historique_liste{
+.session_historique_liste {
   flex: 1;
   overflow-y: auto;
 }
 
-.session_ligne_vide{
+.session_ligne_vide {
   margin: 8px 2px;
   font-size: 13px;
   color: #6b7280;
   line-height: 1.5;
 }
 
-.sessions_tableau{
+.sessions_tableau {
   width: 100%;
   border-collapse: collapse;
   font-family: 'Inter', sans-serif;
 }
 
-.sessions_tableau thead th{
+.sessions_tableau thead th {
   position: sticky;
   top: 0;
   background: #fff;
@@ -3328,26 +3555,26 @@ select option{
   border-bottom: 1px solid rgba(31, 36, 48, 0.1);
 }
 
-.sessions_tableau tbody td{
+.sessions_tableau tbody td {
   padding: 12px 10px;
   font-size: 13px;
   color: #1f2430;
   border-bottom: 1px solid rgba(31, 36, 48, 0.06);
 }
 
-.sessions_tableau tbody tr{
+.sessions_tableau tbody tr {
   transition: background 0.15s ease;
 }
 
-.sessions_tableau tbody tr:hover{
+.sessions_tableau tbody tr:hover {
   background: rgba(226, 71, 42, 0.05);
 }
 
-.session_titre_cellule{
+.session_titre_cellule {
   font-weight: 600;
 }
 
-.session_numero_badge{
+.session_numero_badge {
   display: inline-block;
   font-size: 11px;
   font-weight: 700;
@@ -3358,7 +3585,7 @@ select option{
   white-space: nowrap;
 }
 
-.session_notes_badge{
+.session_notes_badge {
   display: inline-block;
   font-size: 11px;
   font-weight: 700;
@@ -3373,10 +3600,10 @@ select option{
 
 
 /* ======================================================================
-   Compteur de progression (tâches accomplies / totales) + date de
-   création de la session, affichés sous la barre numéro/titre/boutons
+   Compteur de progression (tÃ¢ches accomplies / totales) + date de
+   crÃ©ation de la session, affichÃ©s sous la barre numÃ©ro/titre/boutons
    ====================================================================== */
-.session_progression_ligne{
+.session_progression_ligne {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3389,27 +3616,27 @@ select option{
   border-radius: 12px;
 }
 
-.session_progression_score{
+.session_progression_score {
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 600;
   color: #1f2430;
 }
 
-.session_progression_score strong{
+.session_progression_score strong {
   color: #b8371d;
   font-size: 15px;
 }
 
-.session_progression_date{
+.session_progression_date {
   font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 500;
   color: #6b7280;
 }
 
-/* Badge de progression réutilisé dans l'historique des sessions passées */
-.session_progression_badge{
+/* Badge de progression rÃ©utilisÃ© dans l'historique des sessions passÃ©es */
+.session_progression_badge {
   display: inline-block;
   font-size: 11px;
   font-weight: 700;
@@ -3419,33 +3646,33 @@ select option{
   border-radius: 999px;
 }
 
-@media (max-width: 720px){
-  .session_progression_ligne{
+@media (max-width: 720px) {
+  .session_progression_ligne {
     flex-direction: column;
     align-items: flex-start;
   }
 }
 
-.todo_actions_top{
-    display:flex;
-    align-items:center;
-    gap:12px;
-    margin-bottom:15px;
-    flex-wrap:wrap;
+.todo_actions_top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
 }
 
-.todo_actions{
-    display:flex;
-    align-items:center;
-    gap:12px;
-    flex-wrap:wrap;
+.todo_actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 
 /* ======================================================================
-   Pomodoro Tracker : barre de points représentant les séances terminées
+   Pomodoro Tracker : barre de points reprÃ©sentant les sÃ©ances terminÃ©es
    ====================================================================== */
-.pomodoro_tracker{
+.pomodoro_tracker {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -3454,7 +3681,7 @@ select option{
   flex-shrink: 0;
 }
 
-.pomodoro_tracker_titre{
+.pomodoro_tracker_titre {
   font-size: 10px;
   font-weight: 700;
   color: #6b7280;
@@ -3463,7 +3690,7 @@ select option{
   white-space: nowrap;
 }
 
-.pomodoro_tracker_barre{
+.pomodoro_tracker_barre {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3476,7 +3703,7 @@ select option{
   flex-shrink: 0;
 }
 
-.pomodoro_tracker_slot{
+.pomodoro_tracker_slot {
   position: relative;
   width: 14px;
   height: 14px;
@@ -3488,7 +3715,7 @@ select option{
   justify-content: center;
 }
 
-.pomodoro_tracker_point{
+.pomodoro_tracker_point {
   width: 9px;
   height: 9px;
   border-radius: 50%;
@@ -3496,7 +3723,7 @@ select option{
   display: block;
 }
 
-.pomodoro_tracker_tooltip{
+.pomodoro_tracker_tooltip {
   position: absolute;
   bottom: calc(100% + 8px);
   left: 50%;
@@ -3514,12 +3741,12 @@ select option{
   z-index: 10;
 }
 
-.pomodoro_tracker_slot:hover .pomodoro_tracker_tooltip{
+.pomodoro_tracker_slot:hover .pomodoro_tracker_tooltip {
   opacity: 1;
 }
 
-@media (max-width: 720px){
-  .pomodoro_tracker_barre{
+@media (max-width: 720px) {
+  .pomodoro_tracker_barre {
     padding: 0 8px;
     gap: 6px;
   }
@@ -3527,7 +3754,8 @@ select option{
 
 .accueil_fond {
   min-height: 100vh;
-  background: #1f2430; /* remplace par ton image plus tard : background-image: url(...) */
+  background: #1f2430;
+  /* remplace par ton image plus tard : background-image: url(...) */
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -3612,6 +3840,7 @@ select option{
 .social_ami_statut--en_ligne {
   color: #2e7d32;
 }
+
 .social_carte_compacte {
   padding: 6px 10px;
   gap: 8px;
@@ -3674,7 +3903,7 @@ select option{
   border-radius: 4px;
 }
 
-/* Rendre les cartes de résultat de recherche un peu plus compactes aussi */
+/* Rendre les cartes de rÃ©sultat de recherche un peu plus compactes aussi */
 .social_resultat_rectangle {
   font-size: 0.9em;
 }
@@ -3785,8 +4014,10 @@ select option{
   color: #e2472a;
 }
 
-/* S'assurer que rien n'empêche le scroll naturel sur la page d'accueil */
-html, body, #root {
+/* S'assurer que rien n'empÃªche le scroll naturel sur la page d'accueil */
+html,
+body,
+#root {
   height: auto;
   overflow-y: auto;
   overflow-x: hidden;
@@ -3794,7 +4025,8 @@ html, body, #root {
 }
 
 .accueil {
-  min-height: 100vh; /* et non height: 100vh fixe */
+  min-height: 100vh;
+  /* et non height: 100vh fixe */
   display: flex;
   flex-direction: column;
 }
@@ -3923,8 +4155,390 @@ html, body, #root {
     flex-direction: column;
     text-align: center;
   }
+
   .site_footer_liens,
   .site_footer_reseaux {
     justify-content: center;
   }
+}
+
+/* ======================================================================
+   Monnaie (Coins)
+   ====================================================================== */
+.joueur_coins {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(251, 191, 36, 0.15);
+  color: #b45309;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.icone_coin {
+  width: 18px;
+  height: 18px;
+}
+
+/* ======================================================================
+   Onglet Boutique
+   ====================================================================== */
+.boutique_panneau {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: 100%;
+}
+
+.boutique_entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.boutique_titre {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 20px;
+  color: #1f2430;
+}
+
+.boutique_solde {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #6e7a8a;
+}
+
+.boutique_contenu_vide {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 40px 20px;
+}
+
+.boutique_placeholder_icone {
+  font-size: 48px;
+  filter: grayscale(1) opacity(0.5);
+}
+
+.boutique_placeholder_texte {
+  color: #94a3b8;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ======================================================================
+   Modal Récompense (Gacha / Lootbox)
+   ====================================================================== */
+.recompense_modal_fond {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(8px);
+}
+
+.recompense_fadeOut_attente {
+  animation: fadeOut 1s ease 4s forwards;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+.recompense_carte {
+  width: 80px;
+  height: 200px;
+  background: linear-gradient(135deg, #d4d8e0, #e1e2e7);
+  border: 2px solid #334155;
+  border-radius: 20px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), inset 0 0 40px rgba(255, 255, 255, 0.05);
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.recompense_shake {
+  animation: shake 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes shake {
+  0% {
+    transform: rotate(-3deg) scale(1.05);
+  }
+
+  100% {
+    transform: rotate(3deg) scale(1.05);
+  }
+}
+
+.recompense_ouverte {
+  background: linear-gradient(135deg, #fdfbfb, #ebedee);
+  border-color: #fbbf24;
+  box-shadow: 0 0 60px rgba(251, 191, 36, 0.4), inset 0 0 40px rgba(251, 191, 36, 0.1);
+}
+
+.recompense_contenu_ferme,
+.recompense_contenu_ouvert {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  width: 100%;
+  height: 100%;
+}
+
+.recompense_contenu_ouvert {
+  animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.recompense_symbole {
+  font-size: 40px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.recompense_btn_ouvrir {
+  padding: 12px 30px;
+  font-size: 18px;
+  letter-spacing: 1px;
+  box-shadow: 0 8px 20px rgba(226, 71, 42, 0.4);
+}
+
+.recompense_titre_gain {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 24px;
+  color: #1f2430;
+  margin: 0;
+}
+
+.recompense_gain_visuel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.recompense_gain_texte {
+  font-size: 24px;
+  font-weight: 800;
+  color: #b45309;
+}
+
+.recompense_badge_icone {
+  font-size: 64px;
+}
+
+
+/* ======================================================================
+   Cartes Récompenses Épinglées (sur le tableau)
+   ====================================================================== */
+.recompense_epinglee {
+  position: absolute;
+  width: 110px;
+  height: 200px;
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 2px solid #334155;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.05);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  z-index: 100;
+}
+
+.recompense_epinglee.recompense_ouverte {
+  background: linear-gradient(135deg, #fdfbfb, #ebedee);
+  border-color: #fbbf24;
+  box-shadow: 0 0 40px rgba(251, 191, 36, 0.4), inset 0 0 20px rgba(251, 191, 36, 0.1);
+}
+
+.recompense_epinglee_entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 14px 14px 0 0;
+}
+
+.recompense_poignee {
+  cursor: grab;
+  color: #94a3b8;
+  font-size: 16px;
+  user-select: none;
+}
+
+.recompense_poignee:active {
+  cursor: grabbing;
+}
+
+.recompense_btn_fermer {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.recompense_btn_fermer:hover {
+  color: #e2472a;
+}
+
+.recompense_epinglee_contenu {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.recompense_contenu_ouvert_anim {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* ======================================================================
+   Onglet Récompenses (Panneau latéral)
+   ====================================================================== */
+.recompense_liste_conteneur {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+}
+
+.recompense_liste_titre {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 20px;
+  color: #1f2430;
+}
+
+.recompense_liste {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 8px;
+}
+
+.recompense_liste_vide {
+  text-align: center;
+  color: #94a3b8;
+  margin-top: 40px;
+}
+
+.recompense_item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  transition: all 0.2s ease;
+}
+
+.recompense_item_ouverte {
+  background: #fff;
+  border-color: #fcd34d;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.1);
+}
+
+.recompense_item_visuel_ferme {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #1e293b;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.recompense_item_visuel_ouvert {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #fffbeb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.recompense_item_infos {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recompense_item_nom {
+  font-weight: 700;
+  color: #1f2430;
+}
+
+.recompense_item_statut {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.recompense_item_date {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.recompense_item_btn_ouvrir {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 6px;
 }

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Supabase direct</title>
+</head>
+<body>
+  <h1>Test de connexion à Supabase</h1>
+  <button id="btn">Tester la connexion</button>
+  <pre id="resultat"></pre>
+
+  <script>
+    document.getElementById('btn').addEventListener('click', async () => {
+      const resDiv = document.getElementById('resultat');
+      resDiv.textContent = "Test en cours...";
+      
+      const url = "https://qwjzzlacxafeednmsfhv.supabase.co/rest/v1/preferences_utilisateur?select=id&limit=1";
+      // On remplace par la clé anonyme de ton projet (trouvée dans SupabaseClient.js)
+      const apikey = "sb_publishable_1hDOqjRFA9AEIcipgf4jVw_jsm3uIUA"; 
+
+      try {
+        const reponse = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'apikey': apikey,
+            'Authorization': `Bearer ${apikey}`
+          }
+        });
+        
+        if (reponse.ok) {
+          const data = await reponse.json();
+          resDiv.textContent = `Succès ! Données reçues : ${JSON.stringify(data)}`;
+        } else {
+          resDiv.textContent = `Erreur HTTP : ${reponse.status} ${reponse.statusText}`;
+        }
+      } catch (erreur) {
+        resDiv.textContent = `Erreur réseau (fetch a échoué) : ${erreur.message}\nCeci confirme que le navigateur bloque la requête au niveau TCP/Réseau.`;
+      }
+    });
+  </script>
+</body>
+</html>
