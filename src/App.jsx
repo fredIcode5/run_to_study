@@ -50,7 +50,7 @@ const PHOTO_PROFIL_VIDE = { dataUrl: null, position: { x: 50, y: 50 } };
 
 // Position par défaut du lecteur de musique flottant, calculée en fonction
 // de la taille de la fenêtre pour rester visible sur la plupart des écrans
-function positionParDefautLecteur () {
+function positionParDefautLecteur() {
   if (typeof window === 'undefined') return { x: 24, y: 300 };
   return {
     x: 24,
@@ -60,7 +60,7 @@ function positionParDefautLecteur () {
 
 // Formate une date en "aaaa-mm-jj" (jour ISO local, sans l'heure), utilisée
 // pour indexer les jours dans l'historique Pomodoro (heatmap du profil)
-function formaterJourIso (date) {
+function formaterJourIso(date) {
   const annee = date.getFullYear();
   const mois = String(date.getMonth() + 1).padStart(2, '0');
   const jour = String(date.getDate()).padStart(2, '0');
@@ -69,7 +69,7 @@ function formaterJourIso (date) {
 
 // Formate une date ISO en "jj/mm/aaaa hh:mm" (locale FR), utilisée dans
 // l'en-tête des notes épinglées pour afficher la création/dernière modification
-function formaterDateNote (dateIso) {
+function formaterDateNote(dateIso) {
   try {
     const d = new Date(dateIso);
     if (isNaN(d.getTime())) return '';
@@ -82,37 +82,37 @@ function formaterDateNote (dateIso) {
 }
 
 
-function Navbar({ onAccueil, onCourse, onConnexion, modeInvite }){
+function Navbar({ onAccueil, onCourse, onConnexion, modeInvite }) {
   const { connecte, utilisateur, deconnexion } = useAuth();
 
   // Pseudo affiché une fois connecté : priorité au pseudo renseigné à
   // l'inscription (user_metadata), sinon repli sur l'email du compte.
   const pseudoAffiche = utilisateur?.displayName || utilisateur?.email || '';
 
-  return(
+  return (
     <>
-    <div className="navbar">
-    <button onClick={onAccueil}>home</button>
-    <button onClick={onCourse}>Course</button>
-    {connecte ? (
-      <div className="navbar_compte">
-        <button type="button" className="navbar_compte_bouton">
-          Connecté : {pseudoAffiche}
-        </button>
-        <div className="navbar_compte_menu">
-          <button type="button" className="navbar_compte_menu_item" onClick={deconnexion}>
-            Se déconnecter
+      <div className="navbar">
+        <button onClick={onAccueil}>home</button>
+        <button onClick={onCourse}>Course</button>
+        {connecte ? (
+          <div className="navbar_compte">
+            <button type="button" className="navbar_compte_bouton">
+              Connecté : {pseudoAffiche}
+            </button>
+            <div className="navbar_compte_menu">
+              <button type="button" className="navbar_compte_menu_item" onClick={deconnexion}>
+                Se déconnecter
+              </button>
+            </div>
+          </div>
+        ) : modeInvite ? (
+          <button onClick={onConnexion} title="Cliquer pour créer un compte ou te connecter">
+            Mode invité
           </button>
-        </div>
+        ) : (
+          <button onClick={onConnexion}>Se connecter</button>
+        )}
       </div>
-    ) : modeInvite ? (
-      <button onClick={onConnexion} title="Cliquer pour créer un compte ou te connecter">
-        Mode invité
-      </button>
-    ) : (
-      <button onClick={onConnexion}>Se connecter</button>
-    )}
-    </div>
     </>
   );
 }
@@ -123,7 +123,7 @@ function Navbar({ onAccueil, onCourse, onConnexion, modeInvite }){
 // et occupe le premier écran ; la suite (présentation, fonctionnalités,
 // footer) forme une seconde partie accessible par un défilement naturel
 // à la molette (voir accueil_suite plus bas).
-function Accueil ({ onCommencer }) {
+function Accueil({ onCommencer }) {
   const FONCTIONNALITES_ACCUEIL = [
     {
       id: 'personnalisation',
@@ -191,7 +191,7 @@ function Accueil ({ onCommencer }) {
 
 // --- Footer de la vitrine d'accueil : identité de l'appli, liens légaux,
 // réseaux sociaux (placeholders) et mention de copyright.
-function PiedDePage () {
+function PiedDePage() {
   const anneeActuelle = new Date().getFullYear();
 
   const RESEAUX_SOCIAUX_PLACEHOLDER = [
@@ -236,7 +236,7 @@ function PiedDePage () {
 // --- Fenêtre "Se connecter" : bascule entre le formulaire de connexion et
 // celui de création de compte. Branchée sur Supabase Auth via useAuth() :
 // connexion email/mot de passe, inscription, et connexion Google (OAuth).
-function ModalConnexion ({ ouvert, fermer, vueInitiale = 'connexion' }) {
+function ModalConnexion({ ouvert, fermer, vueInitiale = 'connexion' }) {
   const { connexionAvecEmail, inscriptionAvecEmail, connexionAvecGoogle, connecte } = useAuth();
 
   const [vue, setVue] = useState(vueInitiale); // 'connexion' | 'creation'
@@ -502,152 +502,8 @@ function ModalConfirmationAccueil({ ouvert, fermer, onConfirmer }) {
   );
 }
 
-// --- Carte Récompense Flottante (Drag & Drop)
-function CarteRecompenseEpinglee ({ recompense, actions }) {
-  const [position, setPosition] = useState(recompense.position || { x: window.innerWidth / 2 - 150, y: window.innerHeight / 2 - 200 });
-  const positionRef = useRef(position);
-  const conteneurRef = useRef(null);
-  const decalageRef = useRef({ x: 0, y: 0 });
-  const enTrainDeGlisser = useRef(false);
-  const actionsRef = useRef(actions);
-  const [etapeAnim, setEtapeAnim] = useState(''); // 'animation' lors de l'ouverture
 
-  useEffect(() => {
-    actionsRef.current = actions;
-  });
-
-  useEffect(() => {
-    if (recompense.position) {
-      setPosition(recompense.position);
-      positionRef.current = recompense.position;
-    }
-  }, [recompense.position]);
-
-  useEffect(() => {
-    const handleMove = (e) => {
-      if (!enTrainDeGlisser.current) return;
-      e.preventDefault();
-      
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-      const newX = clientX - decalageRef.current.x;
-      const newY = clientY - decalageRef.current.y;
-      
-      const limitedX = Math.max(0, Math.min(newX, window.innerWidth - (conteneurRef.current?.offsetWidth || 300)));
-      const limitedY = Math.max(0, Math.min(newY, window.innerHeight - (conteneurRef.current?.offsetHeight || 400)));
-      
-      const pos = { x: limitedX, y: limitedY };
-      setPosition(pos);
-      positionRef.current = pos;
-    };
-    
-    const handleUp = () => {
-      if (enTrainDeGlisser.current) {
-        enTrainDeGlisser.current = false;
-        if (actionsRef.current?.onMettreAJourPosition) {
-          actionsRef.current.onMettreAJourPosition(positionRef.current);
-        }
-      }
-    };
-    
-    document.addEventListener('mousemove', handleMove, { passive: false });
-    document.addEventListener('mouseup', handleUp);
-    document.addEventListener('touchmove', handleMove, { passive: false });
-    document.addEventListener('touchend', handleUp);
-    
-    return () => {
-      document.removeEventListener('mousemove', handleMove);
-      document.removeEventListener('mouseup', handleUp);
-      document.removeEventListener('touchmove', handleMove);
-      document.removeEventListener('touchend', handleUp);
-    };
-  }, []);
-
-  const handleDown = (e) => {
-    enTrainDeGlisser.current = true;
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    
-    const rect = conteneurRef.current.getBoundingClientRect();
-    decalageRef.current = {
-      x: clientX - rect.left,
-      y: clientY - rect.top,
-    };
-  };
-
-  const gererOuverture = () => {
-    if (recompense.etat === 'ouverte') return;
-    setEtapeAnim('animation');
-    setTimeout(() => {
-      setEtapeAnim('');
-      actions.onOuvrir(recompense.id);
-    }, 1000);
-  };
-
-  if (!recompense.afficheeSurTableau) return null;
-
-  return (
-    <div 
-      className={`recompense_epinglee ${recompense.etat === 'ouverte' ? 'recompense_ouverte' : ''} ${etapeAnim === 'animation' ? 'recompense_shake' : ''}`}
-      style={{ left: position.x, top: position.y }}
-      ref={conteneurRef}
-    >
-      <div className="recompense_epinglee_entete">
-        <div 
-          className="recompense_poignee" 
-          onMouseDown={handleDown} 
-          onTouchStart={handleDown}
-          title="Déplacer"
-        >
-          ⠿⠿
-        </div>
-        <button 
-          className="recompense_btn_fermer" 
-          onClick={() => actions.onFermer(recompense.id)}
-          title="Masquer du tableau"
-        >
-          ✕
-        </button>
-      </div>
-
-      <div className="recompense_epinglee_contenu">
-        {recompense.etat === 'non_ouverte' || etapeAnim === 'animation' ? (
-          <div className="recompense_contenu_ferme">
-            <span className="recompense_symbole">?</span>
-            <button 
-              className="btn_primaire recompense_btn_ouvrir" 
-              onClick={gererOuverture}
-              disabled={etapeAnim === 'animation'}
-            >
-              {etapeAnim === 'animation' ? 'Ouverture...' : 'Ouvrir'}
-            </button>
-          </div>
-        ) : (
-          <div className="recompense_contenu_ouvert_anim">
-            <h3 className="recompense_titre_gain">Obtenu !</h3>
-            {recompense.type === 'coins' ? (
-              <div className="recompense_gain_visuel">
-                <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: '64px', height: '64px', color: '#fbbf24' }}>
-                  <circle cx="12" cy="12" r="10" fill="#fbbf24"/>
-                  <text x="50%" y="50%" textAnchor="middle" dy=".3em" fontSize="12" fontWeight="bold" fill="#b45309">C</text>
-                </svg>
-                <span className="recompense_gain_texte">+{recompense.valeur} Coins</span>
-              </div>
-            ) : (
-              <div className="recompense_gain_visuel">
-                <span className="recompense_badge_icone">🏆</span>
-                <span className="recompense_gain_texte">{recompense.valeur}</span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ModalChoixAcces ({ ouvert, fermer, onInscription, onInvite, onConnexion }) {
+function ModalChoixAcces({ ouvert, fermer, onInscription, onInvite, onConnexion }) {
   if (!ouvert) return null;
 
   return (
@@ -663,7 +519,7 @@ function ModalChoixAcces ({ ouvert, fermer, onInscription, onInvite, onConnexion
               S'inscrire
             </button>
             <button type="button" className="btn_secondaire choix_acces_option" onClick={onInvite}>
-            invité
+              invité
             </button>
             <button type="button" className="btn_primaire choix_acces_option" onClick={onConnexion}>
               Se connecter
@@ -676,8 +532,8 @@ function ModalChoixAcces ({ ouvert, fermer, onInscription, onInvite, onConnexion
 }
 
 
-function PanneauJoueur ({ pseudo, niveau, distance, position, ouvrirProfil, photoProfil, coins }) {
-  return(
+function PanneauJoueur({ pseudo, niveau, distance, position, ouvrirProfil, photoProfil, coins }) {
+  return (
     <div className="joueur_info">
       <button
         className="joueur_photo"
@@ -703,7 +559,7 @@ function PanneauJoueur ({ pseudo, niveau, distance, position, ouvrirProfil, phot
           <span className="joueur_niveau">Niv. {niveau}</span>
           <div className="joueur_coins" title="Coins gagnés">
             <svg className="icone_coin" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="12" r="10" fill="#fbbf24"/>
+              <circle cx="12" cy="12" r="10" fill="#fbbf24" />
               <text x="50%" y="50%" textAnchor="middle" dy=".3em" fontSize="12" fontWeight="bold" fill="#b45309">C</text>
             </svg>
             <span>{coins}</span>
@@ -729,7 +585,7 @@ function PanneauJoueur ({ pseudo, niveau, distance, position, ouvrirProfil, phot
 // L'onglet actif est un simple état React ; aucun rechargement de page,
 // aucune donnée envoyée nulle part pour Stats/Social (structure prête pour
 // être complétée plus tard).
-function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPomodoro, photoProfil, onEnregistrerPhotoProfil, enregistrementPhotoEnCours, erreurPhotoProfil, coins }) {
+function ModalProfil({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPomodoro, photoProfil, onEnregistrerPhotoProfil, enregistrementPhotoEnCours, erreurPhotoProfil, coins, musiqueAmbiance, titreSession, sessionsSauvegardees, onConsulterSession }) {
   const [ongletActif, setOngletActif] = useState('profil');
 
   // Revient toujours sur l'onglet "Profil" à chaque réouverture de la modale
@@ -741,6 +597,7 @@ function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursP
 
   const ONGLETS_PROFIL = [
     { id: 'profil', label: 'Profil' },
+    { id: 'historique', label: 'Historique' },
     { id: 'stats', label: 'Stats' },
     { id: 'social', label: 'Social' },
     { id: 'progression', label: 'Progression' },
@@ -748,7 +605,7 @@ function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursP
     { id: 'parametres', label: 'Paramètres' },
   ];
 
-  return(
+  return (
     <div className="modal_fond" onClick={fermer}>
       <div className="modal_fenetre profil_modal_fenetre" onClick={(e) => e.stopPropagation()}>
         <button className="modal_fermer" onClick={fermer} aria-label="Fermer">×</button>
@@ -775,7 +632,12 @@ function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursP
               distanceTotale={distanceTotale}
               historiqueJoursPomodoro={historiqueJoursPomodoro}
               photoProfil={photoProfil}
+              musiqueAmbiance={musiqueAmbiance}
+              titreSession={titreSession}
             />
+          )}
+          {ongletActif === 'historique' && (
+            <OngletHistorique sessionsSauvegardees={sessionsSauvegardees} onConsulter={onConsulterSession} />
           )}
           {ongletActif === 'stats' && <OngletStats />}
           {ongletActif === 'social' && <OngletSocial />}
@@ -798,7 +660,7 @@ function ModalProfil ({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursP
 
 // --- Onglet "Profil" : identité, médailles (emplacement réservé) et
 // heatmap mensuelle des jours avec au moins un Pomodoro terminé.
-function OngletProfil ({ pseudo, distanceTotale, historiqueJoursPomodoro, photoProfil }) {
+function OngletProfil({ pseudo, distanceTotale, historiqueJoursPomodoro, photoProfil, musiqueAmbiance, titreSession }) {
   return (
     <div className="profil_onglet_panneau profil_onglet_panneau--profil">
       <div className="profil_layout">
@@ -851,6 +713,109 @@ function OngletProfil ({ pseudo, distanceTotale, historiqueJoursPomodoro, photoP
             <HeatmapPomodoro historique={historiqueJoursPomodoro} />
           </div>
         </div>
+
+        <div className="profil_colonne_activite">
+          <div className="profil_activite_entete">
+            <span className="badge_activite">Activité</span>
+            <span className="titre_session">{titreSession || 'Aucune session en cours'}</span>
+          </div>
+          <div className="profil_activite_musique_rect">
+            {musiqueAmbiance ? (
+              <div className="musique_carte_profil">
+                <MiniatureMusique
+                  className="musique_cover_profil"
+                  iconeClassName="musique_cover_profil_icone"
+                  type={musiqueAmbiance.type}
+                  thumbnail={musiqueAmbiance.thumbnail}
+                />
+                <span className="musique_titre_sous_cover">
+                  {musiqueAmbiance.titre || musiqueAmbiance.title || 'Musique en cours'}
+                </span>
+              </div>
+            ) : (
+              <span className="musique_vide">Aucune musique en lecture</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Onglet "Historique" : liste des anciennes sessions Pomodoro archivées.
+// Réutilise la même structure de tableau que FenetreAnciennesSessions mais
+// directement intégrée dans la modale de profil.
+function OngletHistorique({ sessionsSauvegardees, onConsulter }) {
+  const [recherche, setRecherche] = useState('');
+
+  const sessionsFiltrees = (sessionsSauvegardees || []).filter((s) => {
+    const cible = recherche.trim().toLowerCase();
+    if (!cible) return true;
+    return (
+      s.titre.toLowerCase().includes(cible) ||
+      s.numero.toLowerCase().includes(cible)
+    );
+  });
+
+  return (
+    <div className="profil_onglet_panneau profil_onglet_panneau--historique">
+      <h3 className="profil_section_titre" style={{ marginBottom: 12 }}>Anciennes sessions</h3>
+
+      <input
+        type="text"
+        placeholder="Rechercher par titre ou numéro..."
+        value={recherche}
+        onChange={(e) => setRecherche(e.target.value)}
+        className="historique_recherche_input"
+      />
+
+      <div className="historique_liste">
+        {sessionsFiltrees.length === 0 ? (
+          <p className="historique_vide">Aucune session trouvée.</p>
+        ) : (
+          <table className="sessions_tableau historique_tableau">
+            <thead>
+              <tr>
+                <th>Titre</th>
+                <th>Numéro</th>
+                <th>Date</th>
+                <th>Heure</th>
+                <th>Progression</th>
+                <th>Notes</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sessionsFiltrees.map((s) => (
+                <tr key={s.id}>
+                  <td className="session_titre_cellule">{s.titre}</td>
+                  <td>
+                    <span className="session_numero_badge">#{s.numero}</span>
+                  </td>
+                  <td>{s.date}</td>
+                  <td>{s.heure}</td>
+                  <td>
+                    <span className="session_progression_badge">
+                      {s.notes.filter((n) => n.terminee).length} / {s.notes.length}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="session_notes_badge">{s.notes.length}</span>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="session_action_btn"
+                      onClick={() => onConsulter && onConsulter(s)}
+                    >
+                      Consulter
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -858,7 +823,7 @@ function OngletProfil ({ pseudo, distanceTotale, historiqueJoursPomodoro, photoP
 
 // --- Heatmap mensuelle façon GitHub : un carré par jour du mois en cours,
 // actif dès qu'au moins un Pomodoro a été terminé ce jour-là.
-function HeatmapPomodoro ({ historique }) {
+function HeatmapPomodoro({ historique }) {
   const joursActifs = new Set(historique || []);
 
   const maintenant = new Date();
@@ -891,7 +856,7 @@ function HeatmapPomodoro ({ historique }) {
 // --- Onglet "Stats" : structure minimale pour l'instant, pensée pour
 // accueillir plus tard des sections (temps de concentration, séries de
 // Pomodoro, progression, records...) sans revoir l'organisation générale.
-function OngletStats () {
+function OngletStats() {
   return (
     <div className="profil_onglet_panneau profil_onglet_panneau--stats">
       <h4 className="profil_section_titre">Stats</h4>
@@ -907,7 +872,7 @@ function OngletStats () {
 // --- Onglet "Social" : partagé en deux colonnes.
 // Gauche : recherche d'utilisateurs (barre de recherche + résultats placeholder).
 // Droite : liste d'amis (placeholder), avec statut et actions rapides.
-function OngletSocial () {
+function OngletSocial() {
   // Résultats de recherche placeholder : structure prête pour être
   // remplacée par de vraies données utilisateur plus tard.
   const RESULTATS_RECHERCHE_PLACEHOLDER = [
@@ -1041,12 +1006,12 @@ function OngletProgression({ distanceTotale }) {
     distanceRestanteInfo = 'Niveau maximum atteint !';
   } else {
     for (let i = 0; i < NIVEAUX.length - 1; i++) {
-      if (distanceTotale >= NIVEAUX[i].distance && distanceTotale < NIVEAUX[i+1].distance) {
+      if (distanceTotale >= NIVEAUX[i].distance && distanceTotale < NIVEAUX[i + 1].distance) {
         const base = (i + 1) * 20;
-        const progressionDansSegment = (distanceTotale - NIVEAUX[i].distance) / (NIVEAUX[i+1].distance - NIVEAUX[i].distance);
+        const progressionDansSegment = (distanceTotale - NIVEAUX[i].distance) / (NIVEAUX[i + 1].distance - NIVEAUX[i].distance);
         pourcentage = base + (progressionDansSegment * 20);
-        prochainNiveau = NIVEAUX[i+1];
-        distanceRestanteInfo = `${Math.floor(distanceTotale)} m / ${NIVEAUX[i+1].distance} m pour atteindre ${NIVEAUX[i+1].id}`;
+        prochainNiveau = NIVEAUX[i + 1];
+        distanceRestanteInfo = `${Math.floor(distanceTotale)} m / ${NIVEAUX[i + 1].distance} m pour atteindre ${NIVEAUX[i + 1].id}`;
         break;
       }
     }
@@ -1056,23 +1021,23 @@ function OngletProgression({ distanceTotale }) {
     <div className="profil_onglet_panneau">
       <h3 className="progression_titre">Votre Progression</h3>
       <p className="progression_sous_titre">{distanceRestanteInfo}</p>
-      
+
       <div className="progression_container">
         <div className="progression_barre_fond">
-          <div 
-            className="progression_barre_remplissage" 
+          <div
+            className="progression_barre_remplissage"
             style={{ width: `${pourcentage}%` }}
           ></div>
         </div>
-        
+
         <div className="progression_etapes">
           {NIVEAUX.map((niveau, index) => {
             const estAtteint = distanceTotale >= niveau.distance;
             const positionFixe = (index + 1) * 20;
 
             return (
-              <div 
-                key={niveau.id} 
+              <div
+                key={niveau.id}
                 className={`progression_etape ${estAtteint ? 'progression_etape--atteint' : ''}`}
                 style={{ left: `${positionFixe}%` }}
               >
@@ -1109,18 +1074,18 @@ function OngletBoutique({ coins }) {
           <span>Solde :</span>
           <div className="joueur_coins">
             <svg className="icone_coin" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="12" r="10" fill="#fbbf24"/>
+              <circle cx="12" cy="12" r="10" fill="#fbbf24" />
               <text x="50%" y="50%" textAnchor="middle" dy=".3em" fontSize="12" fontWeight="bold" fill="#b45309">C</text>
             </svg>
             <span>{coins}</span>
           </div>
         </div>
       </div>
-      
+
       <div className="boutique_contenu_vide">
         <div className="boutique_placeholder_icone">🛒</div>
         <p className="boutique_placeholder_texte">
-          La boutique sera bientôt disponible.<br/>
+          La boutique sera bientôt disponible.<br />
           Continuez vos sessions pour gagner des Coins !
         </p>
       </div>
@@ -1128,7 +1093,7 @@ function OngletBoutique({ coins }) {
   );
 }
 
-function OngletParametres ({ pseudo, photoProfil, onEnregistrerPhotoProfil, enregistrementPhotoEnCours, erreurPhotoProfil }) {
+function OngletParametres({ pseudo, photoProfil, onEnregistrerPhotoProfil, enregistrementPhotoEnCours, erreurPhotoProfil }) {
   const { deconnexion, connecte } = useAuth();
 
   // Photo de profil : brouillon local (image choisie + position de
@@ -1191,10 +1156,10 @@ function OngletParametres ({ pseudo, photoProfil, onEnregistrerPhotoProfil, enre
         canvas.height = hauteur;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, largeur, hauteur);
-        
+
         // Compression en WebP ou JPEG (qualité 0.8) pour réduire drastiquement la taille (moins de 100ko)
         const dataUrlCompresser = canvas.toDataURL('image/jpeg', 0.8);
-        
+
         setPhotoDataUrl(dataUrlCompresser);
         setPositionPhoto({ x: 50, y: 50 }); // recentre par défaut à chaque nouvelle photo
       };
@@ -1465,7 +1430,7 @@ function OngletParametres ({ pseudo, photoProfil, onEnregistrerPhotoProfil, enre
 // pilotées par les réglages (props dureeTravailMinutes / dureePauseMinutes).
 // Les couleurs (chrono, boutons) sont appliquées globalement via des
 // variables CSS (voir App > useEffect couleurs), pas via des props ici.
-function Chrono ({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes, dureePauseMinutes, modeLecture }) {
+function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes, dureePauseMinutes, modeLecture }) {
   // 'travail' = session Pomodoro classique, 'pause' = pause qui suit
   const [phase, setPhase] = useState('travail');
 
@@ -1583,7 +1548,7 @@ function Chrono ({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes
   const secondesEcoulees = dureeActuelle - secondesRestantes;
   const distanceSession = Math.floor(secondesEcoulees / 5);
 
-  return(
+  return (
     <div className='chrono'>
       {/* Badge indiquant la phase actuelle (utile car le cycle travail/pause est automatique) */}
       <span className={`chrono_phase chrono_phase--${phase}`}>
@@ -1626,12 +1591,12 @@ function Chrono ({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes
 // --- To-Do List (section "Notes") -------------------------------------
 // Chaque tâche : { id, contenu, tags: string[], dateEcheance, terminee }
 
-function genererIdTache () {
+function genererIdTache() {
   return `tache_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 }
 
 // Petit chip visuel représentant un tag, avec bouton de suppression
-function TacheTag ({ texte, onSupprimer }) {
+function TacheTag({ texte, onSupprimer }) {
   return (
     <span className="todo_tag">
       {texte}
@@ -1648,7 +1613,7 @@ function TacheTag ({ texte, onSupprimer }) {
 }
 
 // Barre supérieure commune à la carte et à la modale : tags + date d'échéance
-function TacheBarre ({ tags, onAjouterTag, onSupprimerTag, dateEcheance, onModifierDate }) {
+function TacheBarre({ tags, onAjouterTag, onSupprimerTag, dateEcheance, onModifierDate }) {
   const [ajoutOuvert, setAjoutOuvert] = useState(false);
   const [valeurTag, setValeurTag] = useState('');
   const inputRef = useRef(null);
@@ -1710,7 +1675,7 @@ function TacheBarre ({ tags, onAjouterTag, onSupprimerTag, dateEcheance, onModif
 }
 
 // Zone de texte qui s'agrandit automatiquement selon son contenu
-function TacheZoneTexte ({ className, valeur, onChange, placeholder, autoFocus }) {
+function TacheZoneTexte({ className, valeur, onChange, placeholder, autoFocus }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -1734,7 +1699,7 @@ function TacheZoneTexte ({ className, valeur, onChange, placeholder, autoFocus }
 }
 
 // Une carte = une tâche, éditable directement dans la liste
-function TacheCarte ({ tache, actions, onAgrandir, lectureSeule }) {
+function TacheCarte({ tache, actions, onAgrandir, lectureSeule }) {
   const zoneTexteRef = useRef(null);
 
   // Clique n'importe où dans la carte (hors boutons/inputs déjà gérés) -> focus l'édition
@@ -1754,7 +1719,7 @@ function TacheCarte ({ tache, actions, onAgrandir, lectureSeule }) {
         aria-label="Supprimer la tâche"
         disabled={lectureSeule}
       >
-        
+
       </button>
 
       <textarea
@@ -1800,7 +1765,7 @@ function TacheCarte ({ tache, actions, onAgrandir, lectureSeule }) {
 }
 
 // Modale d'édition "confortable" pour une tâche
-function ModalTache ({ tache, actions, fermer }) {
+function ModalTache({ tache, actions, fermer }) {
   if (!tache) return null;
 
   return (
@@ -1851,7 +1816,7 @@ function ModalTache ({ tache, actions, fermer }) {
 }
 
 // Petite modale de confirmation générique (utilisée pour le désépinglage)
-function ModalConfirmation ({ ouvert, message, onConfirmer, onAnnuler }) {
+function ModalConfirmation({ ouvert, message, onConfirmer, onAnnuler }) {
   if (!ouvert) return null;
 
   return (
@@ -1875,7 +1840,7 @@ function ModalConfirmation ({ ouvert, message, onConfirmer, onAnnuler }) {
 // Contrairement à ModalConfirmation, elle exige que l'utilisateur active un
 // interrupteur avant de pouvoir valider (le bouton "Confirmer" reste désactivé
 // tant que l'interrupteur n'est pas activé).
-function ModalConfirmationSortie ({ ouvert, toggleActif, onToggle, onConfirmer, onAnnuler }) {
+function ModalConfirmationSortie({ ouvert, toggleActif, onToggle, onConfirmer, onAnnuler }) {
   if (!ouvert) return null;
 
   return (
@@ -1915,7 +1880,7 @@ function ModalConfirmationSortie ({ ouvert, toggleActif, onToggle, onConfirmer, 
 // de la page. Seules deux interactions restent possibles une fois épinglée :
 // déplacer la note (poignée ⠿⠿) et la désépingler (bouton ✕, avec confirmation).
 // Le contenu, les tags et l'échéance sont affichés à plat, non modifiables.
-function NoteEpinglee ({ tache, actions }) {
+function NoteEpinglee({ tache, actions }) {
   const [position, setPosition] = useState(tache.position || { x: 60, y: 130 });
   const positionRef = useRef(position);
   const conteneurRef = useRef(null);
@@ -2047,7 +2012,7 @@ function genererNumeroSession(sessionsExistantes) {
 // --- Pomodoro Tracker : barre de points représentant les séances de
 // travail terminées (10 emplacements max). Survol d'un point rempli =
 // tooltip affichant la durée de la séance correspondante.
-function PomodoroTracker ({ points }) {
+function PomodoroTracker({ points }) {
   const emplacements = Array.from({ length: 10 });
 
   return (
@@ -2073,36 +2038,10 @@ function PomodoroTracker ({ points }) {
   );
 }
 
-function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre, pointsPomodoro, modeLecture, setModeLecture }) {
+function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre, pointsPomodoro, modeLecture, setModeLecture, sessionConsultee, setSessionConsultee, sessionsSauvegardees, setSessionsSauvegardees, sessionsChargeesPourRef }) {
   const { connecte, utilisateur } = useAuth();
 
   const [idAgrandie, setIdAgrandie] = useState(null);
-
-  // Sessions archivées : chargées depuis Supabase (table « sessions_notes »)
-  // pour un compte connecté. Le mode invité n'a aucune persistance : la liste
-  // reste vide et vit uniquement en mémoire.
-  const [sessionsSauvegardees, setSessionsSauvegardees] = useState([]);
-  // Repère l'utilisateur pour lequel le chargement est terminé, afin
-  // d'éviter d'enregistrer une session sous le mauvais compte pendant la
-  // fenêtre de temps où l'on bascule d'un utilisateur à un autre.
-  const sessionsChargeesPourRef = useRef(null);
-
-  useEffect(() => {
-    if (!connecte || !utilisateur?.id) {
-      setSessionsSauvegardees([]);
-      sessionsChargeesPourRef.current = 'invite';
-      return;
-    }
-    let annule = false;
-    (async () => {
-      const data = await chargerSessionsArchivees(utilisateur.id);
-      if (!annule) {
-        setSessionsSauvegardees(data);
-        sessionsChargeesPourRef.current = utilisateur.id;
-      }
-    })();
-    return () => { annule = true; };
-  }, [connecte, utilisateur?.id]);
 
   // Session en cours : le numéro dépend des sessions déjà archivées, donc il
   // est recalculé dès que celles-ci sont (re)chargées (changement de compte).
@@ -2123,8 +2062,15 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const [recherche, setRecherche] = useState('');
 
-    // mode_lecture : reçu depuis App (props) afin d'être partagé avec le Chrono
-  const [sessionConsultee, setSessionConsultee] = useState(null);
+  // mode_lecture : reçu depuis App (props) afin d'être partagé avec le Chrono
+  // sessionConsultee : reçue depuis App (props) pour permettre la consultation
+  // depuis l'onglet Historique de la modale de profil.
+
+  // --- Thème de session : menu déroulant remplaçant l'ancien affichage
+  // « Session : #XXXX ». Permet de catégoriser la session en cours. ---
+  const THEMES_SESSION = ['Lecture', 'Devoir', 'Dessin'];
+  const [themeSession, setThemeSession] = useState('');
+  const [themeDropdownOuvert, setThemeDropdownOuvert] = useState(false);
 
 
   // --- Mode "organiser" : numérotation manuelle de l'ordre des notes ---
@@ -2137,14 +2083,14 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
   const idsConnusRef = useRef(new Set(taches.map((t) => t.id)));
 
   // Une note épinglée quitte la liste : elle est déjà visible sur le fond principal
- const sourceTaches = modeLecture
-  ? (sessionConsultee?.notes || [])
-  : taches;
+  const sourceTaches = modeLecture
+    ? (sessionConsultee?.notes || [])
+    : taches;
 
-const tachesListe = sourceTaches
-  .filter((t) => !t.epinglee)
-  .slice()
-  .sort((a, b) => (a.ordre ?? Infinity) - (b.ordre ?? Infinity));
+  const tachesListe = sourceTaches
+    .filter((t) => !t.epinglee)
+    .slice()
+    .sort((a, b) => (a.ordre ?? Infinity) - (b.ordre ?? Infinity));
 
 
 
@@ -2270,7 +2216,7 @@ const tachesListe = sourceTaches
       notes: taches,
     };
 
-    
+
 
     const sessionsMisesAJour = [...sessionsSauvegardees, sessionArchivee];
     setSessionsSauvegardees(sessionsMisesAJour);
@@ -2313,13 +2259,13 @@ const tachesListe = sourceTaches
 
 
   //consulter les sessions
-      const consulterSession = (session) => {
-      setSessionConsultee(session);
-      setModeLecture(true);
-      setRechercheOuverte(false);
-    };
+  const consulterSession = (session) => {
+    setSessionConsultee(session);
+    setModeLecture(true);
+    setRechercheOuverte(false);
+  };
 
-    // Enregistre la session actuelle sans créer une nouvelle session
+  // Enregistre la session actuelle sans créer une nouvelle session
   const enregistrerSession = () => {
     const maintenant = new Date();
 
@@ -2365,114 +2311,132 @@ const tachesListe = sourceTaches
       <div className="todo_entete">
 
 
-  {/* ===========================
+        {/* ===========================
       Barre de session
   ============================ */}
 
-  <div className="session_section">
+        <div className="session_section">
 
- {/* Barre supérieure */}
-<div className="todo_actions_top">
+          {/* Barre supérieure */}
+          <div className="todo_actions_top">
 
-  <button
-    type="button"
-    className="todo_btn_ajouter"
-    onClick={demarrerNouvelleSession}
-  >
-    +nouvelle session
-  </button>
+            <button
+              type="button"
+              className="todo_btn_ajouter"
+              onClick={demarrerNouvelleSession}
+            >
+              +nouvelle session
+            </button>
 
-  <button
-    className="session_action_btn"
-    onClick={() => setRechercheOuverte(true)}
-  >
-    Consulter les anciennes sessions
-  </button>
+            {modeLecture ? (
+              <div className="session_action_btn">
+                Mode lecture
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="session_action_btn"
+                onClick={enregistrerSession}
+              >
+                Enregistrer la session
+              </button>
+            )}
 
-</div>
+          </div>
 
-{/* Barre de session */}
-<div className="todo_actions">
+          {/* Barre de session */}
+          <div className="todo_actions">
 
-<div className="session_infos">
+            <div className="session_infos">
 
-  <div className="session_titre_ligne">
-    <h3 className="session_titre">
-      Session : #{numeroSession}
-    </h3>
+              <div className="session_titre_ligne">
+                <div className="theme_dropdown_wrapper">
+                  <button
+                    type="button"
+                    className="theme_dropdown_btn"
+                    onClick={() => setThemeDropdownOuvert(!themeDropdownOuvert)}
+                  >
+                    <span className="theme_dropdown_label">{themeSession || 'Thème'}</span>
+                    <span className="theme_dropdown_chevron">{themeDropdownOuvert ? '▲' : '▼'}</span>
+                  </button>
+                  {themeDropdownOuvert && (
+                    <ul className="theme_dropdown_liste">
+                      {THEMES_SESSION.map((t) => (
+                        <li key={t}>
+                          <button
+                            type="button"
+                            className={`theme_dropdown_option${themeSession === t ? ' theme_dropdown_option--actif' : ''}`}
+                            onClick={() => {
+                              setThemeSession(t);
+                              setThemeDropdownOuvert(false);
+                            }}
+                          >
+                            {t}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
 
-      {modeLecture ? (
-      <div className="session_action_btn">
-        Mode lecture
+                <input
+                  type="text"
+                  className="session_titre_input"
+                  placeholder="Titre de la session"
+                  value={titreSession}
+                  onChange={(e) => setTitreSession(e.target.value)}
+                />
+              </div>
+
+              <span className="session_progression_score">
+                <strong>{tachesTerminees}</strong> / {tachesTotal} tâches accomplies
+              </span>
+
+            </div>
+
+          </div>
+          <div className="session_liste_actions">
+            <button
+              type="button"
+              className="note_btn_ajouter"
+              onClick={ajouterTache}
+              disabled={modeLecture}
+            >
+              <span>+Ajouter une note</span>
+            </button>
+
+            <button
+              type="button"
+              className={`session_action_btn${modeOrganisationActif ? ' session_action_btn--actif' : ''}`}
+              onClick={basculerModeOrganisation}
+            >
+              Organiser
+            </button>
+
+            <PomodoroTracker points={pointsPomodoro || []} />
+
+            {modeOrganisationActif && (
+              <>
+                <span className="session_organiser_message">
+                  Pour quitter ce mode, faites un clic droit ou appuyez sur Échap.
+                </span>
+                <button
+                  type="button"
+                  className="session_action_btn session_action_btn--reinit"
+                  onClick={reinitialiserPastilles}
+                  title="Retirer les numéros de toutes les notes"
+                >
+                  ↺ Réinitialiser les pastilles
+                </button>
+              </>
+            )}
+
+          </div>
+        </div>
+
+
+
       </div>
-    ) : (
-      <button
-        type="button"
-        className="session_action_btn"
-        onClick={enregistrerSession}
-      >
-        Enregistrer la session
-      </button>
-    )}
-
-    <input
-      type="text"
-      className="session_titre_input"
-      placeholder="Titre de la session"
-      value={titreSession}
-      onChange={(e) => setTitreSession(e.target.value)}
-    />
-  </div>
-
-  <span className="session_progression_score">
-    <strong>{tachesTerminees}</strong> / {tachesTotal} tâches accomplies
-  </span>
-
-</div>
-
-</div>
-    <div className="session_liste_actions">
-      <button
-      type="button"
-      className="note_btn_ajouter"
-      onClick={ajouterTache}
-      disabled={modeLecture}
-    >
-    <span>+Ajouter une note</span>
-  </button>
-
-  <button
-    type="button"
-    className={`session_action_btn${modeOrganisationActif ? ' session_action_btn--actif' : ''}`}
-    onClick={basculerModeOrganisation}
-  >
-    Organiser
-  </button>
-
-  <PomodoroTracker points={pointsPomodoro || []} />
-
-      {modeOrganisationActif && (
-        <>
-          <span className="session_organiser_message">
-            Pour quitter ce mode, faites un clic droit ou appuyez sur Échap.
-          </span>
-          <button
-            type="button"
-            className="session_action_btn session_action_btn--reinit"
-            onClick={reinitialiserPastilles}
-            title="Retirer les numéros de toutes les notes"
-          >
-            ↺ Réinitialiser les pastilles
-          </button>
-        </>
-      )}
-
-    </div>
-  </div>
-
- 
-
-</div>
 
       {tachesListe.length === 0 ? (
         <p className="todo_vide">
@@ -2526,13 +2490,13 @@ const tachesListe = sourceTaches
       )}
 
       {rechercheOuverte && (
-      <FenetreAnciennesSessions
-      sessions={sessionsFiltrees}
-      recherche={recherche}
-      onChangerRecherche={setRecherche}
-      fermer={() => setRechercheOuverte(false)}
-      onConsulter={consulterSession}
-    />
+        <FenetreAnciennesSessions
+          sessions={sessionsFiltrees}
+          recherche={recherche}
+          onChangerRecherche={setRecherche}
+          fermer={() => setRechercheOuverte(false)}
+          onConsulter={consulterSession}
+        />
       )}
     </div>
   );
@@ -2635,8 +2599,8 @@ function FenetreAnciennesSessions({ sessions, recherche, onChangerRecherche, fer
                       <span className="session_notes_badge">{s.notes.length}</span>
                     </td>
                     <td>
-                    <button type="button" className="session_action_btn" onClick={() => onConsulter(s)} >Consulter </button>
-                  </td>
+                      <button type="button" className="session_action_btn" onClick={() => onConsulter(s)} >Consulter </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -2655,7 +2619,7 @@ function FenetreAnciennesSessions({ sessions, recherche, onChangerRecherche, fer
 
 // Extrait l'identifiant de vidéo d'un lien YouTube (formats standards,
 // courts youtu.be, ou embed) afin de pouvoir instancier le lecteur IFrame
-function extraireIdYoutube (lien) {
+function extraireIdYoutube(lien) {
   try {
     const url = new URL(lien.trim());
     if (url.hostname.includes('youtu.be')) return url.pathname.slice(1) || null;
@@ -2672,7 +2636,7 @@ function extraireIdYoutube (lien) {
 // musique (aperçu) et sur la carte du lecteur flottant : miniature YouTube
 // ou pochette Spotify, avec un repli en dégradé + icône si aucune image
 // n'est disponible (cas de la simulation Spotify, faute d'API réelle).
-function MiniatureMusique ({ className, iconeClassName, type, thumbnail }) {
+function MiniatureMusique({ className, iconeClassName, type, thumbnail }) {
   return (
     <div className={className}>
       {thumbnail ? (
@@ -2686,7 +2650,7 @@ function MiniatureMusique ({ className, iconeClassName, type, thumbnail }) {
 
 // Modale de sélection de la musique d'ambiance : lien YouTube, ou recherche
 // via un compte Spotify connecté (simulation de connexion, comme pour les salons)
-function ModalChoisirMusique ({ ouvert, fermer, onValider }) {
+function ModalChoisirMusique({ ouvert, fermer, onValider }) {
   const [typeMusique, setTypeMusique] = useState('youtube');
   const [lienYoutube, setLienYoutube] = useState('');
   const [spotifyConnecte, setSpotifyConnecte] = useState(false);
@@ -2865,7 +2829,7 @@ function ModalChoisirMusique ({ ouvert, fermer, onValider }) {
 }
 
 // Formate un nombre de secondes en "m:ss" pour l'affichage du lecteur
-function formaterTempsPiste (s) {
+function formaterTempsPiste(s) {
   if (!isFinite(s) || s < 0) s = 0;
   const minutes = Math.floor(s / 60);
   const secondes = Math.floor(s % 60).toString().padStart(2, '0');
@@ -2889,7 +2853,7 @@ function formaterTempsPiste (s) {
 // Astuce : ce composant est monté avec une `key` unique par piste (voir App),
 // ce qui garantit une réinitialisation propre de son état local à chaque
 // changement de musique, sans avoir à gérer manuellement la resynchronisation.
-function LecteurVinyle ({ musique, fermer, onMettreAJour }) {
+function LecteurVinyle({ musique, fermer, onMettreAJour }) {
   const [tempsActuel, setTempsActuel] = useState(0);
   const [duree, setDuree] = useState(musique.duree || 0);
   const [position, setPosition] = useState(musique.position || positionParDefautLecteur());
@@ -3197,14 +3161,14 @@ function LecteurVinyle ({ musique, fermer, onMettreAJour }) {
 // sonore de l'application (fond, couleurs/durées du minuteur, musique
 // d'ambiance) afin de pouvoir la restaurer en un clic.
 
-function genererIdPrereglage () {
+function genererIdPrereglage() {
   return `prereglage_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 }
 
 // Carte défilable représentant un préréglage : aperçu du fond en image
 // principale, bande basse avec le nom, et petites actions (mettre à jour,
 // renommer, supprimer) révélées au survol.
-function PrereglageCarte ({ prereglage, onAppliquer, onRenommer, onSupprimer, onRemplacer }) {
+function PrereglageCarte({ prereglage, onAppliquer, onRenommer, onSupprimer, onRemplacer }) {
   const styleApercu = prereglage.imageFond
     ? { backgroundImage: `url(${prereglage.imageFond})` }
     : { backgroundColor: prereglage.couleurFondAppliquee || '#1f2430' };
@@ -3251,7 +3215,7 @@ function PrereglageCarte ({ prereglage, onAppliquer, onRenommer, onSupprimer, on
 
 // Modale utilisée à la fois pour créer un nouveau préréglage (saisie du nom)
 // et pour renommer un préréglage existant (champ pré-rempli)
-function ModalPrereglage ({ ouvert, modeRenommage, nomInitial, fermer, onValider }) {
+function ModalPrereglage({ ouvert, modeRenommage, nomInitial, fermer, onValider }) {
   const [nom, setNom] = useState(nomInitial || '');
 
   useEffect(() => {
@@ -3301,7 +3265,7 @@ function ModalPrereglage ({ ouvert, modeRenommage, nomInitial, fermer, onValider
 
 // Section "Préréglages" affichée en haut du panneau Réglages : carrousel
 // horizontal de cartes + bouton de création en bas de la page du panneau
-function SectionPrereglages ({
+function SectionPrereglages({
   prereglages,
   onAppliquer,
   onOuvrirRenommage,
@@ -3341,7 +3305,7 @@ function SectionPrereglages ({
 // 1. Arrière-plan du site (couleur RGB + image/GIF)
 // 2. Musique d'ambiance (choix + aperçu + informations détaillées) — juste après le fond
 // 3. Minuteur Pomodoro (durées + couleurs)
-function Param ({
+function Param({
   couleurFondInput,
   setCouleurFondInput,
   onAppliquerCouleur,
@@ -3361,7 +3325,7 @@ function Param ({
   onRemplacerPrereglage,
   onOuvrirCreationPrereglage
 }) {
-  return(
+  return (
     <div className='param'>
       <h2>Paramètre 2</h2>
 
@@ -3621,7 +3585,7 @@ const SALONS_DEMO = [
 
 // Carte représentant un salon rejoignable : image (placeholder), nom,
 // thème et nombre de participants (valeur statique temporaire "4/5")
-function CarteSalon ({ salon, onRejoindre }) {
+function CarteSalon({ salon, onRejoindre }) {
   return (
     <div className="salon_carte">
       <div className="salon_carte_image" aria-hidden="true">
@@ -3647,7 +3611,7 @@ function CarteSalon ({ salon, onRejoindre }) {
 // Modale de création d'un salon : image de fond, musique de fond
 // (lien YouTube ou recherche via un compte Spotify connecté),
 // nombre de participants et thème du salon.
-function ModalCreerSalon ({ ouvert, fermer }) {
+function ModalCreerSalon({ ouvert, fermer }) {
   const [imageFond, setImageFond] = useState(null);
   const [typeMusique, setTypeMusique] = useState('youtube');
   const [lienYoutube, setLienYoutube] = useState('');
@@ -3683,7 +3647,7 @@ function ModalCreerSalon ({ ouvert, fermer }) {
         canvas.height = hauteur;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, largeur, hauteur);
-        
+
         // Compression en JPEG qualité 0.8
         const dataUrlCompresser = canvas.toDataURL('image/jpeg', 0.8);
         setImageFond(dataUrlCompresser);
@@ -3812,14 +3776,14 @@ function ModalCreerSalon ({ ouvert, fermer }) {
   );
 }
 
-function Salon_course () {
+function Salon_course() {
   const [recherche, setRecherche] = useState('');
   const [filtreTheme, setFiltreTheme] = useState('tous');
   const [filtreDuree, setFiltreDuree] = useState('toutes');
   const [rejoindreOuvert, setRejoindreOuvert] = useState(false);
   const [codeSalon, setCodeSalon] = useState('');
   const [creerOuvert, setCreerOuvert] = useState(false);
-    const rejoindreSalonDirect = (salon) => {
+  const rejoindreSalonDirect = (salon) => {
     alert(`Vous avez rejoint le salon « ${salon.nom} » (simulation) !`);
   };
 
@@ -3953,7 +3917,7 @@ function OngletRecompenses({ recompenses, onOuvrirRecompense }) {
                   <div className="recompense_item_visuel_ouvert">
                     {r.type === 'coins' ? (
                       <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: '32px', height: '32px', color: '#fbbf24' }}>
-                        <circle cx="12" cy="12" r="10" fill="#fbbf24"/>
+                        <circle cx="12" cy="12" r="10" fill="#fbbf24" />
                         <text x="50%" y="50%" textAnchor="middle" dy=".3em" fontSize="12" fontWeight="bold" fill="#b45309">C</text>
                       </svg>
                     ) : (
@@ -3983,7 +3947,7 @@ const ONGLETS_POIGNEE = [
 
 // BlocDeux relaie les props "fond" et "réglages Pomodoro" vers Param,
 // et les props des tâches/notes vers Note
-function BlocDeux ({
+function BlocDeux({
   ouvert,
   setOuvert,
   couleurFondInput,
@@ -4014,16 +3978,23 @@ function BlocDeux ({
   onRemplacerPrereglage,
   onOuvrirCreationPrereglage,
   recompenses,
-  onOuvrirRecompense
+  onOuvrirRecompense,
+  vueActive,
+  setVueActive,
+  sessionConsulteeApp,
+  setSessionConsulteeApp,
+  sessionsSauvegardees,
+  setSessionsSauvegardees,
+  sessionsChargeesPourRef
 }) {
-  const [vueActive, setVueActive] = useState(1);
+
 
   const choisirOnglet = (id) => {
     setVueActive(id);
     if (!ouvert) setOuvert(true);
   };
 
-  return(
+  return (
     <div className={`panel ${ouvert ? '' : 'panel--collapsed'}`}>
       <div className="panel_poignee">
         <button
@@ -4069,6 +4040,11 @@ function BlocDeux ({
               pointsPomodoro={pointsPomodoro}
               modeLecture={modeLectureSession}
               setModeLecture={setModeLectureSession}
+              sessionConsultee={sessionConsulteeApp}
+              setSessionConsultee={setSessionConsulteeApp}
+              sessionsSauvegardees={sessionsSauvegardees}
+              setSessionsSauvegardees={setSessionsSauvegardees}
+              sessionsChargeesPourRef={sessionsChargeesPourRef}
             />
           )}
           {vueActive === 2 && (
@@ -4093,9 +4069,9 @@ function BlocDeux ({
               onOuvrirCreationPrereglage={onOuvrirCreationPrereglage}
             />
           )}
-          {vueActive === 3 && <Salon_course/>}
+          {vueActive === 3 && <Salon_course />}
           {vueActive === 4 && (
-            <OngletRecompenses 
+            <OngletRecompenses
               recompenses={recompenses}
               onOuvrirRecompense={onOuvrirRecompense}
             />
@@ -4111,14 +4087,14 @@ function BlocDeux ({
 // de flèches défilantes, et agrandi pour plus de visibilité. Le GIF
 // s'anime nativement (image par image) : aucune animation CSS de saut
 // ne lui est appliquée. Le fichier coureur.gif doit être placé dans /public.
-function BarreDefilante ({ actif }) {
+function BarreDefilante({ actif }) {
   const fleches = Array.from({ length: 16 }, (_, i) => i);
 
-  return(
+  return (
     <div className="bas_page">
       {/* Coureur animé : placé au-dessus de la bande de flèches */}
       <img
-        src="/coureur.png"
+        src="/coureur.gif"
         alt="Coureur animé"
         className="coureur_defilant"
       />
@@ -4151,14 +4127,35 @@ function App() {
   // Vrai après avoir choisi "Continuer en tant qu'invité" ; réinitialisé
   // dès qu'un vrai compte se connecte ou se déconnecte.
   const [modeInvite, setModeInvite] = useState(false);
-  
+
   const [coins, setCoins] = useState(0);
   const [recompenses, setRecompenses] = useState([]);
   const [tempsTotalPomodoro, setTempsTotalPomodoro] = useState(0);
   const [carteRecompenseOuverte, setCarteRecompenseOuverte] = useState(false);
   const [recompenseCourante, setRecompenseCourante] = useState(null);
-  
+
   const { connecte, utilisateur } = useAuth();
+
+  // Sessions archivées chargées au niveau App pour les rendre disponibles
+  // à la fois dans le composant Note et dans l'onglet Historique du profil.
+  const sessionsChargeesPourRef = useRef(null);
+  const [sessionsProfilArchivees, setSessionsProfilArchivees] = useState([]);
+  useEffect(() => {
+    if (!connecte || !utilisateur?.id) {
+      setSessionsProfilArchivees([]);
+      sessionsChargeesPourRef.current = 'invite';
+      return;
+    }
+    let annule = false;
+    (async () => {
+      const data = await chargerSessionsArchivees(utilisateur.id);
+      if (!annule) {
+        setSessionsProfilArchivees(data);
+        sessionsChargeesPourRef.current = utilisateur.id;
+      }
+    })();
+    return () => { annule = true; };
+  }, [connecte, utilisateur?.id]);
 
   // Pseudo affiché à la fois dans le panneau joueur et la modale de profil :
   // priorité au pseudo choisi par l'utilisateur à la création de son compte
@@ -4246,7 +4243,7 @@ function App() {
     setCouleurFondAppliquee(null);
     setImageFond(null);
     setModeInvite(false);
-    
+
     // Fermeture de la modale et redirection
     setConfirmationAccueilOuverte(false);
     setPageActuelle('accueil');
@@ -4255,7 +4252,9 @@ function App() {
   // partagé avec le Chrono pour l'avertir que le temps de travail ne sera
   // pas comptabilisé dans cette session.
   const [modeLectureSession, setModeLectureSession] = useState(false);
+  const [sessionConsulteeApp, setSessionConsulteeApp] = useState(null);
   const [profilOuvert, setProfilOuvert] = useState(false);
+  const [vueActive, setVueActive] = useState(1);
   const [distanceTotale, setDistanceTotale] = useState(0);
 
   // --- Photo de profil : partagée entre le panneau joueur, la modale de
@@ -4365,12 +4364,12 @@ function App() {
     dernierAjoutSessionRef.current = maintenant;
 
     setDistanceTotale((prev) => prev + metres);
-    
+
     // Génération aléatoire de Coins en fonction du temps travaillé
     const minutesTravaillees = reglages.dureeTravail;
     const gainAleatoire = minutesTravaillees * (Math.floor(Math.random() * 5) + 1); // 1 à 5 coins par minute
     setCoins(prev => prev + gainAleatoire);
-    
+
     // Suivi du temps total et déclenchement de la carte récompense
     setTempsTotalPomodoro(prev => {
       const nouveauTotal = prev + minutesTravaillees;
@@ -4481,7 +4480,7 @@ function App() {
       setReglages({ ...REGLAGES_PAR_DEFAUT, ...(config.reglages || {}) });
       setCouleurFondAppliquee(config.couleurFondAppliquee ?? null);
       setImageFond(config.imageFond ?? null);
-      
+
       // Restauration Coins et temps total
       setCoins(profil?.coins ?? 0);
       setTempsTotalPomodoro(profil?.temps_total_pomodoro ?? 0);
@@ -4815,13 +4814,13 @@ function App() {
       return prev.map((t) => (
         t.id === id
           ? {
-              ...t,
-              epinglee: true,
-              position: t.position || {
-                x: 60 + (dejaEpinglees % 6) * 34,
-                y: 130 + (dejaEpinglees % 6) * 34,
-              },
-            }
+            ...t,
+            epinglee: true,
+            position: t.position || {
+              x: 60 + (dejaEpinglees % 6) * 34,
+              y: 130 + (dejaEpinglees % 6) * 34,
+            },
+          }
           : t
       ));
     });
@@ -4910,7 +4909,7 @@ function App() {
         canvas.height = hauteur;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, largeur, hauteur);
-        
+
         // Compression en JPEG qualité 0.8
         const dataUrlCompresser = canvas.toDataURL('image/jpeg', 0.8);
         setCouleurFondAppliquee(null);
@@ -5057,189 +5056,197 @@ function App() {
     ? `${musiqueAmbiance.type}-${musiqueAmbiance.videoId || musiqueAmbiance.titre}`
     : null;
 
-  return(
+  return (
     <>
-    {!modeConcentration && (
-      <Navbar
-        onAccueil={allerAccueil}
-        onCourse={allerPomodoro}
-        onConnexion={choisirConnexion}
-        modeInvite={modeInvite && !connecte}
-      />
-    )}
+      {!modeConcentration && (
+        <Navbar
+          onAccueil={allerAccueil}
+          onCourse={allerPomodoro}
+          onConnexion={choisirConnexion}
+          modeInvite={modeInvite && !connecte}
+        />
+      )}
 
-    {pageActuelle === 'accueil' ? (
-      <Accueil onCommencer={gererCommencer} />
-    ) : (
-    <>
-    {!modeConcentration && (
-      <PanneauJoueur
-        pseudo={pseudoJoueur}
-        niveau={1}
-        distance={distanceTotale}
-        position={0}
-        ouvrirProfil={() => setProfilOuvert(true)}
-        photoProfil={photoProfil}
-        coins={coins}
-      />
-    )}
+      {pageActuelle === 'accueil' ? (
+        <Accueil onCommencer={gererCommencer} />
+      ) : (
+        <>
+          {!modeConcentration && (
+            <PanneauJoueur
+              pseudo={pseudoJoueur}
+              niveau={1}
+              distance={distanceTotale}
+              position={0}
+              ouvrirProfil={() => setProfilOuvert(true)}
+              photoProfil={photoProfil}
+              coins={coins}
+            />
+          )}
 
-    <main className={`stage ${panelOuvert && !modeConcentration ? 'stage--panel-ouvert' : ''}`}>
-      <Chrono
-        enMarche={enMarche}
-        setEnMarche={setEnMarche}
-        onSessionTerminee={ajouterDistanceSession}
-        dureeTravailMinutes={reglages.dureeTravail}
-        dureePauseMinutes={reglages.dureePause}
-        modeLecture={modeLectureSession}
-      />
-    </main>
+          <main className={`stage ${panelOuvert && !modeConcentration ? 'stage--panel-ouvert' : ''}`}>
+            <Chrono
+              enMarche={enMarche}
+              setEnMarche={setEnMarche}
+              onSessionTerminee={ajouterDistanceSession}
+              dureeTravailMinutes={reglages.dureeTravail}
+              dureePauseMinutes={reglages.dureePause}
+              modeLecture={modeLectureSession}
+            />
+          </main>
 
-    {!modeConcentration && (
-      <BlocDeux
-        ouvert={panelOuvert}
-        setOuvert={setPanelOuvert}
-        couleurFondInput={couleurFondInput}
-        setCouleurFondInput={setCouleurFondInput}
-        onAppliquerCouleur={appliquerCouleurFond}
-        onChangerImage={appliquerImageFond}
-        imageFondActuelle={imageFond}
-        reglages={reglages}
-        onChangerDuree={gererChangementDuree}
-        onChangerCouleur={gererChangementCouleur}
-        onReinitialiserReglages={reinitialiserReglages}
-        taches={taches}
-        ajouterTache={ajouterTache}
-        actionsPourTache={actionsPourTache}
-        definirOrdreTache={definirOrdreTache}
-        reinitialiserOrdreTaches={reinitialiserOrdreTaches}
-        viderTaches={viderTaches}
-        pointsPomodoro={pointsPomodoro}
-        modeLectureSession={modeLectureSession}
-        setModeLectureSession={setModeLectureSession}
-        musiqueActuelle={musiqueAmbiance}
-        onOuvrirChoixMusique={() => setChoixMusiqueOuvert(true)}
-        onSupprimerMusique={supprimerMusiqueAmbiance}
-        prereglages={prereglages}
-        onAppliquerPrereglage={appliquerPrereglage}
-        onOuvrirRenommagePrereglage={ouvrirRenommagePrereglage}
-        onDemanderSuppressionPrereglage={demanderSuppressionPrereglage}
-        onRemplacerPrereglage={remplacerPrereglage}
-        onOuvrirCreationPrereglage={ouvrirCreationPrereglage}
-        recompenses={recompenses}
-        onOuvrirRecompense={(id) => actionsPourRecompense(id).onOuvrir(id)}
-      />
-    )}
+          {!modeConcentration && (
+            <BlocDeux
+              ouvert={panelOuvert}
+              setOuvert={setPanelOuvert}
+              couleurFondInput={couleurFondInput}
+              setCouleurFondInput={setCouleurFondInput}
+              onAppliquerCouleur={appliquerCouleurFond}
+              onChangerImage={appliquerImageFond}
+              imageFondActuelle={imageFond}
+              reglages={reglages}
+              onChangerDuree={gererChangementDuree}
+              onChangerCouleur={gererChangementCouleur}
+              onReinitialiserReglages={reinitialiserReglages}
+              taches={taches}
+              ajouterTache={ajouterTache}
+              actionsPourTache={actionsPourTache}
+              definirOrdreTache={definirOrdreTache}
+              reinitialiserOrdreTaches={reinitialiserOrdreTaches}
+              viderTaches={viderTaches}
+              pointsPomodoro={pointsPomodoro}
+              modeLectureSession={modeLectureSession}
+              setModeLectureSession={setModeLectureSession}
+              musiqueActuelle={musiqueAmbiance}
+              onOuvrirChoixMusique={() => setChoixMusiqueOuvert(true)}
+              onSupprimerMusique={supprimerMusiqueAmbiance}
+              prereglages={prereglages}
+              onAppliquerPrereglage={appliquerPrereglage}
+              onOuvrirRenommagePrereglage={ouvrirRenommagePrereglage}
+              onDemanderSuppressionPrereglage={demanderSuppressionPrereglage}
+              onRemplacerPrereglage={remplacerPrereglage}
+              onOuvrirCreationPrereglage={ouvrirCreationPrereglage}
+              recompenses={recompenses}
+              onOuvrirRecompense={(id) => actionsPourRecompense(id).onOuvrir(id)}
+              vueActive={vueActive}
+              setVueActive={setVueActive}
+              sessionConsulteeApp={sessionConsulteeApp}
+              setSessionConsulteeApp={setSessionConsulteeApp}
+              sessionsSauvegardees={sessionsProfilArchivees}
+              setSessionsSauvegardees={setSessionsProfilArchivees}
+              sessionsChargeesPourRef={sessionsChargeesPourRef}
+            />
+          )}
 
-    {!modeConcentration && <BarreDefilante actif={enMarche}/>}
+          {!modeConcentration && <BarreDefilante actif={enMarche} />}
 
-    {/* Bouton Mode concentration : toujours visible, y compris en plein écran,
+          {/* Bouton Mode concentration : toujours visible, y compris en plein écran,
         pour permettre à l'utilisateur de sortir du mode. */}
-    <button
-      type="button"
-      className="btn_mode_concentration"
-      onClick={modeConcentration ? demanderQuitterModeConcentration : activerModeConcentration}
-    >
-      {modeConcentration ? 'Quitter le mode concentration' : 'Mode concentration'}
-    </button>
+          <button
+            type="button"
+            className="btn_mode_concentration"
+            onClick={modeConcentration ? demanderQuitterModeConcentration : activerModeConcentration}
+          >
+            {modeConcentration ? 'Quitter le mode concentration' : 'Mode concentration'}
+          </button>
 
-    <ModalProfil
-      ouvert={profilOuvert}
-      fermer={() => setProfilOuvert(false)}
-      pseudo={pseudoJoueur}
-      distanceTotale={distanceTotale}
-      historiqueJoursPomodoro={historiqueJoursPomodoro}
-      photoProfil={photoProfil}
-      onEnregistrerPhotoProfil={enregistrerPhotoProfil}
-      enregistrementPhotoEnCours={enregistrementPhotoEnCours}
-      erreurPhotoProfil={erreurPhotoProfil}
-      coins={coins}
-    />
+          <ModalProfil
+            ouvert={profilOuvert}
+            fermer={() => setProfilOuvert(false)}
+            pseudo={pseudoJoueur}
+            distanceTotale={distanceTotale}
+            historiqueJoursPomodoro={historiqueJoursPomodoro}
+            photoProfil={photoProfil}
+            onEnregistrerPhotoProfil={enregistrerPhotoProfil}
+            enregistrementPhotoEnCours={enregistrementPhotoEnCours}
+            erreurPhotoProfil={erreurPhotoProfil}
+            coins={coins}
+            musiqueAmbiance={musiqueAmbiance}
+            sessionsSauvegardees={sessionsProfilArchivees}
+            onConsulterSession={(session) => {
+              setSessionConsulteeApp(session);
+              setModeLectureSession(true);
+              setVueActive(1);
+              setProfilOuvert(false);
+              setPanelOuvert(true);
+            }}
+          />
 
-    {/* Récompenses affichées sur le tableau */}
-    {recompenses.filter(r => r.afficheeSurTableau).map((recompense) => (
-      <CarteRecompenseEpinglee 
-        key={recompense.id} 
-        recompense={recompense} 
-        actions={actionsPourRecompense(recompense.id)} 
-      />
-    ))}
 
-    {/* Notes épinglées : widgets flottants affichés sur le fond principal */}
-    {notesEpinglees.map((tache) => (
-      <NoteEpinglee key={tache.id} tache={tache} actions={actionsPourTache(tache.id)} />
-    ))}
+          {/* Notes épinglées : widgets flottants affichés sur le fond principal */}
+          {notesEpinglees.map((tache) => (
+            <NoteEpinglee key={tache.id} tache={tache} actions={actionsPourTache(tache.id)} />
+          ))}
 
-    {/* Lecteur de musique d'ambiance : widget flottant "vinyle", librement
+          {/* Lecteur de musique d'ambiance : widget flottant "vinyle", librement
         déplaçable. La `key` force un remontage propre à chaque changement
         de piste (voir cleLecteurMusique ci-dessus). */}
-    {musiqueAmbiance && lecteurMusiqueVisible && (
-      <LecteurVinyle
-        key={cleLecteurMusique}
-        musique={musiqueAmbiance}
-        fermer={() => setLecteurMusiqueVisible(false)}
-        onMettreAJour={mettreAJourMusique}
+          {musiqueAmbiance && lecteurMusiqueVisible && (
+            <LecteurVinyle
+              key={cleLecteurMusique}
+              musique={musiqueAmbiance}
+              fermer={() => setLecteurMusiqueVisible(false)}
+              onMettreAJour={mettreAJourMusique}
+            />
+          )}
+
+          <ModalChoisirMusique
+            ouvert={choixMusiqueOuvert}
+            fermer={() => setChoixMusiqueOuvert(false)}
+            onValider={validerMusiqueAmbiance}
+          />
+
+          <ModalConfirmation
+            ouvert={idADesepingler !== null}
+            message="Êtes-vous sûr de vouloir désépingler cette note ?"
+            onConfirmer={confirmerDesepingler}
+            onAnnuler={annulerDesepingler}
+          />
+
+          <ModalConfirmationSortie
+            ouvert={confirmationSortieOuverte}
+            toggleActif={toggleSortieActif}
+            onToggle={basculerToggleSortie}
+            onConfirmer={confirmerSortieModeConcentration}
+            onAnnuler={annulerSortieModeConcentration}
+          />
+
+          {/* --- Préréglages : modale de création/renommage + confirmation de suppression --- */}
+          <ModalPrereglage
+            ouvert={modalPrereglageOuvert}
+            modeRenommage={idPrereglageEnEdition !== null}
+            nomInitial={nomPrereglageInitial}
+            fermer={fermerModalPrereglage}
+            onValider={validerModalPrereglage}
+          />
+
+          <ModalConfirmation
+            ouvert={idPrereglageASupprimer !== null}
+            message="Êtes-vous sûr de vouloir supprimer ce préréglage ?"
+            onConfirmer={confirmerSuppressionPrereglage}
+            onAnnuler={annulerSuppressionPrereglage}
+          />
+        </>
+      )}
+
+      <ModalChoixAcces
+        ouvert={choixAccesOuvert}
+        fermer={() => setChoixAccesOuvert(false)}
+        onInscription={choisirInscription}
+        onInvite={choisirInvite}
+        onConnexion={choisirConnexion}
       />
-    )}
 
-    <ModalChoisirMusique
-      ouvert={choixMusiqueOuvert}
-      fermer={() => setChoixMusiqueOuvert(false)}
-      onValider={validerMusiqueAmbiance}
-    />
+      <ModalConfirmationAccueil
+        ouvert={confirmationAccueilOuverte}
+        fermer={() => setConfirmationAccueilOuverte(false)}
+        onConfirmer={quitterModeInvite}
+      />
 
-    <ModalConfirmation
-      ouvert={idADesepingler !== null}
-      message="Êtes-vous sûr de vouloir désépingler cette note ?"
-      onConfirmer={confirmerDesepingler}
-      onAnnuler={annulerDesepingler}
-    />
-
-    <ModalConfirmationSortie
-      ouvert={confirmationSortieOuverte}
-      toggleActif={toggleSortieActif}
-      onToggle={basculerToggleSortie}
-      onConfirmer={confirmerSortieModeConcentration}
-      onAnnuler={annulerSortieModeConcentration}
-    />
-
-    {/* --- Préréglages : modale de création/renommage + confirmation de suppression --- */}
-    <ModalPrereglage
-      ouvert={modalPrereglageOuvert}
-      modeRenommage={idPrereglageEnEdition !== null}
-      nomInitial={nomPrereglageInitial}
-      fermer={fermerModalPrereglage}
-      onValider={validerModalPrereglage}
-    />
-
-    <ModalConfirmation
-      ouvert={idPrereglageASupprimer !== null}
-      message="Êtes-vous sûr de vouloir supprimer ce préréglage ?"
-      onConfirmer={confirmerSuppressionPrereglage}
-      onAnnuler={annulerSuppressionPrereglage}
-    />
-    </>
-    )}
-
-    <ModalChoixAcces
-      ouvert={choixAccesOuvert}
-      fermer={() => setChoixAccesOuvert(false)}
-      onInscription={choisirInscription}
-      onInvite={choisirInvite}
-      onConnexion={choisirConnexion}
-    />
-
-    <ModalConfirmationAccueil 
-      ouvert={confirmationAccueilOuverte} 
-      fermer={() => setConfirmationAccueilOuverte(false)} 
-      onConfirmer={quitterModeInvite} 
-    />
-
-    <ModalConnexion
-      ouvert={connexionOuverte}
-      fermer={() => setConnexionOuverte(false)}
-      vueInitiale={vueConnexionInitiale}
-    />
+      <ModalConnexion
+        ouvert={connexionOuverte}
+        fermer={() => setConnexionOuverte(false)}
+        vueInitiale={vueConnexionInitiale}
+      />
     </>
   )
 }

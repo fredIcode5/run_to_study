@@ -1151,7 +1151,7 @@ select option {
 .fleches_bande {
   width: 100%;
   overflow: hidden;
-  background: #000000;
+  background: #00000000;
   mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
   -webkit-mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
 }
@@ -1162,7 +1162,7 @@ select option {
   gap: 44px;
   font-size: 24px;
   font-weight: 700;
-  color: #f6f6f6;
+  color: #aaaaaa00;
   animation: defiler 10s linear infinite;
 }
 
@@ -3765,6 +3765,7 @@ select option {
 .profil_layout {
   display: flex;
   gap: 24px;
+  flex-wrap: wrap;
 }
 
 .profil_coureur_colonne {
@@ -4541,4 +4542,227 @@ body,
   padding: 6px 12px;
   font-size: 13px;
   border-radius: 6px;
+}
+
+/* --- Nouvelle colonne Activité (Profil) --- */
+.profil_colonne_activite {
+  flex: 1;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background-color: var(--couleur-secondaire, #2c3343);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.profil_activite_entete {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.badge_activite {
+  background-color: #9d50bb;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.titre_session {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profil_activite_musique_rect {
+  background-color: var(--couleur-primaire, #1f2430);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.musique_carte_profil {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.musique_cover_profil {
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #9d50bb 0%, #6e48aa 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.musique_cover_profil img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.musique_cover_profil_icone {
+  font-size: 40px;
+}
+
+.musique_titre_sous_cover {
+  font-size: 14px;
+  color: #f8fafc;
+  font-weight: 600;
+  text-align: center;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.musique_vide {
+  color: #64748b;
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* --- Onglet Historique (modale de profil) --- */
+.profil_onglet_panneau--historique {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.historique_recherche_input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #f8fafc;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.historique_recherche_input::placeholder {
+  color: #64748b;
+}
+
+.historique_recherche_input:focus {
+  border-color: #9d50bb;
+}
+
+.historique_liste {
+  overflow-x: auto;
+}
+
+.historique_tableau {
+  width: 100%;
+}
+
+.historique_vide {
+  color: #64748b;
+  font-style: italic;
+  text-align: center;
+  padding: 32px 0;
+}
+
+/* --- Menu déroulant Thème de session --- */
+.theme_dropdown_wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.theme_dropdown_btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+  white-space: nowrap;
+}
+
+.theme_dropdown_btn:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.theme_dropdown_chevron {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.theme_dropdown_liste {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+  min-width: 160px;
+  background-color: #1e2535;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  animation: theme_dropdown_apparaitre 0.15s ease-out;
+}
+
+@keyframes theme_dropdown_apparaitre {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.theme_dropdown_option {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  color: #cbd5e1;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.theme_dropdown_option:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.theme_dropdown_option--actif {
+  color: #9d50bb;
+  font-weight: 700;
+  background-color: rgba(157, 80, 187, 0.1);
 }
