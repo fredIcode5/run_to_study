@@ -1180,18 +1180,19 @@ select option {
   }
 }
 
-/* Coureur animÃ©, placÃ© au-dessus de la bande de flÃ¨ches.
-   Agrandi pour Ãªtre plus visible. Pas d'animation CSS ajoutÃ©e :
-   le GIF s'anime nativement image par image. */
+/* Coureur animé (iframe runner.html), placé au-dessus de la bande
+   de flèches. L'iframe est transparent et sans bordure. */
 .coureur_defilant {
-  width: 100px;
-  height: 50px;
-  object-fit: contain;
+  width: 150px;
+  height: 150px;
+  border: none;
+  background: transparent;
   display: block;
   margin-left: -520px;
-  margin-bottom: 28px;
-  ;
-  transform: scale(3);
+  margin-bottom: -22px;
+  transform: scale(1);
+  overflow: hidden;
+  pointer-events: none;
 }
 
 /* --- Panneau d'informations joueur --- */
@@ -2950,7 +2951,8 @@ select option {
   }
 
   .coureur_defilant {
-    width: 90px;
+    width: 100px;
+    height: 100px;
   }
 
   .todo_entete {
@@ -4737,6 +4739,7 @@ body,
     opacity: 0;
     transform: translateY(-6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

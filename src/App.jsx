@@ -4083,20 +4083,22 @@ function BlocDeux({
 }
 
 
-// --- BarreDefilante : le coureur GIF est placé AU-DESSUS de la bande
-// de flèches défilantes, et agrandi pour plus de visibilité. Le GIF
-// s'anime nativement (image par image) : aucune animation CSS de saut
-// ne lui est appliquée. Le fichier coureur.gif doit être placé dans /public.
+// --- BarreDefilante : le coureur HTML animé est placé AU-DESSUS de la bande
+// de flèches défilantes, via un iframe pointant vers runner.html.
+// Le fichier runner.html doit être placé dans /public.
 function BarreDefilante({ actif }) {
   const fleches = Array.from({ length: 16 }, (_, i) => i);
 
   return (
     <div className="bas_page">
       {/* Coureur animé : placé au-dessus de la bande de flèches */}
-      <img
-        src="/coureur.gif"
-        alt="Coureur animé"
+      <iframe
+        src="/runner.html"
+        title="Coureur animé"
         className="coureur_defilant"
+        frameBorder="0"
+        scrolling="no"
+        allowTransparency="true"
       />
 
       <div className="fleches_bande">
