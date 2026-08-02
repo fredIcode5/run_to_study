@@ -8,9 +8,9 @@
 
   /* Couleurs personnalisables du minuteur Pomodoro.
      Valeurs par dÃ©faut ici ; Ã©crasÃ©es en JS via setProperty(...) */
-  --couleur-chrono: #1f2430;
-  --couleur-poignee: #e2472a;
-  --couleur-boutons: #e2472a;
+  --couleur-chrono: #f7f7f7;
+  --couleur-poignee: #030303;
+  --couleur-boutons: #000000;
 
   /* EmpÃªche les champs de formulaire natifs de basculer sur le rendu
      "dark" du navigateur (texte blanc par dÃ©faut) quand le systÃ¨me est
@@ -210,12 +210,12 @@ select option {
 
 .chrono_phase--travail {
   background: rgba(226, 71, 42, 0.12);
-  color: #b8371d;
+  color: #f2f2f2;
 }
 
 .chrono_phase--pause {
   background: rgba(47, 111, 107, 0.12);
-  color: #2f6f6b;
+  color: #f6f6f6;
 }
 
 .chrono_affichage {
@@ -288,13 +288,13 @@ select option {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 20px;
   font-weight: 700;
-  color: #7c3aed;
+  color: #ffffff;
 }
 
 .chrono_distance_label {
   font-size: 12px;
   font-weight: 600;
-  color: #7c3aed;
+  color: #ffffff;
   background: rgba(124, 58, 237, 0.12);
   padding: 3px 10px;
   border-radius: 999px;
@@ -1180,19 +1180,58 @@ select option {
   }
 }
 
-/* Coureur animé (iframe runner.html), placé au-dessus de la bande
-   de flèches. L'iframe est transparent et sans bordure. */
-.coureur_defilant {
+/* Conteneur pour superposer les deux iframes de coureurs afin de permettre un fondu */
+.coureurs_container {
+  position: relative;
   width: 150px;
   height: 150px;
-  border: none;
-  background: transparent;
-  display: block;
   margin-left: -520px;
   margin-bottom: -22px;
+}
+
+/* Coureurs (iframes), placés de manière absolue dans leur conteneur */
+.coureur_defilant {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
   transform: scale(1);
   overflow: hidden;
   pointer-events: none;
+  transition: opacity 5s ease-in-out;
+}
+
+.coureur_defilant.hidden {
+  opacity: 0;
+}
+
+.coureur_defilant.visible {
+  opacity: 1;
+}
+
+/* =========================================================
+   POSITIONS ET DIMENSIONS DES COUREURS (Personnalisables séparément)
+   ========================================================= */
+
+/* 1. Coureur en pleine course (Session de travail) */
+.coureur_course {
+  /* Modifie ces valeurs pour redimensionner et déplacer le coureur actif */
+  width: 150px;
+  height: 150px;
+  margin-left: 0px;
+  margin-top: 0px;
+}
+
+/* 2. Coureur au repos (Pause) */
+.coureur_pose {
+  /* Modifie ces valeurs pour redimensionner et déplacer le coureur au repos */
+  width: 180px;
+  height: 180px;
+  margin-left: 200px;
+  margin-top: 0px;
 }
 
 /* --- Panneau d'informations joueur --- */
@@ -4768,4 +4807,124 @@ body,
   color: #9d50bb;
   font-weight: 700;
   background-color: rgba(157, 80, 187, 0.1);
+}
+
+/* ==========================================================================
+   Onglet "Mon Runner"
+   ========================================================================== */
+
+.mon_runner_onglet {
+  padding: 24px;
+}
+
+.mon_runner_layout {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.mon_runner_apercu {
+  flex: 0 0 350px;
+  width: 350px;
+  height: 350px;
+  background-color: #1f2430;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mon_runner_iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.mon_runner_editeur {
+  flex: 1;
+  background-color: #ffffff;
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: var(--shadow-soft);
+}
+
+.mon_runner_titre {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 24px;
+  margin-top: 0;
+}
+
+.mon_runner_colors_list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.mon_runner_color_item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mon_runner_color_item label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.mon_runner_color_picker_wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mon_runner_color_picker_wrap input[type="color"] {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: none;
+  box-shadow: 0 0 0 1px #e2e8f0;
+}
+
+.mon_runner_color_picker_wrap input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.mon_runner_color_picker_wrap input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+.mon_runner_color_valeur {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.mon_runner_btn_save {
+  width: 100%;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .mon_runner_layout {
+    flex-direction: column;
+  }
+
+  .mon_runner_apercu {
+    width: 100%;
+    flex-basis: 300px;
+  }
 }

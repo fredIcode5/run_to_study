@@ -598,7 +598,7 @@ function ModalProfil({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPo
   const ONGLETS_PROFIL = [
     { id: 'profil', label: 'Profil' },
     { id: 'historique', label: 'Historique' },
-    { id: 'stats', label: 'Stats' },
+    { id: 'mon_runner', label: 'mon runner' },
     { id: 'social', label: 'Social' },
     { id: 'progression', label: 'Progression' },
     { id: 'boutique', label: 'Boutique' },
@@ -639,6 +639,7 @@ function ModalProfil({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPo
           {ongletActif === 'historique' && (
             <OngletHistorique sessionsSauvegardees={sessionsSauvegardees} onConsulter={onConsulterSession} />
           )}
+          {ongletActif === 'mon_runner' && <OngletMonRunner />}
           {ongletActif === 'stats' && <OngletStats />}
           {ongletActif === 'social' && <OngletSocial />}
           {ongletActif === 'parametres' && (
@@ -652,6 +653,128 @@ function ModalProfil({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPo
           )}
           {ongletActif === 'progression' && <OngletProgression distanceTotale={distanceTotale} />}
           {ongletActif === 'boutique' && <OngletBoutique coins={coins} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OngletMonRunner() {
+  const DEFAULT_COLORS = {
+    '--couleur-chaussure': '#f4f6fb',
+    '--couleur-chaussure-blanc': '#ffffff',
+    '--couleur-chaussure-fonce': '#ffffff',
+    '--couleur-bras': '#2563eb',
+    '--couleur-jambes': '#e84c9d',
+    '--couleur-mains': '#2563eb',
+    '--couleur-torse': '#000000',
+    '--couleur-fessier': '#e84c9d',
+    '--couleur-tete': '#2563eb',
+    '--couleur-visage': '#050505',
+  };
+
+  const CATEGORIES = [
+    {
+      id: 'peau',
+      label: 'Couleur de peau',
+      vars: ['--couleur-tete', '--couleur-bras', '--couleur-mains']
+    },
+    {
+      id: 'chaussures',
+      label: 'Chaussures',
+      vars: ['--couleur-chaussure', '--couleur-chaussure-blanc', '--couleur-chaussure-fonce']
+    },
+    {
+      id: 'bas',
+      label: 'Bas du corps',
+      vars: ['--couleur-jambes', '--couleur-fessier']
+    },
+    {
+      id: 'tshirt',
+      label: 'Tee-shirt',
+      vars: ['--couleur-torse']
+    },
+    {
+      id: 'visage',
+      label: 'Visage',
+      vars: ['--couleur-visage']
+    }
+  ];
+
+  const iframeRef = useRef(null);
+  const [colors, setColors] = useState(() => {
+    const saved = localStorage.getItem('runnerColors');
+    return saved ? JSON.parse(saved) : DEFAULT_COLORS;
+  });
+  const [savedFeedback, setSavedFeedback] = useState(false);
+
+  const handleCategoryChange = (category, value) => {
+    const newColors = { ...colors };
+    category.vars.forEach(v => {
+      newColors[v] = value;
+    });
+    setColors(newColors);
+    
+    if (iframeRef.current && iframeRef.current.contentWindow) {
+      iframeRef.current.contentWindow.postMessage(
+        { type: 'UPDATE_RUNNER_COLORS', colors: newColors },
+        '*'
+      );
+    }
+  };
+
+  const handleSave = () => {
+    localStorage.setItem('runnerColors', JSON.stringify(colors));
+    const iframes = document.querySelectorAll('iframe.coureur_defilant, iframe.mon_runner_iframe');
+    iframes.forEach(iframe => {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.postMessage(
+          { type: 'UPDATE_RUNNER_COLORS', colors: colors },
+          '*'
+        );
+      }
+    });
+    setSavedFeedback(true);
+    setTimeout(() => setSavedFeedback(false), 2000);
+  };
+
+  return (
+    <div className="profil_onglet_panneau mon_runner_onglet">
+      <div className="mon_runner_layout">
+        <div className="mon_runner_apercu">
+          <iframe
+            ref={iframeRef}
+            src="/runner.html"
+            title="Aperçu du runner"
+            className="mon_runner_iframe"
+            sandbox="allow-scripts allow-same-origin"
+          />
+        </div>
+        <div className="mon_runner_editeur">
+          <h3 className="mon_runner_titre">Personnalise ton coureur</h3>
+          <div className="mon_runner_colors_list">
+            {CATEGORIES.map(category => {
+              // La couleur affichée pour la catégorie est celle de sa première variable CSS
+              const categoryColor = colors[category.vars[0]] || '#000000';
+              return (
+                <div key={category.id} className="mon_runner_color_item">
+                  <label htmlFor={category.id}>{category.label}</label>
+                  <div className="mon_runner_color_picker_wrap">
+                    <input
+                      type="color"
+                      id={category.id}
+                      value={categoryColor}
+                      onChange={(e) => handleCategoryChange(category, e.target.value)}
+                    />
+                    <span className="mon_runner_color_valeur">{categoryColor.toUpperCase()}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <button type="button" className="btn_primaire mon_runner_btn_save" onClick={handleSave}>
+            {savedFeedback ? 'Enregistré ✓' : 'Enregistrer'}
+          </button>
         </div>
       </div>
     </div>
@@ -1430,7 +1553,7 @@ function OngletParametres({ pseudo, photoProfil, onEnregistrerPhotoProfil, enreg
 // pilotées par les réglages (props dureeTravailMinutes / dureePauseMinutes).
 // Les couleurs (chrono, boutons) sont appliquées globalement via des
 // variables CSS (voir App > useEffect couleurs), pas via des props ici.
-function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes, dureePauseMinutes, modeLecture }) {
+function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes, dureePauseMinutes, modeLecture, onPhaseChange }) {
   // 'travail' = session Pomodoro classique, 'pause' = pause qui suit
   const [phase, setPhase] = useState('travail');
 
@@ -1470,6 +1593,10 @@ function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes,
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dureeTravailMinutes, dureePauseMinutes, phase]);
+
+  useEffect(() => {
+    onPhaseChange?.(phase);
+  }, [phase, onPhaseChange]);
 
   useEffect(() => {
     if (enMarche) {
@@ -4084,22 +4211,35 @@ function BlocDeux({
 
 
 // --- BarreDefilante : le coureur HTML animé est placé AU-DESSUS de la bande
-// de flèches défilantes, via un iframe pointant vers runner.html.
-// Le fichier runner.html doit être placé dans /public.
-function BarreDefilante({ actif }) {
+// de flèches défilantes, via des iframes pointant vers runner.html et runner_repos.html.
+// Ils doivent être placés dans /public.
+function BarreDefilante({ actif, phase }) {
   const fleches = Array.from({ length: 16 }, (_, i) => i);
+  const isRunning = actif && phase === 'travail';
 
   return (
     <div className="bas_page">
-      {/* Coureur animé : placé au-dessus de la bande de flèches */}
-      <iframe
-        src="/runner.html"
-        title="Coureur animé"
-        className="coureur_defilant"
-        frameBorder="0"
-        scrolling="no"
-        allowTransparency="true"
-      />
+      <div className="coureurs_container">
+        {/* Coureur animé (En mouvement) */}
+        <iframe
+          src="/runner.html"
+          title="Coureur animé"
+          className={`coureur_defilant coureur_course ${isRunning ? 'visible' : 'hidden'}`}
+          frameBorder="0"
+          scrolling="no"
+          allowTransparency="true"
+        />
+        
+        {/* Coureur au repos (En pause) */}
+        <iframe
+          src="/runner_pose.html"
+          title="Coureur au repos"
+          className={`coureur_defilant coureur_pose ${!isRunning ? 'visible' : 'hidden'}`}
+          frameBorder="0"
+          scrolling="no"
+          allowTransparency="true"
+        />
+      </div>
 
       <div className="fleches_bande">
         <div className={`fleches_piste ${actif ? '' : 'arret'}`}>
@@ -4115,6 +4255,7 @@ function BarreDefilante({ actif }) {
 function App() {
   const [panelOuvert, setPanelOuvert] = useState(true);
   const [enMarche, setEnMarche] = useState(false);
+  const [chronoPhase, setChronoPhase] = useState('travail');
   // Navigation ultra simple entre la vitrine d'accueil et l'appli Pomodoro,
   // sans routeur : on affiche l'un ou l'autre selon cet état.
   const [pageActuelle, setPageActuelle] = useState('accueil');
@@ -5093,6 +5234,7 @@ function App() {
               dureeTravailMinutes={reglages.dureeTravail}
               dureePauseMinutes={reglages.dureePause}
               modeLecture={modeLectureSession}
+              onPhaseChange={setChronoPhase}
             />
           </main>
 
@@ -5139,7 +5281,7 @@ function App() {
             />
           )}
 
-          {!modeConcentration && <BarreDefilante actif={enMarche} />}
+          {!modeConcentration && <BarreDefilante actif={enMarche} phase={chronoPhase} />}
 
           {/* Bouton Mode concentration : toujours visible, y compris en plein écran,
         pour permettre à l'utilisateur de sortir du mode. */}
