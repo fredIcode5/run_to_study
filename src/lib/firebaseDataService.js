@@ -15,7 +15,11 @@ import {
   where, 
   getDocs, 
   writeBatch, 
-  orderBy 
+  orderBy,
+  addDoc,
+  deleteDoc,
+  limit,
+  or
 } from "firebase/firestore";
 
 // -------------------------------------------------------
@@ -36,7 +40,7 @@ export async function chargerProfil(userId) {
   }
 }
 
-export async function sauvegarderProfil(userId, { pseudo, photo_profil, preferences, coins, temps_total_pomodoro }) {
+export async function sauvegarderProfil(userId, { pseudo, photo_profil, preferences, coins, temps_total_pomodoro, email }) {
   try {
     const docRef = doc(db, "preferences_utilisateur", userId);
     const dataToSave = { updated_at: new Date().toISOString() };
@@ -45,6 +49,7 @@ export async function sauvegarderProfil(userId, { pseudo, photo_profil, preferen
     if (preferences !== undefined) dataToSave.preferences = preferences;
     if (coins !== undefined) dataToSave.coins = coins;
     if (temps_total_pomodoro !== undefined) dataToSave.temps_total_pomodoro = temps_total_pomodoro;
+    if (email !== undefined) dataToSave.email = email;
 
     await setDoc(docRef, dataToSave, { merge: true });
   } catch (err) {
@@ -317,4 +322,194 @@ export async function mettreAJourRecompense(userId, recompenseId, misesAJour) {
     throw err;
   }
 }
+// -------------------------------------------------------
+// Social (Recherche, Demandes d'amis, Amis)
+// -------------------------------------------------------
 
+export async function rechercherUtilisateurs(texteRecherche, currentUserId) {
+  try {
+    const q = query(collection(db, "preferences_utilisateur"), limit(50));
+    const querySnapshot = await getDocs(q);
+    const resultats = [];
+    
+    const cible = texteRecherche.toLowerCase().trim();
+    if (!cible) return [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      const id = doc.id;
+      
+      if (id === currentUserId) return;
+      
+      const pseudoMatch = data.pseudo && data.pseudo.toLowerCase().includes(cible);
+      const emailMatch = data.email && data.email.toLowerCase().includes(cible);
+      
+      if (pseudoMatch || emailMatch) {
+        resultats.push({
+          id,
+          pseudo: data.pseudo || data.email || 'Utilisateur inconnu',
+          photo_profil: data.photo_profil || null,
+          niveau: data.temps_total_pomodoro ? Math.floor((data.temps_total_pomodoro / 60) / 10) + 1 : 1
+        });
+      }
+    });
+    
+    return resultats;
+  } catch (err) {
+    console.error("Erreur recherche utilisateurs :", err);
+    return [];
+  }
+}
+
+export async function envoyerDemandeAmi(expediteurId, destinataireId) {
+  try {
+    const q = query(
+      collection(db, "demandes_amis"),
+      or(
+        where("expediteur_id", "==", expediteurId),
+        where("destinataire_id", "==", expediteurId)
+      )
+    );
+    const querySnapshot = await getDocs(q);
+    
+    let demandeExiste = false;
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if ((data.expediteur_id === expediteurId && data.destinataire_id === destinataireId) ||
+          (data.expediteur_id === destinataireId && data.destinataire_id === expediteurId)) {
+        demandeExiste = true;
+      }
+    });
+
+    if (demandeExiste) {
+      console.log("Une demande d'ami ou une amitié existe déjà.");
+      return null;
+    }
+
+    const docRef = await addDoc(collection(db, "demandes_amis"), {
+      expediteur_id: expediteurId,
+      destinataire_id: destinataireId,
+      statut: 'en_attente',
+      created_at: new Date().toISOString()
+    });
+    return docRef.id;
+  } catch (err) {
+    console.error("Erreur envoi demande d'ami :", err);
+    throw err;
+  }
+}
+
+export async function repondreDemandeAmi(demandeId, nouveauStatut) {
+  try {
+    const docRef = doc(db, "demandes_amis", demandeId);
+    if (nouveauStatut === 'refusee') {
+      await deleteDoc(docRef);
+    } else {
+      await updateDoc(docRef, {
+        statut: nouveauStatut,
+        updated_at: new Date().toISOString()
+      });
+    }
+  } catch (err) {
+    console.error("Erreur réponse demande d'ami :", err);
+    throw err;
+  }
+}
+
+export async function getDemandesAmis(userId) {
+  try {
+    const q = query(
+      collection(db, "demandes_amis"),
+      where("destinataire_id", "==", userId),
+      where("statut", "==", "en_attente")
+    );
+    const querySnapshot = await getDocs(q);
+    
+    const demandes = [];
+    for (const d of querySnapshot.docs) {
+      const data = d.data();
+      const expediteurRef = doc(db, "preferences_utilisateur", data.expediteur_id);
+      const expediteurSnap = await getDoc(expediteurRef);
+      
+      let profilExpediteur = { pseudo: 'Utilisateur inconnu', niveau: 1 };
+      if (expediteurSnap.exists()) {
+        const pData = expediteurSnap.data();
+        profilExpediteur = {
+          pseudo: pData.pseudo || 'Utilisateur inconnu',
+          photo_profil: pData.photo_profil || null,
+          niveau: pData.temps_total_pomodoro ? Math.floor((pData.temps_total_pomodoro / 60) / 10) + 1 : 1
+        };
+      }
+      
+      demandes.push({
+        id: d.id,
+        ...data,
+        expediteur: profilExpediteur
+      });
+    }
+    
+    return demandes;
+  } catch (err) {
+    console.error("Erreur chargement demandes d'amis :", err);
+    return [];
+  }
+}
+
+export async function getDemandesEnvoyees(userId) {
+  try {
+    const q = query(
+      collection(db, "demandes_amis"),
+      where("expediteur_id", "==", userId),
+      where("statut", "==", "en_attente")
+    );
+    const querySnapshot = await getDocs(q);
+    
+    const demandes = [];
+    querySnapshot.forEach((doc) => {
+      demandes.push({ id: doc.id, ...doc.data() });
+    });
+    return demandes;
+  } catch (err) {
+    console.error("Erreur chargement demandes envoyées :", err);
+    return [];
+  }
+}
+
+export async function getAmis(userId) {
+  try {
+    const q = query(
+      collection(db, "demandes_amis"),
+      or(
+        where("expediteur_id", "==", userId),
+        where("destinataire_id", "==", userId)
+      )
+    );
+    const querySnapshot = await getDocs(q);
+    
+    const amis = [];
+    for (const d of querySnapshot.docs) {
+      const data = d.data();
+      if (data.statut !== 'acceptee') continue;
+      
+      const amiId = data.expediteur_id === userId ? data.destinataire_id : data.expediteur_id;
+      const amiRef = doc(db, "preferences_utilisateur", amiId);
+      const amiSnap = await getDoc(amiRef);
+      
+      if (amiSnap.exists()) {
+        const pData = amiSnap.data();
+        amis.push({
+          id: d.id, // L'id de la relation d'amitié (document 'demandes_amis')
+          amiId: amiId, // L'id Firebase de l'ami
+          pseudo: pData.pseudo || 'Ami',
+          photo_profil: pData.photo_profil || null,
+          niveau: pData.temps_total_pomodoro ? Math.floor((pData.temps_total_pomodoro / 60) / 10) + 1 : 1
+        });
+      }
+    }
+    
+    return amis;
+  } catch (err) {
+    console.error("Erreur chargement amis :", err);
+    return [];
+  }
+}

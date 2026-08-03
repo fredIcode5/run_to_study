@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Play, Pause } from 'lucide-react'
+import { Play, Pause, SquarePen, Gift, AlarmClockCheck, Users, Headphones, Check } from 'lucide-react'
 import './App.css'
 import { useAuth } from './context/AuthContext.jsx'
 import {
@@ -16,8 +16,13 @@ import {
   chargerSessionsArchivees,
   sauvegarderSessionArchivee,
   chargerRecompenses,
-  ajouterRecompense,
   mettreAJourRecompense,
+  rechercherUtilisateurs,
+  envoyerDemandeAmi,
+  repondreDemandeAmi,
+  getDemandesAmis,
+  getDemandesEnvoyees,
+  getAmis,
 } from './lib/firebaseDataService'
 
 
@@ -297,7 +302,13 @@ function ModalConnexion({ ouvert, fermer, vueInitiale = 'connexion' }) {
     setErreur(null);
     setEnvoiEnCours(true);
     try {
-      await connexionAvecEmail(emailConnexion.trim(), motDePasseConnexion);
+      const { user } = await connexionAvecEmail(emailConnexion.trim(), motDePasseConnexion);
+      if (user) {
+        await sauvegarderProfil(user.id, {
+          email: user.email,
+          pseudo: user.displayName || user.email // Garanti d'avoir un pseudo cherchable
+        });
+      }
       // La fermeture se fait via l'effet ci-dessus quand `connecte` passe à true
     } catch (err) {
       setErreur(traduireErreur(err));
@@ -317,15 +328,17 @@ function ModalConnexion({ ouvert, fermer, vueInitiale = 'connexion' }) {
 
     setEnvoiEnCours(true);
     try {
-      const { session } = await inscriptionAvecEmail(
+      const { user } = await inscriptionAvecEmail(
         emailCreation.trim(),
         motDePasseCreation,
         { pseudo: pseudoCreation.trim(), date_naissance: dateNaissanceCreation }
       );
-      // Si la confirmation par e-mail est activée côté Supabase, aucune session
-      // n'est renvoyée immédiatement : on informe l'utilisateur au lieu de fermer.
-      if (!session) {
-        setErreur("Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse avant de te connecter.");
+      if (user) {
+        await sauvegarderProfil(user.id, {
+          pseudo: pseudoCreation.trim(),
+          email: emailCreation.trim()
+        });
+        fermer();
       }
     } catch (err) {
       setErreur(traduireErreur(err));
@@ -337,8 +350,14 @@ function ModalConnexion({ ouvert, fermer, vueInitiale = 'connexion' }) {
   const cliquerGoogle = async () => {
     setErreur(null);
     try {
-      await connexionAvecGoogle();
-      // Redirection gérée par Supabase : la page quitte l'appli puis revient.
+      const { user } = await connexionAvecGoogle();
+      if (user) {
+        await sauvegarderProfil(user.id, {
+          pseudo: user.displayName || user.email,
+          email: user.email
+        });
+        fermer();
+      }
     } catch (err) {
       setErreur(traduireErreur(err));
     }
@@ -715,7 +734,7 @@ function OngletMonRunner() {
       newColors[v] = value;
     });
     setColors(newColors);
-    
+
     if (iframeRef.current && iframeRef.current.contentWindow) {
       iframeRef.current.contentWindow.postMessage(
         { type: 'UPDATE_RUNNER_COLORS', colors: newColors },
@@ -871,27 +890,73 @@ function OngletProfil({ pseudo, distanceTotale, historiqueJoursPomodoro, photoPr
 // directement intégrée dans la modale de profil.
 function OngletHistorique({ sessionsSauvegardees, onConsulter }) {
   const [recherche, setRecherche] = useState('');
+  const [critereTri, setCritereTri] = useState('chronologie');
+  const [ordreCroissant, setOrdreCroissant] = useState(false);
 
-  const sessionsFiltrees = (sessionsSauvegardees || []).filter((s) => {
-    const cible = recherche.trim().toLowerCase();
-    if (!cible) return true;
-    return (
-      s.titre.toLowerCase().includes(cible) ||
-      s.numero.toLowerCase().includes(cible)
-    );
-  });
+  const sessionsFiltrees = (sessionsSauvegardees || [])
+    .filter((s) => {
+      const cible = recherche.trim().toLowerCase();
+      if (!cible) return true;
+      return (
+        s.titre.toLowerCase().includes(cible) ||
+        s.numero.toLowerCase().includes(cible)
+      );
+    })
+    .sort((a, b) => {
+      let comparaison = 0;
+      switch (critereTri) {
+        case 'alphabétique':
+          comparaison = (a.titre || '').localeCompare(b.titre || '');
+          break;
+        case 'thème':
+          comparaison = (a.theme || '').localeCompare(b.theme || '');
+          break;
+        case 'tache non finie':
+          const nonFiniesA = (a.notes || []).filter(t => !t.terminee).length;
+          const nonFiniesB = (b.notes || []).filter(t => !t.terminee).length;
+          comparaison = nonFiniesA - nonFiniesB;
+          break;
+        case 'chronologie':
+        default:
+          const tsA = parseInt((a.id || '').replace('session_', '')) || 0;
+          const tsB = parseInt((b.id || '').replace('session_', '')) || 0;
+          comparaison = tsA - tsB;
+          break;
+      }
+      return ordreCroissant ? comparaison : -comparaison;
+    });
 
   return (
     <div className="profil_onglet_panneau profil_onglet_panneau--historique">
       <h3 className="profil_section_titre" style={{ marginBottom: 12 }}>Anciennes sessions</h3>
 
-      <input
-        type="text"
-        placeholder="Rechercher par titre ou numéro..."
-        value={recherche}
-        onChange={(e) => setRecherche(e.target.value)}
-        className="historique_recherche_input"
-      />
+      <div className="historique_controles">
+        <input
+          type="text"
+          placeholder="Rechercher par titre ou numéro..."
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          className="historique_recherche_input"
+        />
+        <select
+          value={critereTri}
+          onChange={(e) => setCritereTri(e.target.value)}
+          className="historique_tri_select"
+        >
+          <option value="chronologie">Chronologie</option>
+          <option value="alphabétique">Alphabétique</option>
+          <option value="thème">Thème</option>
+          <option value="tache non finie">Tâches non finies</option>
+        </select>
+        <button
+          type="button"
+          className="historique_tri_btn"
+          onClick={() => setOrdreCroissant(!ordreCroissant)}
+          title={ordreCroissant ? "Ordre croissant" : "Ordre décroissant"}
+        >
+          {ordreCroissant ? '↑' : '↓'}
+        </button>
+      </div>
 
       <div className="historique_liste">
         {sessionsFiltrees.length === 0 ? (
@@ -997,23 +1062,55 @@ function OngletStats() {
 // Gauche : recherche d'utilisateurs (barre de recherche + résultats placeholder).
 // Droite : liste d'amis (placeholder), avec statut et actions rapides.
 function OngletSocial() {
-  // Résultats de recherche placeholder : structure prête pour être
-  // remplacée par de vraies données utilisateur plus tard.
-  const RESULTATS_RECHERCHE_PLACEHOLDER = [
-    { id: 'r1', pseudo: 'Utilisateur_1', niveau: 3 },
-    { id: 'r2', pseudo: 'Utilisateur_2', niveau: 7 },
-    { id: 'r3', pseudo: 'Utilisateur_3', niveau: 1 },
-  ];
+  const { utilisateur } = useAuth();
+  const [recherche, setRecherche] = useState('');
+  const [resultats, setResultats] = useState([]);
+  const [amis, setAmis] = useState([]);
+  const [demandesRecues, setDemandesRecues] = useState([]);
+  const [demandesEnvoyees, setDemandesEnvoyees] = useState([]);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  
+  const chargerDonneesSociales = async () => {
+    if (!utilisateur?.id) return;
+    const [lesAmis, recues, envoyees] = await Promise.all([
+      getAmis(utilisateur.id),
+      getDemandesAmis(utilisateur.id),
+      getDemandesEnvoyees(utilisateur.id)
+    ]);
+    setAmis(lesAmis);
+    setDemandesRecues(recues);
+    setDemandesEnvoyees(envoyees);
+  };
 
-  // Liste d'amis placeholder : structure prête pour être remplacée par
-  // de vraies données (statut en ligne, niveau d'activité, invitations...).
-  // "activite" est un pourcentage placeholder pour la barre d'activité.
-  const AMIS_PLACEHOLDER = [
-    { id: 'a1', pseudo: 'Ami_1', enLigne: true, activite: 80 },
-    { id: 'a2', pseudo: 'Ami_2', enLigne: true, activite: 45 },
-    { id: 'a3', pseudo: 'Ami_3', enLigne: false, activite: 15 },
-    { id: 'a4', pseudo: 'Ami_4', enLigne: false, activite: 60 },
-  ];
+  useEffect(() => {
+    chargerDonneesSociales();
+  }, [utilisateur?.id]);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (!recherche.trim()) {
+        setResultats([]);
+        setLoadingSearch(false);
+        return;
+      }
+      setLoadingSearch(true);
+      const res = await rechercherUtilisateurs(recherche, utilisateur?.id);
+      setResultats(res);
+      setLoadingSearch(false);
+    }, 400); // 400ms debounce
+    return () => clearTimeout(timer);
+  }, [recherche, utilisateur?.id]);
+
+  const handleAjouter = async (destId) => {
+    if (!utilisateur?.id) return;
+    await envoyerDemandeAmi(utilisateur.id, destId);
+    await chargerDonneesSociales();
+  };
+
+  const handleRepondre = async (demandeId, statut) => {
+    await repondreDemandeAmi(demandeId, statut);
+    await chargerDonneesSociales();
+  };
 
   return (
     <div className="profil_onglet_panneau profil_onglet_panneau--social">
@@ -1026,72 +1123,142 @@ function OngletSocial() {
           <input
             type="text"
             className="social_recherche_input"
-            placeholder="Rechercher un pseudo..."
+            placeholder="Rechercher un pseudo ou email..."
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
           />
 
           <div className="social_resultats_liste">
-            {RESULTATS_RECHERCHE_PLACEHOLDER.map((resultat) => (
-              <div key={resultat.id} className="social_resultat_rectangle social_carte_compacte">
-                <div className="social_resultat_infos">
-                  <div className="social_resultat_photo">
-                    <span className="social_resultat_photo_icone">👤</span>
-                  </div>
-                  <div className="social_resultat_identite">
-                    <span className="social_resultat_pseudo">{resultat.pseudo}</span>
-                    <span className="social_resultat_niveau">Niv. {resultat.niveau}</span>
-                  </div>
-                </div>
+            {!recherche.trim() && resultats.length === 0 && (
+              <p className="social_vide_texte" style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center', marginTop: '20px' }}>
+                Cherchez des amis avec qui courir, travailler et évoluer ensemble.
+              </p>
+            )}
+            
+            {recherche.trim() && resultats.length === 0 && !loadingSearch && (
+              <p className="social_vide_texte" style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center', marginTop: '20px' }}>
+                Aucun utilisateur trouvé.
+              </p>
+            )}
 
-                <button type="button" className="btn_secondaire social_resultat_btn_ajouter">
-                  Ajouter
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
+            {loadingSearch && (
+              <p className="social_vide_texte" style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center', marginTop: '20px' }}>
+                Recherche en cours...
+              </p>
+            )}
 
-        {/* Colonne droite : liste d'amis */}
-        <div className="social_colonne social_colonne_amis">
-          <h4 className="profil_section_titre">Liste d'amis</h4>
-
-          <div className="social_amis_liste">
-            {AMIS_PLACEHOLDER.map((ami) => (
-              <div key={ami.id} className="social_ami_rectangle social_carte_compacte">
-                {/* Emplacement visuel réservé : photo de profil de l'ami */}
-                <div className="social_ami_photo">
-                  <span className="social_ami_photo_icone">👤</span>
-                </div>
-
-                <div className="social_ami_contenu">
-                  <div className="social_ami_ligne_haut">
-                    <span className="social_ami_pseudo">{ami.pseudo}</span>
-                    <div className="social_ami_actions">
-                      <button type="button" className="btn_secondaire social_ami_btn_inviter">
-                        Inviter
-                      </button>
-                      <button type="button" className="btn_primaire social_ami_btn_rejoindre">
-                        Rejoindre
-                      </button>
+            {!loadingSearch && resultats.map((resultat) => {
+              const estAmi = amis.some(a => a.amiId === resultat.id);
+              const aEnvoyeDemande = demandesEnvoyees.some(d => d.destinataire_id === resultat.id);
+              
+              return (
+                <div key={resultat.id} className="social_resultat_rectangle social_carte_compacte">
+                  <div className="social_resultat_infos">
+                    <div className="social_resultat_photo">
+                      {resultat.photo_profil ? (
+                        <img src={resultat.photo_profil} alt="" className="social_photo_img" />
+                      ) : (
+                        <span className="social_resultat_photo_icone">👤</span>
+                      )}
+                    </div>
+                    <div className="social_resultat_identite">
+                      <span className="social_resultat_pseudo">{resultat.pseudo}</span>
+                      <span className="social_resultat_niveau">Niv. {resultat.niveau}</span>
                     </div>
                   </div>
 
-                  <div className="social_ami_statut_ligne">
-                    <span className={`social_ami_statut ${ami.enLigne ? 'social_ami_statut--en_ligne' : ''}`}>
-                      {ami.enLigne ? 'En ligne' : 'Hors ligne'}
-                    </span>
-                    <span className="social_ami_activite_label">Activité</span>
+                  {estAmi ? (
+                    <span className="social_statut_texte" style={{ fontSize: '12px', color: '#10b981', fontWeight: 'bold' }}>Ami</span>
+                  ) : aEnvoyeDemande ? (
+                    <span className="social_statut_texte" style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 'bold' }}>En attente</span>
+                  ) : (
+                    <button 
+                      type="button" 
+                      className="btn_secondaire social_resultat_btn_ajouter"
+                      onClick={() => handleAjouter(resultat.id)}
+                    >
+                      Ajouter
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Colonne droite : liste d'amis et demandes */}
+        <div className="social_colonne social_colonne_amis">
+          
+          {demandesRecues.length > 0 && (
+            <>
+              <h4 className="profil_section_titre">Demandes d'amis</h4>
+              <div className="social_amis_liste" style={{ marginBottom: '20px' }}>
+                {demandesRecues.map((demande) => (
+                  <div key={demande.id} className="social_ami_rectangle social_carte_compacte">
+                    <div className="social_ami_photo">
+                      {demande.expediteur.photo_profil ? (
+                        <img src={demande.expediteur.photo_profil} alt="" className="social_photo_img" />
+                      ) : (
+                        <span className="social_ami_photo_icone">👤</span>
+                      )}
+                    </div>
+                    <div className="social_ami_contenu">
+                      <div className="social_ami_ligne_haut">
+                        <span className="social_ami_pseudo">{demande.expediteur.pseudo}</span>
+                        <span className="social_resultat_niveau" style={{ marginLeft: 8 }}>Niv. {demande.expediteur.niveau}</span>
+                      </div>
+                      <div className="social_ami_actions" style={{ marginTop: 8 }}>
+                        <button 
+                          type="button" 
+                          className="btn_primaire" 
+                          onClick={() => handleRepondre(demande.id, 'acceptee')}
+                          style={{ padding: '4px 8px', fontSize: 12 }}
+                        >
+                          Accepter
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn_secondaire"
+                          onClick={() => handleRepondre(demande.id, 'refusee')}
+                          style={{ padding: '4px 8px', fontSize: 12, marginLeft: 8 }}
+                        >
+                          Refuser
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <h4 className="profil_section_titre">Liste d'amis</h4>
+
+          <div className="social_amis_liste">
+            {amis.length === 0 ? (
+              <p className="social_vide_texte" style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center', marginTop: '20px' }}>
+                Vous n'avez actuellement aucun ami.
+              </p>
+            ) : (
+              amis.map((ami) => (
+                <div key={ami.id} className="social_ami_rectangle social_carte_compacte">
+                  <div className="social_ami_photo">
+                    {ami.photo_profil ? (
+                      <img src={ami.photo_profil} alt="" className="social_photo_img" />
+                    ) : (
+                      <span className="social_ami_photo_icone">👤</span>
+                    )}
                   </div>
 
-                  {/* Barre d'activité placeholder */}
-                  <div className="social_ami_barre_activite">
-                    <div
-                      className="social_ami_barre_activite_remplie"
-                      style={{ width: `${ami.activite}%` }}
-                    />
+                  <div className="social_ami_contenu">
+                    <div className="social_ami_ligne_haut">
+                      <span className="social_ami_pseudo">{ami.pseudo}</span>
+                      <span className="social_resultat_niveau" style={{ marginLeft: 8 }}>Niv. {ami.niveau}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -1841,7 +2008,7 @@ function TacheCarte({ tache, actions, onAgrandir, lectureSeule }) {
 
   return (
     <div
-      className={`todo_carte ${tache.terminee ? 'todo_carte--terminee' : ''}`}
+      className={`todo_carte ${tache.terminee ? 'todo_carte--terminee' : ''} ${lectureSeule && !tache.terminee ? 'todo_carte--lecture-non-terminee' : ''}`}
       onClick={focaliserEdition}
     >
       <button
@@ -2091,15 +2258,26 @@ function NoteEpinglee({ tache, actions }) {
           ⠿⠿
         </span>
 
-        <button
-          type="button"
-          className="note_epinglee_fermer"
-          onClick={actions.demanderDesepingler}
-          aria-label="Désépingler la note"
-          title="Désépingler"
-        >
-          ✕
-        </button>
+        <div className="note_epinglee_actions_droite">
+          <button
+            type="button"
+            className="note_epinglee_valider"
+            onClick={actions.toggleTerminee}
+            aria-label={tache.terminee ? "Marquer comme non terminée" : "Marquer comme terminée"}
+            title="Terminer"
+          >
+            <Check size={14} />
+          </button>
+          <button
+            type="button"
+            className="note_epinglee_fermer"
+            onClick={actions.demanderDesepingler}
+            aria-label="Désépingler la note"
+            title="Désépingler"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       <div className="note_epinglee_contenu_lecture">
@@ -2145,32 +2323,16 @@ function genererNumeroSession(sessionsExistantes) {
 // travail terminées (10 emplacements max). Survol d'un point rempli =
 // tooltip affichant la durée de la séance correspondante.
 function PomodoroTracker({ points }) {
-  const emplacements = Array.from({ length: 10 });
+  const nbTours = points.length;
 
   return (
-    <div className="pomodoro_tracker">
-      <div className="pomodoro_tracker_barre">
-        {emplacements.map((_, index) => {
-          const point = points[index];
-          return (
-            <div key={index} className="pomodoro_tracker_slot">
-              {point && (
-                <>
-                  <span className="pomodoro_tracker_point"></span>
-                  <span className="pomodoro_tracker_tooltip">
-                    Séance de {point.duree} min
-                  </span>
-                </>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <span className="pomodoro_compteur">
+      Tours : {nbTours}
+    </span>
   );
 }
 
-function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre, pointsPomodoro, modeLecture, setModeLecture, sessionConsultee, setSessionConsultee, sessionsSauvegardees, setSessionsSauvegardees, sessionsChargeesPourRef }) {
+function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre, pointsPomodoro, modeLecture, setModeLecture, sessionConsultee, setSessionConsultee, sessionsSauvegardees, setSessionsSauvegardees, sessionsChargeesPourRef, remplacerTaches }) {
   const { connecte, utilisateur } = useAuth();
 
   const [idAgrandie, setIdAgrandie] = useState(null);
@@ -2204,6 +2366,15 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
   const [themeSession, setThemeSession] = useState('');
   const [themeDropdownOuvert, setThemeDropdownOuvert] = useState(false);
 
+  useEffect(() => {
+    if (sessionConsultee) {
+      setTitreSession(sessionConsultee.titre || '');
+      setThemeSession(sessionConsultee.theme || '');
+    } else {
+      setTitreSession('');
+      setThemeSession('');
+    }
+  }, [sessionConsultee]);
 
   // --- Mode "organiser" : numérotation manuelle de l'ordre des notes ---
   const [modeOrganisationActif, setModeOrganisationActif] = useState(false);
@@ -2397,21 +2568,63 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     setRechercheOuverte(false);
   };
 
-  // Enregistre la session actuelle sans créer une nouvelle session
+  const tachesHistoriquesNonTerminees = (sessionConsultee?.notes || []).filter(t => !t.terminee);
+  const nbTachesADeplacer = tachesHistoriquesNonTerminees.length;
+
+  const deplacerNotesNonTerminees = () => {
+    if (!sessionConsultee) return;
+    
+    const tachesTerminees = (sessionConsultee.notes || []).filter(t => t.terminee);
+    
+    const sessionArchiveeMiseAJour = {
+      ...sessionConsultee,
+      notes: tachesTerminees,
+    };
+    
+    const sessionsMisesAJour = sessionsSauvegardees.map(s => 
+      s.id === sessionConsultee.id ? sessionArchiveeMiseAJour : s
+    );
+    
+    setSessionsSauvegardees(sessionsMisesAJour);
+    
+    if (connecte && utilisateur?.id && sessionsChargeesPourRef.current === utilisateur.id) {
+      sauvegarderSessionArchivee(utilisateur.id, sessionArchiveeMiseAJour);
+    }
+    
+    if (typeof remplacerTaches === 'function') {
+      remplacerTaches(tachesHistoriquesNonTerminees);
+    }
+    
+    setTitreSession('');
+    setNumeroSession(genererNumeroSession(sessionsMisesAJour));
+    setDateCreationSession(new Date().toISOString());
+    setConfirmationOuverte(false);
+    
+    setModeLecture(false);
+    setSessionConsultee(null);
+  };
+
+  // Enregistre la session actuelle (crée une nouvelle ou met à jour l'existante)
   const enregistrerSession = () => {
     const maintenant = new Date();
 
     const sessionArchivee = {
-      id: `session_${Date.now()}`,
+      id: sessionConsultee ? sessionConsultee.id : `session_${Date.now()}`,
       titre: titreSession.trim() || `Session ${numeroSession}`,
       numero: numeroSession,
+      theme: themeSession,
       date: maintenant.toLocaleDateString(),
       heure: maintenant.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      dateCreation: dateCreationSession,
+      dateCreation: sessionConsultee ? sessionConsultee.dateCreation : dateCreationSession,
       notes: taches,
     };
 
-    const sessionsMisesAJour = [...sessionsSauvegardees, sessionArchivee];
+    let sessionsMisesAJour;
+    if (sessionConsultee) {
+      sessionsMisesAJour = sessionsSauvegardees.map(s => s.id === sessionConsultee.id ? sessionArchivee : s);
+    } else {
+      sessionsMisesAJour = [...sessionsSauvegardees, sessionArchivee];
+    }
 
     setSessionsSauvegardees(sessionsMisesAJour);
 
@@ -2432,7 +2645,7 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
 
   return (
     <div
-      className="todo_zone"
+      className={`todo_zone ${modeLecture ? 'todo_zone--lecture' : ''}`}
       onContextMenu={(e) => {
         if (modeOrganisationActif) {
           e.preventDefault();
@@ -2452,17 +2665,38 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
           {/* Barre supérieure */}
           <div className="todo_actions_top">
 
-            <button
-              type="button"
-              className="todo_btn_ajouter"
-              onClick={demarrerNouvelleSession}
-            >
-              +nouvelle session
-            </button>
+            {!modeLecture && (
+              <button
+                type="button"
+                className="todo_btn_ajouter"
+                onClick={demarrerNouvelleSession}
+              >
+                +nouvelle session
+              </button>
+            )}
 
             {modeLecture ? (
-              <div className="session_action_btn">
-                Mode lecture
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <span className="session_mode_lecture_texte">
+                  Mode lecture
+                </span>
+                {nbTachesADeplacer > 0 && (
+                  <button
+                    type="button"
+                    className="session_action_btn session_btn_deplacer"
+                    onClick={deplacerNotesNonTerminees}
+                    style={{ marginRight: '150px' }}
+                  >
+                    Déplacer les {nbTachesADeplacer}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="session_action_btn session_btn_continuer"
+                  onClick={() => setModeLecture(false)}
+                >
+                  Continuer la session
+                </button>
               </div>
             ) : (
               <button
@@ -2482,6 +2716,14 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
             <div className="session_infos">
 
               <div className="session_titre_ligne">
+                <input
+                  type="text"
+                  className="session_titre_input"
+                  placeholder="Titre de la session"
+                  value={titreSession}
+                  onChange={(e) => setTitreSession(e.target.value)}
+                />
+
                 <div className="theme_dropdown_wrapper">
                   <button
                     type="button"
@@ -2510,14 +2752,6 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
                     </ul>
                   )}
                 </div>
-
-                <input
-                  type="text"
-                  className="session_titre_input"
-                  placeholder="Titre de la session"
-                  value={titreSession}
-                  onChange={(e) => setTitreSession(e.target.value)}
-                />
               </div>
 
               <span className="session_progression_score">
@@ -2987,72 +3221,22 @@ function formaterTempsPiste(s) {
 // changement de musique, sans avoir à gérer manuellement la resynchronisation.
 function LecteurVinyle({ musique, fermer, onMettreAJour }) {
   const [tempsActuel, setTempsActuel] = useState(0);
-  const [duree, setDuree] = useState(musique.duree || 0);
-  const [position, setPosition] = useState(musique.position || positionParDefautLecteur());
-  const [glisseActif, setGlisseActif] = useState(false);
+  const [duree, setDuree] = useState(musique?.duree || 0);
 
-  const positionRef = useRef(position);
   const conteneurRef = useRef(null);
-  const decalageRef = useRef({ x: 0, y: 0 });
-  const enTrainDeGlisser = useRef(false);
 
   const lecteurYoutubeRef = useRef(null);
   const conteneurYoutubeRef = useRef(null);
   const intervalProgressionRef = useRef(null);
   const intervalSimulationRef = useRef(null);
-  const boucleRef = useRef(Boolean(musique.boucle));
+  const boucleRef = useRef(Boolean(musique?.boucle));
   const onMettreAJourRef = useRef(onMettreAJour);
 
-  const enLecture = Boolean(musique.enLecture);
-  const boucle = Boolean(musique.boucle);
+  const enLecture = Boolean(musique?.enLecture);
+  const boucle = Boolean(musique?.boucle);
 
   useEffect(() => { onMettreAJourRef.current = onMettreAJour; });
   useEffect(() => { boucleRef.current = boucle; }, [boucle]);
-
-  // --- Glisser-déposer : mêmes principes que NoteEpinglee. La position n'est
-  // remontée au composant App (pour persistance) qu'une fois le glissement
-  // terminé, afin de garder l'animation fluide pendant le déplacement.
-  useEffect(() => {
-    const gererDeplacement = (e) => {
-      if (!enTrainDeGlisser.current) return;
-      const marge = 8;
-      const largeur = conteneurRef.current?.offsetWidth || 168;
-      const hauteur = conteneurRef.current?.offsetHeight || 220;
-
-      let x = e.clientX - decalageRef.current.x;
-      let y = e.clientY - decalageRef.current.y;
-
-      x = Math.min(Math.max(x, marge), window.innerWidth - largeur - marge);
-      y = Math.min(Math.max(y, marge), window.innerHeight - hauteur - marge);
-
-      positionRef.current = { x, y };
-      setPosition({ x, y });
-    };
-
-    const terminerDrag = () => {
-      if (!enTrainDeGlisser.current) return;
-      enTrainDeGlisser.current = false;
-      setGlisseActif(false);
-      onMettreAJourRef.current?.({ position: positionRef.current });
-    };
-
-    document.addEventListener('pointermove', gererDeplacement);
-    document.addEventListener('pointerup', terminerDrag);
-    return () => {
-      document.removeEventListener('pointermove', gererDeplacement);
-      document.removeEventListener('pointerup', terminerDrag);
-    };
-  }, []);
-
-  const demarrerDrag = (e) => {
-    e.preventDefault();
-    enTrainDeGlisser.current = true;
-    setGlisseActif(true);
-    decalageRef.current = {
-      x: e.clientX - positionRef.current.x,
-      y: e.clientY - positionRef.current.y,
-    };
-  };
 
   // Mise en place du lecteur YouTube caché (audio réel). Grâce à la `key`
   // posée sur ce composant dans App, un changement de piste remonte un tout
@@ -3196,18 +3380,9 @@ function LecteurVinyle({ musique, fermer, onMettreAJour }) {
   return (
     <div
       ref={conteneurRef}
-      className={`lecteur_vinyle ${glisseActif ? 'lecteur_vinyle--glisse' : ''}`}
-      style={{ left: `${position.x}px`, top: `${position.y}px` }}
+      className="lecteur_vinyle"
     >
       <div className="lecteur_vinyle_entete">
-        <span
-          className="lecteur_vinyle_poignee"
-          onPointerDown={demarrerDrag}
-          title="Déplacer le lecteur"
-          aria-hidden="true"
-        >
-          ⠿⠿
-        </span>
 
         <button
           type="button"
@@ -4071,10 +4246,10 @@ function OngletRecompenses({ recompenses, onOuvrirRecompense }) {
 }
 
 const ONGLETS_POIGNEE = [
-  { id: 1, icone: '📝', label: 'Notes', notif: true },
-  { id: 4, icone: '🎁', label: 'Récompenses', notif: true },
-  { id: 2, icone: '⚙️', label: 'Réglages', notif: true },
-  { id: 3, icone: '🏁', label: 'Salon de course', notif: true },
+  { id: 1, icone: <SquarePen size={18} />, label: 'Notes', notif: true },
+  { id: 4, icone: <Gift size={18} />, label: 'Récompenses', notif: true },
+  { id: 2, icone: <AlarmClockCheck size={18} />, label: 'Réglages', notif: true },
+  { id: 3, icone: <Users size={18} />, label: 'Salon de course', notif: true },
 ];
 
 // BlocDeux relaie les props "fond" et "réglages Pomodoro" vers Param,
@@ -4117,7 +4292,8 @@ function BlocDeux({
   setSessionConsulteeApp,
   sessionsSauvegardees,
   setSessionsSauvegardees,
-  sessionsChargeesPourRef
+  sessionsChargeesPourRef,
+  remplacerTaches
 }) {
 
 
@@ -4177,6 +4353,7 @@ function BlocDeux({
               sessionsSauvegardees={sessionsSauvegardees}
               setSessionsSauvegardees={setSessionsSauvegardees}
               sessionsChargeesPourRef={sessionsChargeesPourRef}
+              remplacerTaches={remplacerTaches}
             />
           )}
           {vueActive === 2 && (
@@ -4234,7 +4411,7 @@ function BarreDefilante({ actif, phase }) {
           scrolling="no"
           allowTransparency="true"
         />
-        
+
         {/* Coureur au repos (En pause) */}
         <iframe
           src="/runner_pose.html"
@@ -5006,6 +5183,39 @@ function App() {
   });
 
   const notesEpinglees = taches.filter((t) => t.epinglee);
+  const aDesNotesEpinglees = notesEpinglees.length > 0;
+
+  const basculerEpinglageToutesLesNotes = () => {
+    setTaches((prev) => {
+      let compteEpingles = 0;
+      return prev.map((t) => {
+        if (aDesNotesEpinglees) {
+          // Si des notes sont épinglées, on les range (désépingle)
+          return { ...t, epinglee: false };
+        } else {
+          // Sinon, on les déploie (épingle). On réutilise la position si elle existe
+          const nouvellePos = t.position || {
+            x: 60 + (compteEpingles % 6) * 34,
+            y: 130 + (compteEpingles % 6) * 34,
+          };
+          compteEpingles++;
+          return { ...t, epinglee: true, position: nouvellePos };
+        }
+      });
+    });
+  };
+
+  // Range automatiquement toutes les notes épinglées à l'ouverture du panneau latéral
+  useEffect(() => {
+    if (panelOuvert) {
+      setTaches((prev) => {
+        if (prev.some((t) => t.epinglee)) {
+          return prev.map((t) => (t.epinglee ? { ...t, epinglee: false } : t));
+        }
+        return prev;
+      });
+    }
+  }, [panelOuvert]);
 
   // Vérifie le format "rgb(r, g, b)" avec composantes entre 0 et 255, puis applique
   const appliquerCouleurFond = (valeur) => {
@@ -5283,20 +5493,28 @@ function App() {
               sessionsSauvegardees={sessionsProfilArchivees}
               setSessionsSauvegardees={setSessionsProfilArchivees}
               sessionsChargeesPourRef={sessionsChargeesPourRef}
+              remplacerTaches={setTaches}
             />
           )}
 
           <BarreDefilante actif={enMarche} phase={chronoPhase} />
 
-          {/* Bouton Mode concentration : toujours visible, y compris en plein écran,
-        pour permettre à l'utilisateur de sortir du mode. */}
-          <button
-            type="button"
-            className="btn_mode_concentration"
-            onClick={modeConcentration ? demanderQuitterModeConcentration : activerModeConcentration}
-          >
-            {modeConcentration ? 'Quitter le mode concentration' : 'Mode concentration'}
-          </button>
+          <div className="actions_haut_droite">
+            <button
+              type="button"
+              className="btn_action_haut"
+              onClick={basculerEpinglageToutesLesNotes}
+            >
+              {aDesNotesEpinglees ? 'Ranger' : 'Déployer les notes'}
+            </button>
+            <button
+              type="button"
+              className="btn_action_haut"
+              onClick={modeConcentration ? demanderQuitterModeConcentration : activerModeConcentration}
+            >
+              {modeConcentration ? 'Quitter le mode concentration' : 'Mode concentration'}
+            </button>
+          </div>
 
           <ModalProfil
             ouvert={profilOuvert}
@@ -5326,17 +5544,30 @@ function App() {
             <NoteEpinglee key={tache.id} tache={tache} actions={actionsPourTache(tache.id)} />
           ))}
 
-          {/* Lecteur de musique d'ambiance : widget flottant "vinyle", librement
-        déplaçable. La `key` force un remontage propre à chaque changement
-        de piste (voir cleLecteurMusique ci-dessus). */}
-          {musiqueAmbiance && lecteurMusiqueVisible && (
-            <LecteurVinyle
-              key={cleLecteurMusique}
-              musique={musiqueAmbiance}
-              fermer={() => setLecteurMusiqueVisible(false)}
-              onMettreAJour={mettreAJourMusique}
-            />
-          )}
+          {/* Lecteur de musique d'ambiance intégré dans un panneau gauche */}
+          <div className={`panel_gauche ${lecteurMusiqueVisible ? '' : 'panel_gauche--collapsed'}`}>
+            <button
+              className="panel_gauche_poignee"
+              onClick={() => setLecteurMusiqueVisible(!lecteurMusiqueVisible)}
+              aria-label={lecteurMusiqueVisible ? 'Fermer le lecteur' : 'Ouvrir le lecteur'}
+            >
+              <Headphones size={16} />
+            </button>
+            <div className="panel_gauche_corps">
+              {musiqueAmbiance ? (
+                <LecteurVinyle
+                  key={cleLecteurMusique}
+                  musique={musiqueAmbiance}
+                  fermer={() => setLecteurMusiqueVisible(false)}
+                  onMettreAJour={mettreAJourMusique}
+                />
+              ) : (
+                <div className="panel_gauche_vide">
+                  Aucune musique sélectionnée
+                </div>
+              )}
+            </div>
+          </div>
 
           <ModalChoisirMusique
             ouvert={choixMusiqueOuvert}

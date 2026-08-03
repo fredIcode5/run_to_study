@@ -57,7 +57,10 @@ export function AuthProvider({ children }) {
 
   const connexionAvecGoogle = async () => {
     const provider = new GoogleAuthProvider()
-    await signInWithPopup(auth, provider)
+    const userCredential = await signInWithPopup(auth, provider)
+    const user = userCredential.user
+    user.id = user.uid
+    return { user }
   }
 
   const deconnexion = async () => {
