@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Play, Pause, SquarePen, Gift, AlarmClockCheck, Users, Headphones, Check } from 'lucide-react'
+import { Play, Pause, SquarePen, Gift, Headphones } from 'lucide-react'
 import './App.css'
 import { useAuth } from './context/AuthContext.jsx'
 import {
@@ -16,13 +16,9 @@ import {
   chargerSessionsArchivees,
   sauvegarderSessionArchivee,
   chargerRecompenses,
+  ajouterRecompense,
   mettreAJourRecompense,
   rechercherUtilisateurs,
-  envoyerDemandeAmi,
-  repondreDemandeAmi,
-  getDemandesAmis,
-  getDemandesEnvoyees,
-  getAmis,
 } from './lib/firebaseDataService'
 
 
@@ -302,13 +298,7 @@ function ModalConnexion({ ouvert, fermer, vueInitiale = 'connexion' }) {
     setErreur(null);
     setEnvoiEnCours(true);
     try {
-      const { user } = await connexionAvecEmail(emailConnexion.trim(), motDePasseConnexion);
-      if (user) {
-        await sauvegarderProfil(user.id, {
-          email: user.email,
-          pseudo: user.displayName || user.email // Garanti d'avoir un pseudo cherchable
-        });
-      }
+      await connexionAvecEmail(emailConnexion.trim(), motDePasseConnexion);
       // La fermeture se fait via l'effet ci-dessus quand `connecte` passe à true
     } catch (err) {
       setErreur(traduireErreur(err));
@@ -328,17 +318,15 @@ function ModalConnexion({ ouvert, fermer, vueInitiale = 'connexion' }) {
 
     setEnvoiEnCours(true);
     try {
-      const { user } = await inscriptionAvecEmail(
+      const { session } = await inscriptionAvecEmail(
         emailCreation.trim(),
         motDePasseCreation,
         { pseudo: pseudoCreation.trim(), date_naissance: dateNaissanceCreation }
       );
-      if (user) {
-        await sauvegarderProfil(user.id, {
-          pseudo: pseudoCreation.trim(),
-          email: emailCreation.trim()
-        });
-        fermer();
+      // Si la confirmation par e-mail est activée côté Supabase, aucune session
+      // n'est renvoyée immédiatement : on informe l'utilisateur au lieu de fermer.
+      if (!session) {
+        setErreur("Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse avant de te connecter.");
       }
     } catch (err) {
       setErreur(traduireErreur(err));
@@ -350,14 +338,8 @@ function ModalConnexion({ ouvert, fermer, vueInitiale = 'connexion' }) {
   const cliquerGoogle = async () => {
     setErreur(null);
     try {
-      const { user } = await connexionAvecGoogle();
-      if (user) {
-        await sauvegarderProfil(user.id, {
-          pseudo: user.displayName || user.email,
-          email: user.email
-        });
-        fermer();
-      }
+      await connexionAvecGoogle();
+      // Redirection gérée par Supabase : la page quitte l'appli puis revient.
     } catch (err) {
       setErreur(traduireErreur(err));
     }
@@ -734,7 +716,7 @@ function OngletMonRunner() {
       newColors[v] = value;
     });
     setColors(newColors);
-
+    
     if (iframeRef.current && iframeRef.current.contentWindow) {
       iframeRef.current.contentWindow.postMessage(
         { type: 'UPDATE_RUNNER_COLORS', colors: newColors },
@@ -807,21 +789,6 @@ function OngletProfil({ pseudo, distanceTotale, historiqueJoursPomodoro, photoPr
   return (
     <div className="profil_onglet_panneau profil_onglet_panneau--profil">
       <div className="profil_layout">
-        {/* Colonne gauche : emplacement réservé pour le coureur (skin du
-            personnage). Fond gris pour bien le distinguer en attendant
-            l'intégration du visuel final. */}
-        <div className="profil_coureur_colonne">
-          <div
-            className="profil_coureur_placeholder"
-            style={{ backgroundColor: '#d9d9d9' }}
-          >
-            {/* Emplacement visuel réservé : aperçu du coureur à venir */}
-          </div>
-          <button type="button" className="btn_secondaire profil_coureur_btn_personnaliser">
-            Personnaliser
-          </button>
-        </div>
-
         <div className="profil_colonne_infos">
           <div className="profil_entete">
             <div className="profil_photo">
@@ -893,38 +860,33 @@ function OngletHistorique({ sessionsSauvegardees, onConsulter }) {
   const [critereTri, setCritereTri] = useState('chronologie');
   const [ordreCroissant, setOrdreCroissant] = useState(false);
 
-  const sessionsFiltrees = (sessionsSauvegardees || [])
-    .filter((s) => {
-      const cible = recherche.trim().toLowerCase();
-      if (!cible) return true;
-      return (
-        s.titre.toLowerCase().includes(cible) ||
-        s.numero.toLowerCase().includes(cible)
-      );
-    })
-    .sort((a, b) => {
-      let comparaison = 0;
-      switch (critereTri) {
-        case 'alphabétique':
-          comparaison = (a.titre || '').localeCompare(b.titre || '');
-          break;
-        case 'thème':
-          comparaison = (a.theme || '').localeCompare(b.theme || '');
-          break;
-        case 'tache non finie':
-          const nonFiniesA = (a.notes || []).filter(t => !t.terminee).length;
-          const nonFiniesB = (b.notes || []).filter(t => !t.terminee).length;
-          comparaison = nonFiniesA - nonFiniesB;
-          break;
-        case 'chronologie':
-        default:
-          const tsA = parseInt((a.id || '').replace('session_', '')) || 0;
-          const tsB = parseInt((b.id || '').replace('session_', '')) || 0;
-          comparaison = tsA - tsB;
-          break;
-      }
-      return ordreCroissant ? comparaison : -comparaison;
-    });
+  const sessionsFiltrees = (sessionsSauvegardees || []).filter((s) => {
+    const cible = recherche.trim().toLowerCase();
+    if (!cible) return true;
+    return (
+      s.titre.toLowerCase().includes(cible) ||
+      s.numero.toLowerCase().includes(cible)
+    );
+  });
+
+  const sessionsTriees = [...sessionsFiltrees].sort((a, b) => {
+    let valA, valB;
+
+    if (critereTri === 'chronologie') {
+      valA = parseInt(a.id.split('_')[1]) || 0;
+      valB = parseInt(b.id.split('_')[1]) || 0;
+    } else if (critereTri === 'theme') {
+      valA = a.titre.toLowerCase();
+      valB = b.titre.toLowerCase();
+    } else if (critereTri === 'tachesCompletees') {
+      valA = a.notes.filter(n => n.terminee).length;
+      valB = b.notes.filter(n => n.terminee).length;
+    }
+
+    if (valA < valB) return ordreCroissant ? -1 : 1;
+    if (valA > valB) return ordreCroissant ? 1 : -1;
+    return 0;
+  });
 
   return (
     <div className="profil_onglet_panneau profil_onglet_panneau--historique">
@@ -938,16 +900,17 @@ function OngletHistorique({ sessionsSauvegardees, onConsulter }) {
           onChange={(e) => setRecherche(e.target.value)}
           className="historique_recherche_input"
         />
-        <select
+        
+        <select 
+          className="historique_tri_select"
           value={critereTri}
           onChange={(e) => setCritereTri(e.target.value)}
-          className="historique_tri_select"
         >
           <option value="chronologie">Chronologie</option>
-          <option value="alphabétique">Alphabétique</option>
-          <option value="thème">Thème</option>
-          <option value="tache non finie">Tâches non finies</option>
+          <option value="theme">Thème</option>
+          <option value="tachesCompletees">Tâches complétées</option>
         </select>
+        
         <button
           type="button"
           className="historique_tri_btn"
@@ -959,7 +922,7 @@ function OngletHistorique({ sessionsSauvegardees, onConsulter }) {
       </div>
 
       <div className="historique_liste">
-        {sessionsFiltrees.length === 0 ? (
+        {sessionsTriees.length === 0 ? (
           <p className="historique_vide">Aucune session trouvée.</p>
         ) : (
           <table className="sessions_tableau historique_tableau">
@@ -975,7 +938,7 @@ function OngletHistorique({ sessionsSauvegardees, onConsulter }) {
               </tr>
             </thead>
             <tbody>
-              {sessionsFiltrees.map((s) => (
+              {sessionsTriees.map((s) => (
                 <tr key={s.id}>
                   <td className="session_titre_cellule">{s.titre}</td>
                   <td>
@@ -1063,54 +1026,52 @@ function OngletStats() {
 // Droite : liste d'amis (placeholder), avec statut et actions rapides.
 function OngletSocial() {
   const { utilisateur } = useAuth();
-  const [recherche, setRecherche] = useState('');
-  const [resultats, setResultats] = useState([]);
-  const [amis, setAmis] = useState([]);
-  const [demandesRecues, setDemandesRecues] = useState([]);
-  const [demandesEnvoyees, setDemandesEnvoyees] = useState([]);
-  const [loadingSearch, setLoadingSearch] = useState(false);
-  
-  const chargerDonneesSociales = async () => {
-    if (!utilisateur?.id) return;
-    const [lesAmis, recues, envoyees] = await Promise.all([
-      getAmis(utilisateur.id),
-      getDemandesAmis(utilisateur.id),
-      getDemandesEnvoyees(utilisateur.id)
-    ]);
-    setAmis(lesAmis);
-    setDemandesRecues(recues);
-    setDemandesEnvoyees(envoyees);
-  };
+  const [rechercheTerme, setRechercheTerme] = useState('');
+  const [resultatsRecherche, setResultatsRecherche] = useState([]);
+  const [enChargementRecherche, setEnChargementRecherche] = useState(false);
 
+  // Recherche dynamique avec debounce
   useEffect(() => {
-    chargerDonneesSociales();
-  }, [utilisateur?.id]);
-
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (!recherche.trim()) {
-        setResultats([]);
-        setLoadingSearch(false);
+    let timeoutId;
+    
+    const lancerRecherche = async () => {
+      if (!rechercheTerme || rechercheTerme.trim().length < 2) {
+        setResultatsRecherche([]);
         return;
       }
-      setLoadingSearch(true);
-      const res = await rechercherUtilisateurs(recherche, utilisateur?.id);
-      setResultats(res);
-      setLoadingSearch(false);
-    }, 400); // 400ms debounce
-    return () => clearTimeout(timer);
-  }, [recherche, utilisateur?.id]);
+      
+      setEnChargementRecherche(true);
+      try {
+        const resultats = await rechercherUtilisateurs(rechercheTerme, utilisateur?.id);
+        setResultatsRecherche(resultats);
+      } catch (err) {
+        console.error("Erreur lors de la recherche :", err);
+        setResultatsRecherche([]);
+      } finally {
+        setEnChargementRecherche(false);
+      }
+    };
 
-  const handleAjouter = async (destId) => {
-    if (!utilisateur?.id) return;
-    await envoyerDemandeAmi(utilisateur.id, destId);
-    await chargerDonneesSociales();
-  };
+    if (rechercheTerme.trim().length >= 2) {
+      timeoutId = setTimeout(lancerRecherche, 300); // 300ms de debounce
+    } else {
+      setResultatsRecherche([]);
+    }
 
-  const handleRepondre = async (demandeId, statut) => {
-    await repondreDemandeAmi(demandeId, statut);
-    await chargerDonneesSociales();
-  };
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [rechercheTerme, utilisateur?.id]);
+
+  // Liste d'amis placeholder : structure prête pour être remplacée par
+  // de vraies données (statut en ligne, niveau d'activité, invitations...).
+  // "activite" est un pourcentage placeholder pour la barre d'activité.
+  const AMIS_PLACEHOLDER = [
+    { id: 'a1', pseudo: 'Ami_1', enLigne: true, activite: 80 },
+    { id: 'a2', pseudo: 'Ami_2', enLigne: true, activite: 45 },
+    { id: 'a3', pseudo: 'Ami_3', enLigne: false, activite: 15 },
+    { id: 'a4', pseudo: 'Ami_4', enLigne: false, activite: 60 },
+  ];
 
   return (
     <div className="profil_onglet_panneau profil_onglet_panneau--social">
@@ -1124,39 +1085,20 @@ function OngletSocial() {
             type="text"
             className="social_recherche_input"
             placeholder="Rechercher un pseudo ou email..."
-            value={recherche}
-            onChange={(e) => setRecherche(e.target.value)}
+            value={rechercheTerme}
+            onChange={(e) => setRechercheTerme(e.target.value)}
           />
 
           <div className="social_resultats_liste">
-            {!recherche.trim() && resultats.length === 0 && (
-              <p className="social_vide_texte" style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center', marginTop: '20px' }}>
-                Cherchez des amis avec qui courir, travailler et évoluer ensemble.
-              </p>
-            )}
-            
-            {recherche.trim() && resultats.length === 0 && !loadingSearch && (
-              <p className="social_vide_texte" style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center', marginTop: '20px' }}>
-                Aucun utilisateur trouvé.
-              </p>
-            )}
-
-            {loadingSearch && (
-              <p className="social_vide_texte" style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center', marginTop: '20px' }}>
-                Recherche en cours...
-              </p>
-            )}
-
-            {!loadingSearch && resultats.map((resultat) => {
-              const estAmi = amis.some(a => a.amiId === resultat.id);
-              const aEnvoyeDemande = demandesEnvoyees.some(d => d.destinataire_id === resultat.id);
-              
-              return (
+            {enChargementRecherche ? (
+              <p className="social_message_info">Recherche en cours...</p>
+            ) : resultatsRecherche.length > 0 ? (
+              resultatsRecherche.map((resultat) => (
                 <div key={resultat.id} className="social_resultat_rectangle social_carte_compacte">
                   <div className="social_resultat_infos">
                     <div className="social_resultat_photo">
                       {resultat.photo_profil ? (
-                        <img src={resultat.photo_profil} alt="" className="social_photo_img" />
+                        <img src={resultat.photo_profil} alt={`Profil de ${resultat.pseudo}`} className="social_resultat_photo_img" />
                       ) : (
                         <span className="social_resultat_photo_icone">👤</span>
                       )}
@@ -1167,98 +1109,61 @@ function OngletSocial() {
                     </div>
                   </div>
 
-                  {estAmi ? (
-                    <span className="social_statut_texte" style={{ fontSize: '12px', color: '#10b981', fontWeight: 'bold' }}>Ami</span>
-                  ) : aEnvoyeDemande ? (
-                    <span className="social_statut_texte" style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 'bold' }}>En attente</span>
-                  ) : (
-                    <button 
-                      type="button" 
-                      className="btn_secondaire social_resultat_btn_ajouter"
-                      onClick={() => handleAjouter(resultat.id)}
-                    >
-                      Ajouter
-                    </button>
-                  )}
+                  <button type="button" className="btn_secondaire social_resultat_btn_ajouter">
+                    Ajouter
+                  </button>
                 </div>
-              );
-            })}
+              ))
+            ) : rechercheTerme.trim().length >= 2 ? (
+              <p className="social_message_info">Aucun utilisateur trouvé.</p>
+            ) : (
+              <p className="social_message_info">Tapez au moins 2 caractères.</p>
+            )}
           </div>
         </div>
 
-        {/* Colonne droite : liste d'amis et demandes */}
+        {/* Colonne droite : liste d'amis */}
         <div className="social_colonne social_colonne_amis">
-          
-          {demandesRecues.length > 0 && (
-            <>
-              <h4 className="profil_section_titre">Demandes d'amis</h4>
-              <div className="social_amis_liste" style={{ marginBottom: '20px' }}>
-                {demandesRecues.map((demande) => (
-                  <div key={demande.id} className="social_ami_rectangle social_carte_compacte">
-                    <div className="social_ami_photo">
-                      {demande.expediteur.photo_profil ? (
-                        <img src={demande.expediteur.photo_profil} alt="" className="social_photo_img" />
-                      ) : (
-                        <span className="social_ami_photo_icone">👤</span>
-                      )}
-                    </div>
-                    <div className="social_ami_contenu">
-                      <div className="social_ami_ligne_haut">
-                        <span className="social_ami_pseudo">{demande.expediteur.pseudo}</span>
-                        <span className="social_resultat_niveau" style={{ marginLeft: 8 }}>Niv. {demande.expediteur.niveau}</span>
-                      </div>
-                      <div className="social_ami_actions" style={{ marginTop: 8 }}>
-                        <button 
-                          type="button" 
-                          className="btn_primaire" 
-                          onClick={() => handleRepondre(demande.id, 'acceptee')}
-                          style={{ padding: '4px 8px', fontSize: 12 }}
-                        >
-                          Accepter
-                        </button>
-                        <button 
-                          type="button" 
-                          className="btn_secondaire"
-                          onClick={() => handleRepondre(demande.id, 'refusee')}
-                          style={{ padding: '4px 8px', fontSize: 12, marginLeft: 8 }}
-                        >
-                          Refuser
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
           <h4 className="profil_section_titre">Liste d'amis</h4>
 
           <div className="social_amis_liste">
-            {amis.length === 0 ? (
-              <p className="social_vide_texte" style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center', marginTop: '20px' }}>
-                Vous n'avez actuellement aucun ami.
-              </p>
-            ) : (
-              amis.map((ami) => (
-                <div key={ami.id} className="social_ami_rectangle social_carte_compacte">
-                  <div className="social_ami_photo">
-                    {ami.photo_profil ? (
-                      <img src={ami.photo_profil} alt="" className="social_photo_img" />
-                    ) : (
-                      <span className="social_ami_photo_icone">👤</span>
-                    )}
-                  </div>
+            {AMIS_PLACEHOLDER.map((ami) => (
+              <div key={ami.id} className="social_ami_rectangle social_carte_compacte">
+                {/* Emplacement visuel réservé : photo de profil de l'ami */}
+                <div className="social_ami_photo">
+                  <span className="social_ami_photo_icone">👤</span>
+                </div>
 
-                  <div className="social_ami_contenu">
-                    <div className="social_ami_ligne_haut">
-                      <span className="social_ami_pseudo">{ami.pseudo}</span>
-                      <span className="social_resultat_niveau" style={{ marginLeft: 8 }}>Niv. {ami.niveau}</span>
+                <div className="social_ami_contenu">
+                  <div className="social_ami_ligne_haut">
+                    <span className="social_ami_pseudo">{ami.pseudo}</span>
+                    <div className="social_ami_actions">
+                      <button type="button" className="btn_secondaire social_ami_btn_inviter">
+                        Inviter
+                      </button>
+                      <button type="button" className="btn_primaire social_ami_btn_rejoindre">
+                        Rejoindre
+                      </button>
                     </div>
                   </div>
+
+                  <div className="social_ami_statut_ligne">
+                    <span className={`social_ami_statut ${ami.enLigne ? 'social_ami_statut--en_ligne' : ''}`}>
+                      {ami.enLigne ? 'En ligne' : 'Hors ligne'}
+                    </span>
+                    <span className="social_ami_activite_label">Activité</span>
+                  </div>
+
+                  {/* Barre d'activité placeholder */}
+                  <div className="social_ami_barre_activite">
+                    <div
+                      className="social_ami_barre_activite_remplie"
+                      style={{ width: `${ami.activite}%` }}
+                    />
+                  </div>
                 </div>
-              ))
-            )}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -2008,18 +1913,20 @@ function TacheCarte({ tache, actions, onAgrandir, lectureSeule }) {
 
   return (
     <div
-      className={`todo_carte ${tache.terminee ? 'todo_carte--terminee' : ''} ${lectureSeule && !tache.terminee ? 'todo_carte--lecture-non-terminee' : ''}`}
+      className={`todo_carte ${tache.terminee ? 'todo_carte--terminee' : ''}${lectureSeule && !tache.terminee ? ' todo_carte--non-terminee-lecture' : ''}`}
       onClick={focaliserEdition}
     >
-      <button
-        type="button"
-        className="todo_carte_suppr"
-        onClick={(e) => { e.stopPropagation(); actions.supprimer(); }}
-        aria-label="Supprimer la tâche"
-        disabled={lectureSeule}
-      >
+      <div className="todo_carte_actions_haut">
+        <button
+          type="button"
+          className="todo_carte_suppr"
+          onClick={(e) => { e.stopPropagation(); actions.supprimer(); }}
+          aria-label="Supprimer la tâche"
+          disabled={lectureSeule}
+        >
 
-      </button>
+        </button>
+      </div>
 
       <textarea
         ref={zoneTexteRef}
@@ -2264,9 +2171,9 @@ function NoteEpinglee({ tache, actions }) {
             className="note_epinglee_valider"
             onClick={actions.toggleTerminee}
             aria-label={tache.terminee ? "Marquer comme non terminée" : "Marquer comme terminée"}
-            title="Terminer"
+            title={tache.terminee ? "Marquer comme non terminée" : "Marquer comme terminée"}
           >
-            <Check size={14} />
+            ✓
           </button>
           <button
             type="button"
@@ -2323,16 +2230,14 @@ function genererNumeroSession(sessionsExistantes) {
 // travail terminées (10 emplacements max). Survol d'un point rempli =
 // tooltip affichant la durée de la séance correspondante.
 function PomodoroTracker({ points }) {
-  const nbTours = points.length;
-
   return (
-    <span className="pomodoro_compteur">
-      Tours : {nbTours}
+    <span className="pomodoro_tours_compteur">
+      Tours : {points.length}
     </span>
   );
 }
 
-function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre, pointsPomodoro, modeLecture, setModeLecture, sessionConsultee, setSessionConsultee, sessionsSauvegardees, setSessionsSauvegardees, sessionsChargeesPourRef, remplacerTaches }) {
+function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre, pointsPomodoro, modeLecture, setModeLecture, sessionConsultee, setSessionConsultee, sessionsSauvegardees, setSessionsSauvegardees, sessionsChargeesPourRef, remplacerTachesActives }) {
   const { connecte, utilisateur } = useAuth();
 
   const [idAgrandie, setIdAgrandie] = useState(null);
@@ -2366,15 +2271,6 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
   const [themeSession, setThemeSession] = useState('');
   const [themeDropdownOuvert, setThemeDropdownOuvert] = useState(false);
 
-  useEffect(() => {
-    if (sessionConsultee) {
-      setTitreSession(sessionConsultee.titre || '');
-      setThemeSession(sessionConsultee.theme || '');
-    } else {
-      setTitreSession('');
-      setThemeSession('');
-    }
-  }, [sessionConsultee]);
 
   // --- Mode "organiser" : numérotation manuelle de l'ordre des notes ---
   const [modeOrganisationActif, setModeOrganisationActif] = useState(false);
@@ -2568,63 +2464,21 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     setRechercheOuverte(false);
   };
 
-  const tachesHistoriquesNonTerminees = (sessionConsultee?.notes || []).filter(t => !t.terminee);
-  const nbTachesADeplacer = tachesHistoriquesNonTerminees.length;
-
-  const deplacerNotesNonTerminees = () => {
-    if (!sessionConsultee) return;
-    
-    const tachesTerminees = (sessionConsultee.notes || []).filter(t => t.terminee);
-    
-    const sessionArchiveeMiseAJour = {
-      ...sessionConsultee,
-      notes: tachesTerminees,
-    };
-    
-    const sessionsMisesAJour = sessionsSauvegardees.map(s => 
-      s.id === sessionConsultee.id ? sessionArchiveeMiseAJour : s
-    );
-    
-    setSessionsSauvegardees(sessionsMisesAJour);
-    
-    if (connecte && utilisateur?.id && sessionsChargeesPourRef.current === utilisateur.id) {
-      sauvegarderSessionArchivee(utilisateur.id, sessionArchiveeMiseAJour);
-    }
-    
-    if (typeof remplacerTaches === 'function') {
-      remplacerTaches(tachesHistoriquesNonTerminees);
-    }
-    
-    setTitreSession('');
-    setNumeroSession(genererNumeroSession(sessionsMisesAJour));
-    setDateCreationSession(new Date().toISOString());
-    setConfirmationOuverte(false);
-    
-    setModeLecture(false);
-    setSessionConsultee(null);
-  };
-
-  // Enregistre la session actuelle (crée une nouvelle ou met à jour l'existante)
+  // Enregistre la session actuelle sans créer une nouvelle session
   const enregistrerSession = () => {
     const maintenant = new Date();
 
     const sessionArchivee = {
-      id: sessionConsultee ? sessionConsultee.id : `session_${Date.now()}`,
+      id: `session_${Date.now()}`,
       titre: titreSession.trim() || `Session ${numeroSession}`,
       numero: numeroSession,
-      theme: themeSession,
       date: maintenant.toLocaleDateString(),
       heure: maintenant.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      dateCreation: sessionConsultee ? sessionConsultee.dateCreation : dateCreationSession,
+      dateCreation: dateCreationSession,
       notes: taches,
     };
 
-    let sessionsMisesAJour;
-    if (sessionConsultee) {
-      sessionsMisesAJour = sessionsSauvegardees.map(s => s.id === sessionConsultee.id ? sessionArchivee : s);
-    } else {
-      sessionsMisesAJour = [...sessionsSauvegardees, sessionArchivee];
-    }
+    const sessionsMisesAJour = [...sessionsSauvegardees, sessionArchivee];
 
     setSessionsSauvegardees(sessionsMisesAJour);
 
@@ -2643,9 +2497,64 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     );
   });
 
+  // --- Mode lecture : nombre de tâches non terminées dans la session consultée
+  const tachesNonTerminees = modeLecture && sessionConsultee
+    ? (sessionConsultee.notes || []).filter((n) => !n.terminee).length
+    : 0;
+
+  // Quitte le mode lecture pour revenir à la session en cours
+  const continuerSession = () => {
+    setModeLecture(false);
+    setSessionConsultee(null);
+  };
+
+  // Déplace les tâches non terminées de la session consultée vers une nouvelle session active
+  const deplacerTachesNonTerminees = () => {
+    if (!sessionConsultee) return;
+    const nonTerminees = (sessionConsultee.notes || []).filter((n) => !n.terminee);
+    const terminees = (sessionConsultee.notes || []).filter((n) => n.terminee);
+    
+    if (nonTerminees.length === 0) return;
+
+    // 1. Sauvegarder la session de travail actuelle (en arrière-plan) pour ne rien perdre
+    if (taches.length > 0) {
+      enregistrerSession();
+    }
+
+    // 2. Mettre à jour l'ancienne session en retirant les non terminées
+    const ancienneSessionMiseAJour = {
+      ...sessionConsultee,
+      notes: terminees
+    };
+
+    const sessionsMisesAJour = sessionsSauvegardees.map((s) => 
+      s.id === ancienneSessionMiseAJour.id ? ancienneSessionMiseAJour : s
+    );
+    setSessionsSauvegardees(sessionsMisesAJour);
+
+    if (connecte && utilisateur?.id && sessionsChargeesPourRef.current === utilisateur.id) {
+      sauvegarderSessionArchivee(utilisateur.id, ancienneSessionMiseAJour);
+    }
+
+    // 3. Remplacer l'espace de travail actif par les tâches non terminées
+    const nouvellesTaches = nonTerminees.map((n) => ({ ...n, id: genererIdTache() }));
+    if (typeof remplacerTachesActives === 'function') {
+      remplacerTachesActives(nouvellesTaches);
+    }
+
+    // Mettre à jour les métadonnées de la session active
+    setTitreSession(`Suite de ${sessionConsultee.titre || 'Session'}`);
+    setNumeroSession(genererNumeroSession(sessionsMisesAJour));
+    setDateCreationSession(new Date().toISOString());
+
+    // 4. Quitter le mode lecture pour afficher la nouvelle session en cours
+    setModeLecture(false);
+    setSessionConsultee(null);
+  };
+
   return (
     <div
-      className={`todo_zone ${modeLecture ? 'todo_zone--lecture' : ''}`}
+      className={`todo_zone${modeLecture ? ' todo_zone--lecture' : ''}`}
       onContextMenu={(e) => {
         if (modeOrganisationActif) {
           e.preventDefault();
@@ -2676,27 +2585,28 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
             )}
 
             {modeLecture ? (
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <span className="session_mode_lecture_texte">
-                  Mode lecture
-                </span>
-                {nbTachesADeplacer > 0 && (
+              <div className="session_lecture_zone">
+                <span className="session_lecture_texte">Mode lecture</span>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {tachesNonTerminees > 0 && (
+                    <button
+                      type="button"
+                      className="session_btn_ajouter_rouge"
+                      onClick={deplacerTachesNonTerminees}
+                    >
+                      Ajouter les {tachesNonTerminees}
+                    </button>
+                  )}
+
                   <button
                     type="button"
-                    className="session_action_btn session_btn_deplacer"
-                    onClick={deplacerNotesNonTerminees}
-                    style={{ marginRight: '150px' }}
+                    className="session_btn_continuer"
+                    onClick={continuerSession}
                   >
-                    Déplacer les {nbTachesADeplacer}
+                    Continuer la session
                   </button>
-                )}
-                <button
-                  type="button"
-                  className="session_action_btn session_btn_continuer"
-                  onClick={() => setModeLecture(false)}
-                >
-                  Continuer la session
-                </button>
+                </div>
               </div>
             ) : (
               <button
@@ -2716,14 +2626,6 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
             <div className="session_infos">
 
               <div className="session_titre_ligne">
-                <input
-                  type="text"
-                  className="session_titre_input"
-                  placeholder="Titre de la session"
-                  value={titreSession}
-                  onChange={(e) => setTitreSession(e.target.value)}
-                />
-
                 <div className="theme_dropdown_wrapper">
                   <button
                     type="button"
@@ -2752,6 +2654,14 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
                     </ul>
                   )}
                 </div>
+
+                <input
+                  type="text"
+                  className="session_titre_input"
+                  placeholder="Titre de la session"
+                  value={titreSession}
+                  onChange={(e) => setTitreSession(e.target.value)}
+                />
               </div>
 
               <span className="session_progression_score">
@@ -3219,24 +3129,74 @@ function formaterTempsPiste(s) {
 // Astuce : ce composant est monté avec une `key` unique par piste (voir App),
 // ce qui garantit une réinitialisation propre de son état local à chaque
 // changement de musique, sans avoir à gérer manuellement la resynchronisation.
-function LecteurVinyle({ musique, fermer, onMettreAJour }) {
+function LecteurVinyle({ musique, fermer, onMettreAJour, modeTiroir }) {
   const [tempsActuel, setTempsActuel] = useState(0);
-  const [duree, setDuree] = useState(musique?.duree || 0);
+  const [duree, setDuree] = useState(musique.duree || 0);
+  const [position, setPosition] = useState(musique.position || positionParDefautLecteur());
+  const [glisseActif, setGlisseActif] = useState(false);
 
+  const positionRef = useRef(position);
   const conteneurRef = useRef(null);
+  const decalageRef = useRef({ x: 0, y: 0 });
+  const enTrainDeGlisser = useRef(false);
 
   const lecteurYoutubeRef = useRef(null);
   const conteneurYoutubeRef = useRef(null);
   const intervalProgressionRef = useRef(null);
   const intervalSimulationRef = useRef(null);
-  const boucleRef = useRef(Boolean(musique?.boucle));
+  const boucleRef = useRef(Boolean(musique.boucle));
   const onMettreAJourRef = useRef(onMettreAJour);
 
-  const enLecture = Boolean(musique?.enLecture);
-  const boucle = Boolean(musique?.boucle);
+  const enLecture = Boolean(musique.enLecture);
+  const boucle = Boolean(musique.boucle);
 
   useEffect(() => { onMettreAJourRef.current = onMettreAJour; });
   useEffect(() => { boucleRef.current = boucle; }, [boucle]);
+
+  // --- Glisser-déposer : mêmes principes que NoteEpinglee. La position n'est
+  // remontée au composant App (pour persistance) qu'une fois le glissement
+  // terminé, afin de garder l'animation fluide pendant le déplacement.
+  useEffect(() => {
+    const gererDeplacement = (e) => {
+      if (!enTrainDeGlisser.current) return;
+      const marge = 8;
+      const largeur = conteneurRef.current?.offsetWidth || 168;
+      const hauteur = conteneurRef.current?.offsetHeight || 220;
+
+      let x = e.clientX - decalageRef.current.x;
+      let y = e.clientY - decalageRef.current.y;
+
+      x = Math.min(Math.max(x, marge), window.innerWidth - largeur - marge);
+      y = Math.min(Math.max(y, marge), window.innerHeight - hauteur - marge);
+
+      positionRef.current = { x, y };
+      setPosition({ x, y });
+    };
+
+    const terminerDrag = () => {
+      if (!enTrainDeGlisser.current) return;
+      enTrainDeGlisser.current = false;
+      setGlisseActif(false);
+      onMettreAJourRef.current?.({ position: positionRef.current });
+    };
+
+    document.addEventListener('pointermove', gererDeplacement);
+    document.addEventListener('pointerup', terminerDrag);
+    return () => {
+      document.removeEventListener('pointermove', gererDeplacement);
+      document.removeEventListener('pointerup', terminerDrag);
+    };
+  }, []);
+
+  const demarrerDrag = (e) => {
+    e.preventDefault();
+    enTrainDeGlisser.current = true;
+    setGlisseActif(true);
+    decalageRef.current = {
+      x: e.clientX - positionRef.current.x,
+      y: e.clientY - positionRef.current.y,
+    };
+  };
 
   // Mise en place du lecteur YouTube caché (audio réel). Grâce à la `key`
   // posée sur ce composant dans App, un changement de piste remonte un tout
@@ -3380,20 +3340,31 @@ function LecteurVinyle({ musique, fermer, onMettreAJour }) {
   return (
     <div
       ref={conteneurRef}
-      className="lecteur_vinyle"
+      className={`lecteur_vinyle ${glisseActif ? 'lecteur_vinyle--glisse' : ''} ${modeTiroir ? 'lecteur_vinyle--tiroir' : ''}`}
+      style={modeTiroir ? {} : { left: `${position.x}px`, top: `${position.y}px` }}
     >
-      <div className="lecteur_vinyle_entete">
+      {!modeTiroir && (
+        <div className="lecteur_vinyle_entete">
+          <span
+            className="lecteur_vinyle_poignee"
+            onPointerDown={demarrerDrag}
+            title="Déplacer le lecteur"
+            aria-hidden="true"
+          >
+            ⠿⠿
+          </span>
 
-        <button
-          type="button"
-          className="lecteur_vinyle_fermer"
-          onClick={fermer}
-          aria-label="Fermer le lecteur de musique"
-          title="Fermer le lecteur"
-        >
-          ×
-        </button>
-      </div>
+          <button
+            type="button"
+            className="lecteur_vinyle_fermer"
+            onClick={fermer}
+            aria-label="Fermer le lecteur de musique"
+            title="Fermer le lecteur"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <MiniatureMusique
         className={`vinyle_miniature ${enLecture ? 'vinyle_miniature--lecture' : ''}`}
@@ -4248,8 +4219,8 @@ function OngletRecompenses({ recompenses, onOuvrirRecompense }) {
 const ONGLETS_POIGNEE = [
   { id: 1, icone: <SquarePen size={18} />, label: 'Notes', notif: true },
   { id: 4, icone: <Gift size={18} />, label: 'Récompenses', notif: true },
-  { id: 2, icone: <AlarmClockCheck size={18} />, label: 'Réglages', notif: true },
-  { id: 3, icone: <Users size={18} />, label: 'Salon de course', notif: true },
+  { id: 2, icone: '⚙️', label: 'Réglages', notif: true },
+  { id: 3, icone: '🏁', label: 'Salon de course', notif: true },
 ];
 
 // BlocDeux relaie les props "fond" et "réglages Pomodoro" vers Param,
@@ -4293,7 +4264,7 @@ function BlocDeux({
   sessionsSauvegardees,
   setSessionsSauvegardees,
   sessionsChargeesPourRef,
-  remplacerTaches
+  remplacerTachesActives
 }) {
 
 
@@ -4353,7 +4324,7 @@ function BlocDeux({
               sessionsSauvegardees={sessionsSauvegardees}
               setSessionsSauvegardees={setSessionsSauvegardees}
               sessionsChargeesPourRef={sessionsChargeesPourRef}
-              remplacerTaches={remplacerTaches}
+              remplacerTachesActives={remplacerTachesActives}
             />
           )}
           {vueActive === 2 && (
@@ -4411,7 +4382,7 @@ function BarreDefilante({ actif, phase }) {
           scrolling="no"
           allowTransparency="true"
         />
-
+        
         {/* Coureur au repos (En pause) */}
         <iframe
           src="/runner_pose.html"
@@ -5070,6 +5041,11 @@ function App() {
     setPointsPomodoro([]);
   };
 
+  const remplacerTachesActives = (nouvellesTaches) => {
+    setTaches(nouvellesTaches);
+    setPointsPomodoro([]);
+  };
+
   // Définit (ou remplace) le numéro d'ordre d'une tâche, utilisé par le
   // mode "organiser" pour numéroter et intervertir les notes.
   const definirOrdreTache = (id, ordre) => {
@@ -5183,38 +5159,52 @@ function App() {
   });
 
   const notesEpinglees = taches.filter((t) => t.epinglee);
-  const aDesNotesEpinglees = notesEpinglees.length > 0;
 
-  const basculerEpinglageToutesLesNotes = () => {
+  // --- Ranger / Déployer les notes épinglées ---
+  // Stocke les dernières positions connues des notes épinglées pour pouvoir
+  // les redéployer au même endroit après un rangement.
+  const dernieresPositionsRef = useRef({});
+
+  const rangerNotes = () => {
+    // Sauvegarder les positions actuelles avant de désépingler
+    const positions = {};
+    taches.forEach((t) => {
+      if (t.epinglee && t.position) {
+        positions[t.id] = { ...t.position };
+      }
+    });
+    dernieresPositionsRef.current = { ...dernieresPositionsRef.current, ...positions };
+    // Désépingler toutes les notes en un clic
+    setTaches((prev) => prev.map((t) => t.epinglee ? { ...t, epinglee: false } : t));
+  };
+
+  const deployerNotes = () => {
+    // Ré-épingler toutes les notes à leur dernière position connue
     setTaches((prev) => {
-      let compteEpingles = 0;
+      let compteur = 0;
       return prev.map((t) => {
-        if (aDesNotesEpinglees) {
-          // Si des notes sont épinglées, on les range (désépingle)
-          return { ...t, epinglee: false };
-        } else {
-          // Sinon, on les déploie (épingle). On réutilise la position si elle existe
-          const nouvellePos = t.position || {
-            x: 60 + (compteEpingles % 6) * 34,
-            y: 130 + (compteEpingles % 6) * 34,
-          };
-          compteEpingles++;
-          return { ...t, epinglee: true, position: nouvellePos };
+        const pos = dernieresPositionsRef.current[t.id];
+        if (pos) {
+          return { ...t, epinglee: true, position: pos };
         }
+        return t;
       });
     });
   };
 
-  // Range automatiquement toutes les notes épinglées à l'ouverture du panneau latéral
+  const aDesNotesARanger = notesEpinglees.length > 0;
+  const aDesNotesADeployer = !aDesNotesARanger && Object.keys(dernieresPositionsRef.current).length > 0;
+
+  // --- Carte musique gauche ---
+  const [carteMusiqueOuverte, setCarteMusiqueOuverte] = useState(false);
+
+  // Rangement automatique des notes quand le menu latéral droit s'ouvre
+  const panelOuvertPrecRef = useRef(panelOuvert);
   useEffect(() => {
-    if (panelOuvert) {
-      setTaches((prev) => {
-        if (prev.some((t) => t.epinglee)) {
-          return prev.map((t) => (t.epinglee ? { ...t, epinglee: false } : t));
-        }
-        return prev;
-      });
+    if (panelOuvert && !panelOuvertPrecRef.current && notesEpinglees.length > 0) {
+      rangerNotes();
     }
+    panelOuvertPrecRef.current = panelOuvert;
   }, [panelOuvert]);
 
   // Vérifie le format "rgb(r, g, b)" avec composantes entre 0 et 255, puis applique
@@ -5472,6 +5462,7 @@ function App() {
               definirOrdreTache={definirOrdreTache}
               reinitialiserOrdreTaches={reinitialiserOrdreTaches}
               viderTaches={viderTaches}
+              remplacerTachesActives={remplacerTachesActives}
               pointsPomodoro={pointsPomodoro}
               modeLectureSession={modeLectureSession}
               setModeLectureSession={setModeLectureSession}
@@ -5493,23 +5484,59 @@ function App() {
               sessionsSauvegardees={sessionsProfilArchivees}
               setSessionsSauvegardees={setSessionsProfilArchivees}
               sessionsChargeesPourRef={sessionsChargeesPourRef}
-              remplacerTaches={setTaches}
             />
           )}
 
           <BarreDefilante actif={enMarche} phase={chronoPhase} />
 
-          <div className="actions_haut_droite">
+          {/* Poignée musique gauche */}
+          <div className={`poignee_musique${carteMusiqueOuverte ? ' poignee_musique--ouverte' : ''}`}>
+            {musiqueAmbiance ? (
+              <div style={{ position: 'relative' }}>
+                <LecteurVinyle
+                  key={cleLecteurMusique}
+                  musique={musiqueAmbiance}
+                  fermer={() => setCarteMusiqueOuverte(false)}
+                  onMettreAJour={mettreAJourMusique}
+                  modeTiroir={true}
+                />
+              </div>
+            ) : null}
+            
             <button
               type="button"
-              className="btn_action_haut"
-              onClick={basculerEpinglageToutesLesNotes}
+              className="poignee_musique_btn"
+              onClick={() => setCarteMusiqueOuverte(!carteMusiqueOuverte)}
+              aria-label={carteMusiqueOuverte ? 'Fermer le lecteur musique' : 'Ouvrir le lecteur musique'}
             >
-              {aDesNotesEpinglees ? 'Ranger' : 'Déployer les notes'}
+              <Headphones size={20} />
             </button>
+          </div>
+
+          {/* Boutons d'action en bas : Ranger/Déployer + Mode concentration */}
+          <div className="actions_bas_page">
+            {aDesNotesARanger && (
+              <button
+                type="button"
+                className="btn_ranger_notes"
+                onClick={rangerNotes}
+              >
+                Ranger
+              </button>
+            )}
+            {aDesNotesADeployer && (
+              <button
+                type="button"
+                className="btn_deployer_notes"
+                onClick={deployerNotes}
+              >
+                Déployer les notes
+              </button>
+            )}
+
             <button
               type="button"
-              className="btn_action_haut"
+              className="btn_mode_concentration"
               onClick={modeConcentration ? demanderQuitterModeConcentration : activerModeConcentration}
             >
               {modeConcentration ? 'Quitter le mode concentration' : 'Mode concentration'}
@@ -5543,31 +5570,6 @@ function App() {
           {notesEpinglees.map((tache) => (
             <NoteEpinglee key={tache.id} tache={tache} actions={actionsPourTache(tache.id)} />
           ))}
-
-          {/* Lecteur de musique d'ambiance intégré dans un panneau gauche */}
-          <div className={`panel_gauche ${lecteurMusiqueVisible ? '' : 'panel_gauche--collapsed'}`}>
-            <button
-              className="panel_gauche_poignee"
-              onClick={() => setLecteurMusiqueVisible(!lecteurMusiqueVisible)}
-              aria-label={lecteurMusiqueVisible ? 'Fermer le lecteur' : 'Ouvrir le lecteur'}
-            >
-              <Headphones size={16} />
-            </button>
-            <div className="panel_gauche_corps">
-              {musiqueAmbiance ? (
-                <LecteurVinyle
-                  key={cleLecteurMusique}
-                  musique={musiqueAmbiance}
-                  fermer={() => setLecteurMusiqueVisible(false)}
-                  onMettreAJour={mettreAJourMusique}
-                />
-              ) : (
-                <div className="panel_gauche_vide">
-                  Aucune musique sélectionnée
-                </div>
-              )}
-            </div>
-          </div>
 
           <ModalChoisirMusique
             ouvert={choixMusiqueOuvert}

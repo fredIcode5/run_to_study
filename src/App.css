@@ -2541,7 +2541,11 @@ select option {
    ====================================================================== */
 .lecteur_vinyle {
   width: 168px;
-  background: transparent;
+  background: rgba(30, 30, 40, 0.9);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   padding: 14px 16px 14px;
   display: flex;
   flex-direction: column;
@@ -3581,13 +3585,13 @@ select option {
   border-color: #059669;
 }
 
-.session_btn_deplacer {
+.session_btn_ajouter_rouge {
   background: #ef4444;
   color: #fff;
   border-color: #ef4444;
 }
 
-.session_btn_deplacer:hover {
+.session_btn_ajouter_rouge:hover {
   background: #dc2626;
   color: #fff;
   border-color: #dc2626;
@@ -5039,4 +5043,282 @@ body,
     width: 100%;
     flex-basis: 300px;
   }
+}
+
+/* ========================================================================== */
+/* MODIFICATIONS DU 3 AOUT */
+/* ========================================================================== */
+
+/* --- 1. Poignée Musique (Headphones) --- */
+.poignee_musique {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) translateX(calc(-100% + 41px)); /* Cache exactement le lecteur, laisse dépasser le bouton (41px) */
+  display: flex;
+  align-items: stretch; /* Permet à la poignée de prendre toute la hauteur */
+  z-index: 100;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.poignee_musique--ouverte {
+  transform: translateY(-50%) translateX(0);
+}
+
+.poignee_musique_btn {
+  background: rgba(30, 30, 40, 0.9);
+  backdrop-filter: blur(8px);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: none; /* Fusionne avec la bordure droite du lecteur */
+  border-radius: 0 16px 16px 0; /* Même arrondi que le lecteur */
+  padding: 16px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+  transition: background 0.2s;
+  height: auto;
+}
+
+.poignee_musique_btn:hover {
+  background: rgba(45, 45, 55, 0.9);
+}
+
+.lecteur_vinyle--tiroir {
+  position: relative !important;
+  border-radius: 0 !important; /* Pas d'arrondi pour fusionner parfaitement avec le bouton */
+  border-right: none !important;
+  box-shadow: none !important;
+  margin: 0;
+}
+
+.poignee_musique_titre {
+  margin: 0 0 15px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.poignee_musique_infos {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.poignee_musique_nom {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.poignee_musique_artiste {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.poignee_musique_actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.poignee_musique_vide {
+  text-align: center;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.poignee_musique_vide p {
+  margin-bottom: 15px;
+}
+
+/* --- 2. Boutons Ranger / Déployer et Mode Concentration --- */
+.actions_bas_page {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  gap: 15px;
+  z-index: 100;
+}
+
+.btn_ranger_notes, .btn_deployer_notes {
+  background: #111827; /* Noir */
+  color: #ffffff;
+  border: 1px solid #374151;
+  border-radius: 9999px; /* Force les coins totalement arrondis */
+  padding: 10px 24px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.btn_ranger_notes:hover, .btn_deployer_notes:hover {
+  background: #1f2937; /* Noir un peu plus clair au survol */
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn_mode_concentration {
+  background: #111827; /* Noir */
+  color: #ffffff;
+  border: 1px solid #374151;
+  border-radius: 9999px; /* Force les coins totalement arrondis */
+  padding: 10px 24px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.btn_mode_concentration:hover {
+  background: #1f2937; /* Noir un peu plus clair au survol */
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* --- 3. Croix verte sur TacheCarte --- */
+.todo_carte_actions_haut {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: flex;
+  gap: 5px;
+}
+
+.todo_carte_check {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #10b981; /* Vert */
+  color: white;
+  border: none;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.todo_carte:hover .todo_carte_check,
+.todo_carte:focus-within .todo_carte_check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.todo_carte_check:hover {
+  background: #059669; /* Vert plus foncé */
+  transform: scale(1.1) !important;
+}
+
+.todo_carte--terminee .todo_carte_check {
+  background: #6b7280; /* Gris quand terminée pour pouvoir l'annuler */
+}
+
+/* --- 4. Mode lecture avancé --- */
+.todo_zone--lecture {
+  background-color: #f3f4f6; /* Gris clair */
+}
+
+.todo_carte--non-terminee-lecture {
+  border: 2px solid #ef4444 !important; /* Contour rouge vif */
+  box-shadow: 0 0 5px rgba(239, 68, 68, 0.5) !important;
+}
+
+.session_lecture_zone {
+  display: flex;
+  align-items: center;
+  gap: 150px; /* 150px de gap demandé */
+}
+
+.session_lecture_texte {
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.session_btn_deplacer {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.session_btn_deplacer:hover {
+  background: #dc2626;
+}
+
+.session_btn_continuer {
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.session_btn_continuer:hover {
+  background: #059669;
+}
+
+/* --- 5. Compteur Tours en violet --- */
+.pomodoro_tours_compteur {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #8b5cf6; /* Violet */
+  background: rgba(139, 92, 246, 0.1);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+}
+
+/* --- 6. Tri historique en noir/blanc --- */
+.historique_tri_select, .historique_tri_btn {
+  background: #111827; /* Noir */
+  color: #ffffff; /* Blanc */
+  border: 1px solid #374151;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.historique_tri_select:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.historique_tri_btn:hover {
+  background: #1f2937;
+}
+
+/* --- 7. Recherche Social Image & Messages --- */
+.social_resultat_photo_img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.social_message_info {
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+  padding: 20px 0;
+  font-style: italic;
 }
