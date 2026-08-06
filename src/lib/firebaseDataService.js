@@ -514,3 +514,63 @@ export async function getAmis(userId) {
   }
 }
 
+// -------------------------------------------------------
+// Planning (Calendrier et Notes associées aux jours)
+// -------------------------------------------------------
+
+// Récupère toutes les entrées d'un utilisateur pour un mois donné (format 'YYYY-MM')
+// Utilisé pour calculer le nombre de notes par jour (les bulles sur le calendrier)
+export async function chargerPlanningMois(userId, prefixeMois) {
+  try {
+    const q = query(
+      collection(db, "planning_jours"),
+      where("user_id", "==", userId)
+    );
+    // Note: Pour optimiser, une vraie app avec beaucoup de données ferait un where("date", ">=", prefixeMois + "-01") etc.
+    // Pour l'instant, on filtre côté client.
+    const querySnapshot = await getDocs(q);
+    const resultats = {};
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.date && data.date.startsWith(prefixeMois)) {
+        resultats[data.date] = data.notes ? data.notes.length : 0;
+      }
+    });
+    return resultats;
+  } catch (err) {
+    console.error("Erreur chargement planning du mois :", err);
+    return {};
+  }
+}
+
+// Récupère les détails (titre, thème, notes) pour un jour spécifique ('YYYY-MM-DD')
+export async function chargerPlanningJour(userId, dateStr) {
+  try {
+    const docId = `${userId}_${dateStr}`;
+    const docRef = doc(db, "planning_jours", docId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+    return { date: dateStr, titreSession: '', themeSession: 'Concentration (par défaut)', notes: [] };
+  } catch (err) {
+    console.error("Erreur chargement planning du jour :", err);
+    return { date: dateStr, titreSession: '', themeSession: 'Concentration (par défaut)', notes: [] };
+  }
+}
+
+// Sauvegarde les détails pour un jour spécifique
+export async function sauvegarderPlanningJour(userId, dateStr, donnees) {
+  try {
+    const docId = `${userId}_${dateStr}`;
+    const docRef = doc(db, "planning_jours", docId);
+    await setDoc(docRef, {
+      user_id: userId,
+      date: dateStr,
+      ...donnees,
+      updated_at: new Date().toISOString()
+    }, { merge: true });
+  } catch (err) {
+    console.error("Erreur sauvegarde planning du jour :", err);
+  }
+}

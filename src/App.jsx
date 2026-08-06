@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Play, Pause, SquarePen, Gift, Headphones } from 'lucide-react'
+import FullCalendar from '@fullcalendar/react'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import interactionPlugin from '@fullcalendar/interaction'
 import './App.css'
 import { useAuth } from './context/AuthContext.jsx'
 import {
@@ -19,6 +22,14 @@ import {
   ajouterRecompense,
   mettreAJourRecompense,
   rechercherUtilisateurs,
+  envoyerDemandeAmi,
+  repondreDemandeAmi,
+  getDemandesAmis,
+  getDemandesEnvoyees,
+  getAmis,
+  chargerPlanningMois,
+  chargerPlanningJour,
+  sauvegarderPlanningJour,
 } from './lib/firebaseDataService'
 
 
@@ -547,7 +558,7 @@ function PanneauJoueur({ pseudo, niveau, distance, position, ouvrirProfil, photo
             src={photoProfil.dataUrl}
             alt={`Photo de profil de ${pseudo}`}
             className="joueur_photo_img"
-            style={{ objectPosition: `${photoProfil.position.x}% ${photoProfil.position.y}%` }}
+            style={{ objectPosition: `${photoProfil.position?.x ?? 50}% ${photoProfil.position?.y ?? 50}%` }}
             draggable={false}
           />
         ) : (
@@ -587,7 +598,7 @@ function PanneauJoueur({ pseudo, niveau, distance, position, ouvrirProfil, photo
 // L'onglet actif est un simple état React ; aucun rechargement de page,
 // aucune donnée envoyée nulle part pour Stats/Social (structure prête pour
 // être complétée plus tard).
-function ModalProfil({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPomodoro, photoProfil, onEnregistrerPhotoProfil, enregistrementPhotoEnCours, erreurPhotoProfil, coins, musiqueAmbiance, titreSession, sessionsSauvegardees, onConsulterSession }) {
+function ModalProfil({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPomodoro, photoProfil, onEnregistrerPhotoProfil, enregistrementPhotoEnCours, erreurPhotoProfil, coins, musiqueAmbiance, bio, setBio, titreSession, numeroSession, taches, sessionsSauvegardees, onConsulterSession }) {
   const [ongletActif, setOngletActif] = useState('profil');
 
   // Revient toujours sur l'onglet "Profil" à chaque réouverture de la modale
@@ -599,6 +610,7 @@ function ModalProfil({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPo
 
   const ONGLETS_PROFIL = [
     { id: 'profil', label: 'Profil' },
+    { id: 'planning', label: 'Planning' },
     { id: 'historique', label: 'Historique' },
     { id: 'mon_runner', label: 'mon runner' },
     { id: 'social', label: 'Social' },
@@ -635,8 +647,14 @@ function ModalProfil({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPo
               historiqueJoursPomodoro={historiqueJoursPomodoro}
               photoProfil={photoProfil}
               musiqueAmbiance={musiqueAmbiance}
+              bio={bio}
               titreSession={titreSession}
+              numeroSession={numeroSession}
+              taches={taches}
             />
+          )}
+          {ongletActif === 'planning' && (
+            <OngletPlanning />
           )}
           {ongletActif === 'historique' && (
             <OngletHistorique sessionsSauvegardees={sessionsSauvegardees} onConsulter={onConsulterSession} />
@@ -651,6 +669,8 @@ function ModalProfil({ ouvert, fermer, pseudo, distanceTotale, historiqueJoursPo
               onEnregistrerPhotoProfil={onEnregistrerPhotoProfil}
               enregistrementPhotoEnCours={enregistrementPhotoEnCours}
               erreurPhotoProfil={erreurPhotoProfil}
+              bio={bio}
+              setBio={setBio}
             />
           )}
           {ongletActif === 'progression' && <OngletProgression distanceTotale={distanceTotale} />}
@@ -716,7 +736,7 @@ function OngletMonRunner() {
       newColors[v] = value;
     });
     setColors(newColors);
-    
+
     if (iframeRef.current && iframeRef.current.contentWindow) {
       iframeRef.current.contentWindow.postMessage(
         { type: 'UPDATE_RUNNER_COLORS', colors: newColors },
@@ -785,7 +805,11 @@ function OngletMonRunner() {
 
 // --- Onglet "Profil" : identité, médailles (emplacement réservé) et
 // heatmap mensuelle des jours avec au moins un Pomodoro terminé.
-function OngletProfil({ pseudo, distanceTotale, historiqueJoursPomodoro, photoProfil, musiqueAmbiance, titreSession }) {
+function OngletProfil({ pseudo, distanceTotale, historiqueJoursPomodoro, photoProfil, musiqueAmbiance, bio, titreSession, numeroSession, taches }) {
+  const aUneSessionActive = taches && taches.length > 0;
+  const nomSession = titreSession && titreSession.trim() !== '' ? titreSession.trim() : `Session ${numeroSession}`;
+  const affichageSession = aUneSessionActive ? nomSession : 'Aucune session active';
+
   return (
     <div className="profil_onglet_panneau profil_onglet_panneau--profil">
       <div className="profil_layout">
@@ -797,7 +821,7 @@ function OngletProfil({ pseudo, distanceTotale, historiqueJoursPomodoro, photoPr
                   src={photoProfil.dataUrl}
                   alt={`Photo de profil de ${pseudo}`}
                   className="profil_photo_img"
-                  style={{ objectPosition: `${photoProfil.position.x}% ${photoProfil.position.y}%` }}
+                  style={{ objectPosition: `${photoProfil.position?.x ?? 50}% ${photoProfil.position?.y ?? 50}%` }}
                   draggable={false}
                 />
               ) : (
@@ -810,6 +834,13 @@ function OngletProfil({ pseudo, distanceTotale, historiqueJoursPomodoro, photoPr
           <p className="modal_distance_totale">
             Distance totale parcourue : <strong>{distanceTotale} m</strong>
           </p>
+
+          <div className="profil_section">
+            <h4 className="profil_section_titre">Présentation</h4>
+            <div className="profil_bio_carte" style={{ padding: '16px', background: 'rgba(0, 0, 0, 0.03)', borderRadius: '12px', color: '#1f2430', fontSize: '0.95rem', lineHeight: '1.5', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word', width: '100%', maxWidth: '400px', minHeight: '100px', border: '1px solid rgba(0,0,0,0.05)' }}>
+              {bio ? bio : "Présentez-vous..."}
+            </div>
+          </div>
 
           <div className="profil_section">
             <h4 className="profil_section_titre">Médailles</h4>
@@ -825,25 +856,35 @@ function OngletProfil({ pseudo, distanceTotale, historiqueJoursPomodoro, photoPr
         </div>
 
         <div className="profil_colonne_activite">
-          <div className="profil_activite_entete">
-            <span className="badge_activite">Activité</span>
-            <span className="titre_session">{titreSession || 'Aucune session en cours'}</span>
-          </div>
-          <div className="profil_activite_musique_rect">
+          <div className="profil_activite_carte_unique" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'transparent', padding: '24px', gap: '16px' }}>
+
+            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: '10px', textAlign: 'center', width: '100%' }}>
+              <span className="badge_activite" style={{ fontSize: '0.8rem', padding: '4px 10px' }}>
+                {aUneSessionActive ? 'En cours' : 'Activité'}
+              </span>
+              <span className="titre_session" style={{ fontWeight: aUneSessionActive ? '600' : 'normal', fontSize: '1rem', color: '#1f2430' }}>
+                {affichageSession}
+              </span>
+            </div>
+
             {musiqueAmbiance ? (
-              <div className="musique_carte_profil">
-                <MiniatureMusique
-                  className="musique_cover_profil"
-                  iconeClassName="musique_cover_profil_icone"
-                  type={musiqueAmbiance.type}
-                  thumbnail={musiqueAmbiance.thumbnail}
-                />
-                <span className="musique_titre_sous_cover">
+              <>
+                <div style={{ width: '70%', aspectRatio: '1 / 1', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 6px 16px rgba(0,0,0,0.3)', marginTop: '8px' }}>
+                  <MiniatureMusique
+                    className="musique_cover_profil"
+                    iconeClassName="musique_cover_profil_icone"
+                    type={musiqueAmbiance.type}
+                    thumbnail={musiqueAmbiance.thumbnail}
+                  />
+                </div>
+                <span style={{ textAlign: 'center', fontWeight: '500', fontSize: '1.05rem', color: '#1f2430', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                   {musiqueAmbiance.titre || musiqueAmbiance.title || 'Musique en cours'}
                 </span>
-              </div>
+              </>
             ) : (
-              <span className="musique_vide">Aucune musique en lecture</span>
+              <span style={{ color: 'rgba(255,255,255,0.7)', fontStyle: 'italic', marginTop: '20px' }}>
+                Aucune musique en lecture
+              </span>
             )}
           </div>
         </div>
@@ -900,8 +941,8 @@ function OngletHistorique({ sessionsSauvegardees, onConsulter }) {
           onChange={(e) => setRecherche(e.target.value)}
           className="historique_recherche_input"
         />
-        
-        <select 
+
+        <select
           className="historique_tri_select"
           value={critereTri}
           onChange={(e) => setCritereTri(e.target.value)}
@@ -910,7 +951,7 @@ function OngletHistorique({ sessionsSauvegardees, onConsulter }) {
           <option value="theme">Thème</option>
           <option value="tachesCompletees">Tâches complétées</option>
         </select>
-        
+
         <button
           type="button"
           className="historique_tri_btn"
@@ -1005,6 +1046,236 @@ function HeatmapPomodoro({ historique }) {
   );
 }
 
+// --- Onglet "Planning" : Gestion de sessions et tâches via un calendrier interactif
+function OngletPlanning() {
+  const { utilisateur } = useAuth();
+
+  // Mois actuellement affiché (par défaut le 1er du mois courant pour simplifier)
+  const aujourdhui = new Date();
+  const [moisAffiche, setMoisAffiche] = useState(new Date(aujourdhui.getFullYear(), aujourdhui.getMonth(), 1));
+
+  // Date sélectionnée (format YYYY-MM-DD)
+  const [dateSelectionnee, setDateSelectionnee] = useState(formaterJourIso(aujourdhui));
+
+  // Données du mois (pour les bulles)
+  const [donneesMois, setDonneesMois] = useState({});
+
+  // Données du jour sélectionné
+  const [titreSession, setTitreSession] = useState('');
+  const [themeSession, setThemeSession] = useState('Concentration (par défaut)');
+  const [notes, setNotes] = useState([]);
+
+  const [enChargement, setEnChargement] = useState(true);
+
+  // Charger les données globales du mois (les compteurs de notes)
+  useEffect(() => {
+    if (!utilisateur?.id) return;
+
+    const chargerMois = async () => {
+      const prefixe = `${moisAffiche.getFullYear()}-${String(moisAffiche.getMonth() + 1).padStart(2, '0')}`;
+      const donnees = await chargerPlanningMois(utilisateur.id, prefixe);
+      setDonneesMois(donnees);
+    };
+    chargerMois();
+  }, [moisAffiche, utilisateur?.id]);
+
+  // Charger les détails du jour
+  useEffect(() => {
+    if (!utilisateur?.id) return;
+
+    let annule = false;
+    const chargerJour = async () => {
+      setEnChargement(true);
+      const data = await chargerPlanningJour(utilisateur.id, dateSelectionnee);
+      if (!annule) {
+        setTitreSession(data.titreSession || '');
+        setThemeSession(data.themeSession || 'Concentration (par défaut)');
+        setNotes(data.notes || []);
+        setEnChargement(false);
+      }
+    };
+    chargerJour();
+    return () => { annule = true; };
+  }, [dateSelectionnee, utilisateur?.id]);
+
+  // Sauvegarde automatique (debounce)
+  useEffect(() => {
+    if (enChargement || !utilisateur?.id) return;
+
+    const timeout = setTimeout(() => {
+      sauvegarderPlanningJour(utilisateur.id, dateSelectionnee, {
+        titreSession,
+        themeSession,
+        notes
+      });
+
+      // Mettre à jour le compteur du mois en local sans recharger depuis Firebase
+      setDonneesMois(prev => ({
+        ...prev,
+        [dateSelectionnee]: notes.length
+      }));
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [titreSession, themeSession, notes, dateSelectionnee, utilisateur?.id, enChargement]);
+
+  // Événements pour afficher les bulles sur le calendrier
+  const events = Object.entries(donneesMois)
+    .filter(([_, count]) => count > 0)
+    .map(([date, count]) => ({
+      date: date,
+      extendedProps: { count }
+    }));
+
+  const renderEventContent = (eventInfo) => {
+    return (
+      <div className="planning_bulle_indicateur_fc">
+        {eventInfo.event.extendedProps.count}
+      </div>
+    );
+  };
+
+  const THEMES_SESSION = [
+    'Concentration (par défaut)',
+    'Créativité',
+    'Administratif',
+    'Révision / Étude',
+    'Sport / Physique',
+    'Détente / Pause'
+  ];
+
+  const handleAjouterNote = () => {
+    const id = Date.now().toString();
+    setNotes([...notes, { id, contenu: '', terminee: false }]);
+  };
+
+  const handleModifierNote = (id, nouveauContenu) => {
+    setNotes(notes.map(n => n.id === id ? { ...n, contenu: nouveauContenu } : n));
+  };
+
+  const handleToggleNote = (id) => {
+    setNotes(notes.map(n => n.id === id ? { ...n, terminee: !n.terminee } : n));
+  };
+
+  const handleSupprimerNote = (id) => {
+    setNotes(notes.filter(n => n.id !== id));
+  };
+
+  const dateFormatee = new Date(dateSelectionnee).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  return (
+    <div className="planning_layout">
+      {/* Colonne Gauche : Calendrier */}
+      <div className="planning_colonne_calendrier">
+        <div className="planning_calendrier_conteneur">
+          <FullCalendar
+            plugins={[dayGridPlugin, interactionPlugin]}
+            initialView="dayGridMonth"
+            initialDate={moisAffiche}
+            events={events}
+            eventContent={renderEventContent}
+            dateClick={(info) => {
+              setDateSelectionnee(info.dateStr);
+            }}
+            datesSet={(info) => {
+              const middleDate = new Date((info.start.getTime() + info.end.getTime()) / 2);
+              // Avoid infinite loops by only updating if the month/year changed
+              if (middleDate.getMonth() !== moisAffiche.getMonth() || middleDate.getFullYear() !== moisAffiche.getFullYear()) {
+                setMoisAffiche(middleDate);
+              }
+            }}
+            headerToolbar={{
+              left: 'prev,next today',
+              center: 'title',
+              right: ''
+            }}
+            firstDay={1} // Lundi
+            height="100%"
+          />
+        </div>
+      </div>
+
+      {/* Colonne Droite : Détails */}
+      <div className="planning_colonne_details">
+        <h3 className="planning_details_entete" style={{ textTransform: 'capitalize' }}>
+          {dateFormatee}
+        </h3>
+
+        {enChargement ? (
+          <p className="social_message_info">Chargement...</p>
+        ) : (
+          <>
+            <div className="planning_groupe_champ">
+              <label className="planning_label">Titre de la session</label>
+              <input
+                type="text"
+                className="planning_input"
+                placeholder="Ex: Révision Mathématiques..."
+                value={titreSession}
+                onChange={(e) => setTitreSession(e.target.value)}
+              />
+            </div>
+
+            <div className="planning_groupe_champ">
+              <label className="planning_label">Thème</label>
+              <select
+                className="planning_select"
+                value={themeSession}
+                onChange={(e) => setThemeSession(e.target.value)}
+              >
+                {THEMES_SESSION.map(theme => (
+                  <option key={theme} value={theme}>{theme}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="planning_groupe_champ" style={{ marginTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label className="planning_label">Tâches / Notes</label>
+                <button type="button" className="btn_primaire" style={{ fontSize: '0.85rem', padding: '6px 12px' }} onClick={handleAjouterNote}>
+                  + Ajouter
+                </button>
+              </div>
+
+              <div className="planning_notes_liste">
+                {notes.length === 0 ? (
+                  <p className="social_message_info" style={{ textAlign: 'left', fontSize: '0.9rem' }}>Aucune note pour ce jour.</p>
+                ) : (
+                  notes.map((note) => (
+                    <div key={note.id} className="planning_note_item">
+                      <input
+                        type="checkbox"
+                        checked={note.terminee}
+                        onChange={() => handleToggleNote(note.id)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <input
+                        type="text"
+                        className={`planning_note_input ${note.terminee ? 'terminee' : ''}`}
+                        value={note.contenu}
+                        onChange={(e) => handleModifierNote(note.id, e.target.value)}
+                        placeholder="Texte de la note..."
+                      />
+                      <button
+                        type="button"
+                        className="planning_note_btn_supprimer"
+                        onClick={() => handleSupprimerNote(note.id)}
+                        title="Supprimer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // --- Onglet "Stats" : structure minimale pour l'instant, pensée pour
 // accueillir plus tard des sections (temps de concentration, séries de
 // Pomodoro, progression, records...) sans revoir l'organisation générale.
@@ -1033,13 +1304,13 @@ function OngletSocial() {
   // Recherche dynamique avec debounce
   useEffect(() => {
     let timeoutId;
-    
+
     const lancerRecherche = async () => {
       if (!rechercheTerme || rechercheTerme.trim().length < 2) {
         setResultatsRecherche([]);
         return;
       }
-      
+
       setEnChargementRecherche(true);
       try {
         const resultats = await rechercherUtilisateurs(rechercheTerme, utilisateur?.id);
@@ -1063,15 +1334,59 @@ function OngletSocial() {
     };
   }, [rechercheTerme, utilisateur?.id]);
 
-  // Liste d'amis placeholder : structure prête pour être remplacée par
-  // de vraies données (statut en ligne, niveau d'activité, invitations...).
-  // "activite" est un pourcentage placeholder pour la barre d'activité.
-  const AMIS_PLACEHOLDER = [
-    { id: 'a1', pseudo: 'Ami_1', enLigne: true, activite: 80 },
-    { id: 'a2', pseudo: 'Ami_2', enLigne: true, activite: 45 },
-    { id: 'a3', pseudo: 'Ami_3', enLigne: false, activite: 15 },
-    { id: 'a4', pseudo: 'Ami_4', enLigne: false, activite: 60 },
-  ];
+  const [amis, setAmis] = useState([]);
+  const [demandesRecues, setDemandesRecues] = useState([]);
+  const [demandesEnvoyees, setDemandesEnvoyees] = useState([]);
+  const [chargementSocial, setChargementSocial] = useState(true);
+
+  const chargerDonneesSociales = async () => {
+    if (!utilisateur?.id) return;
+    setChargementSocial(true);
+    try {
+      const amisData = await getAmis(utilisateur.id);
+      const recuesData = await getDemandesAmis(utilisateur.id);
+      const envoyeesData = await getDemandesEnvoyees(utilisateur.id);
+
+      setAmis(amisData);
+      setDemandesRecues(recuesData);
+      setDemandesEnvoyees(envoyeesData);
+    } catch (err) {
+      console.error("Erreur chargement social:", err);
+    } finally {
+      setChargementSocial(false);
+    }
+  };
+
+  useEffect(() => {
+    chargerDonneesSociales();
+  }, [utilisateur?.id]);
+
+  const handleAjouterAmi = async (destinataireId) => {
+    if (!utilisateur?.id) return;
+    try {
+      await envoyerDemandeAmi(utilisateur.id, destinataireId);
+      await chargerDonneesSociales();
+    } catch (err) {
+      console.error("Erreur ajout ami", err);
+    }
+  };
+
+  const handleRepondreDemande = async (demandeId, reponse) => {
+    try {
+      await repondreDemandeAmi(demandeId, reponse);
+      await chargerDonneesSociales();
+    } catch (err) {
+      console.error("Erreur reponse demande", err);
+    }
+  };
+
+  // Helper pour savoir si on a déjà envoyé/reçu/accepté une demande avec un utilisateur
+  const getStatutAmi = (userId) => {
+    if (amis.some(a => a.amiId === userId)) return 'ami';
+    if (demandesEnvoyees.some(d => d.destinataire_id === userId)) return 'envoyee';
+    if (demandesRecues.some(d => d.expediteur_id === userId)) return 'recue';
+    return 'aucun';
+  };
 
   return (
     <div className="profil_onglet_panneau profil_onglet_panneau--social">
@@ -1093,31 +1408,51 @@ function OngletSocial() {
             {enChargementRecherche ? (
               <p className="social_message_info">Recherche en cours...</p>
             ) : resultatsRecherche.length > 0 ? (
-              resultatsRecherche.map((resultat) => (
-                <div key={resultat.id} className="social_resultat_rectangle social_carte_compacte">
-                  <div className="social_resultat_infos">
-                    <div className="social_resultat_photo">
-                      {resultat.photo_profil ? (
-                        <img src={resultat.photo_profil} alt={`Profil de ${resultat.pseudo}`} className="social_resultat_photo_img" />
-                      ) : (
-                        <span className="social_resultat_photo_icone">👤</span>
-                      )}
+              resultatsRecherche.map((resultat) => {
+                const statut = getStatutAmi(resultat.id);
+                return (
+                  <div key={resultat.id} className="social_resultat_rectangle social_carte_compacte">
+                    <div className="social_resultat_infos">
+                      <div className="social_resultat_photo">
+                        {resultat.photo_profil ? (
+                          <img src={resultat.photo_profil} alt={`Profil de ${resultat.pseudo}`} className="social_resultat_photo_img" />
+                        ) : (
+                          <span className="social_resultat_photo_icone">👤</span>
+                        )}
+                      </div>
+                      <div className="social_resultat_identite">
+                        <span className="social_resultat_pseudo">{resultat.pseudo}</span>
+                        <span className="social_resultat_niveau">Niv. {resultat.niveau}</span>
+                      </div>
                     </div>
-                    <div className="social_resultat_identite">
-                      <span className="social_resultat_pseudo">{resultat.pseudo}</span>
-                      <span className="social_resultat_niveau">Niv. {resultat.niveau}</span>
-                    </div>
-                  </div>
 
-                  <button type="button" className="btn_secondaire social_resultat_btn_ajouter">
-                    Ajouter
-                  </button>
-                </div>
-              ))
+                    {statut === 'aucun' && (
+                      <button type="button" className="btn_secondaire social_resultat_btn_ajouter" onClick={() => handleAjouterAmi(resultat.id)}>
+                        Ajouter
+                      </button>
+                    )}
+                    {statut === 'envoyee' && (
+                      <button type="button" className="btn_secondaire social_resultat_btn_ajouter" disabled style={{ opacity: 0.6 }}>
+                        En attente
+                      </button>
+                    )}
+                    {statut === 'recue' && (
+                      <button type="button" className="btn_secondaire social_resultat_btn_ajouter" disabled style={{ opacity: 0.6 }}>
+                        Demande reçue
+                      </button>
+                    )}
+                    {statut === 'ami' && (
+                      <button type="button" className="btn_secondaire social_resultat_btn_ajouter" disabled style={{ opacity: 0.6 }}>
+                        Déjà ami
+                      </button>
+                    )}
+                  </div>
+                );
+              })
             ) : rechercheTerme.trim().length >= 2 ? (
               <p className="social_message_info">Aucun utilisateur trouvé.</p>
             ) : (
-              <p className="social_message_info">Tapez au moins 2 caractères.</p>
+              <p className="social_message_info">Cherchez des amis avec qui courir, travailler et évoluer ensemble.</p>
             )}
           </div>
         </div>
@@ -1127,43 +1462,69 @@ function OngletSocial() {
           <h4 className="profil_section_titre">Liste d'amis</h4>
 
           <div className="social_amis_liste">
-            {AMIS_PLACEHOLDER.map((ami) => (
-              <div key={ami.id} className="social_ami_rectangle social_carte_compacte">
-                {/* Emplacement visuel réservé : photo de profil de l'ami */}
-                <div className="social_ami_photo">
-                  <span className="social_ami_photo_icone">👤</span>
-                </div>
-
-                <div className="social_ami_contenu">
-                  <div className="social_ami_ligne_haut">
-                    <span className="social_ami_pseudo">{ami.pseudo}</span>
-                    <div className="social_ami_actions">
-                      <button type="button" className="btn_secondaire social_ami_btn_inviter">
-                        Inviter
-                      </button>
-                      <button type="button" className="btn_primaire social_ami_btn_rejoindre">
-                        Rejoindre
-                      </button>
-                    </div>
+            {chargementSocial ? (
+              <p className="social_message_info">Chargement de vos amis...</p>
+            ) : (
+              <>
+                {demandesRecues.length > 0 && (
+                  <div className="social_demandes_section">
+                    <h5 style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px', marginTop: 0 }}>Demandes reçues</h5>
+                    {demandesRecues.map((demande) => (
+                      <div key={demande.id} className="social_ami_rectangle social_carte_compacte">
+                        <div className="social_ami_photo">
+                          {demande.expediteur?.photo_profil ? (
+                            <img src={demande.expediteur.photo_profil} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                          ) : (
+                            <span className="social_ami_photo_icone">👤</span>
+                          )}
+                        </div>
+                        <div className="social_ami_contenu">
+                          <div className="social_ami_ligne_haut">
+                            <span className="social_ami_pseudo">{demande.expediteur?.pseudo}</span>
+                            <div className="social_ami_actions">
+                              <button type="button" className="btn_secondaire" onClick={() => handleRepondreDemande(demande.id, 'refusee')}>
+                                Refuser
+                              </button>
+                              <button type="button" className="btn_primaire" onClick={() => handleRepondreDemande(demande.id, 'acceptee')}>
+                                Accepter
+                              </button>
+                            </div>
+                          </div>
+                          <span className="social_ami_activite_label">Niv. {demande.expediteur?.niveau}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                )}
 
-                  <div className="social_ami_statut_ligne">
-                    <span className={`social_ami_statut ${ami.enLigne ? 'social_ami_statut--en_ligne' : ''}`}>
-                      {ami.enLigne ? 'En ligne' : 'Hors ligne'}
-                    </span>
-                    <span className="social_ami_activite_label">Activité</span>
+                {amis.length > 0 ? (
+                  <div className="social_amis_approuves">
+                    {demandesRecues.length > 0 && <h5 style={{ fontSize: '0.85rem', color: '#6b7280', margin: '16px 0 8px 0' }}>Amis</h5>}
+                    {amis.map((ami) => (
+                      <div key={ami.id} className="social_ami_rectangle social_carte_compacte">
+                        <div className="social_ami_photo">
+                          {ami.photo_profil ? (
+                            <img src={ami.photo_profil} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                          ) : (
+                            <span className="social_ami_photo_icone">👤</span>
+                          )}
+                        </div>
+                        <div className="social_ami_contenu">
+                          <div className="social_ami_ligne_haut">
+                            <span className="social_ami_pseudo">{ami.pseudo}</span>
+                          </div>
+                          <span className="social_ami_activite_label">Niv. {ami.niveau}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-
-                  {/* Barre d'activité placeholder */}
-                  <div className="social_ami_barre_activite">
-                    <div
-                      className="social_ami_barre_activite_remplie"
-                      style={{ width: `${ami.activite}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
+                ) : (
+                  demandesRecues.length === 0 && (
+                    <p className="social_message_info">Vous n'avez actuellement aucun ami.</p>
+                  )
+                )}
+              </>
+            )}
           </div>
         </div>
 
@@ -1289,21 +1650,12 @@ function OngletBoutique({ coins }) {
   );
 }
 
-function OngletParametres({ pseudo, photoProfil, onEnregistrerPhotoProfil, enregistrementPhotoEnCours, erreurPhotoProfil }) {
+function OngletParametres({ pseudo, photoProfil, onEnregistrerPhotoProfil, enregistrementPhotoEnCours, erreurPhotoProfil, bio, setBio }) {
   const { deconnexion, connecte } = useAuth();
 
-  // Photo de profil : brouillon local (image choisie + position de
-  // recadrage en %, utilisée comme object-position). On édite ce brouillon
-  // librement dans cet onglet (choix de fichier, glisser pour recentrer)
-  // sans rien enregistrer ; l'envoi vers Supabase (et donc la mise à jour
-  // du panneau joueur / de la modale de profil) n'a lieu qu'au clic sur
-  // "Enregistrer les modifications". Un invité n'a pas de compte Supabase :
-  // les contrôles de photo lui sont donc masqués plus bas (voir JSX).
   const [photoDataUrl, setPhotoDataUrl] = useState(photoProfil?.dataUrl ?? null);
   const [positionPhoto, setPositionPhoto] = useState(photoProfil?.position ?? { x: 50, y: 50 });
 
-  // Resynchronise le brouillon si la photo enregistrée change depuis
-  // l'extérieur (ex: chargement des user_metadata après connexion).
   useEffect(() => {
     setPhotoDataUrl(photoProfil?.dataUrl ?? null);
     setPositionPhoto(photoProfil?.position ?? { x: 50, y: 50 });
@@ -1319,22 +1671,30 @@ function OngletParametres({ pseudo, photoProfil, onEnregistrerPhotoProfil, enreg
 
   const [suppressionCompteOuverte, setSuppressionCompteOuverte] = useState(false);
 
-  const zonePhotoRef = useRef(null);
-  const glissementRef = useRef(null); // { startX, startY, startPosX, startPosY } pendant un glissement
+  // --- Bio local state ---
+  const [bioTemp, setBioTemp] = useState(bio || '');
+  const [bioErreur, setBioErreur] = useState('');
 
-  // Charge le fichier choisi par l'utilisateur (depuis son PC), le compresse
-  // via un canvas pour éviter d'envoyer des payloads massifs à Supabase (ce qui
-  // provoque des erreurs réseau ERR_HTTP2_PROTOCOL_ERROR / CONNECTION_RESET),
-  // et le convertit en data URL.
+  useEffect(() => {
+    setBioTemp(bio || '');
+  }, [bio]);
+
+  const zonePhotoRef = useRef(null);
+  const glissementRef = useRef(null);
+
   const gererChoixPhoto = (evenement) => {
     const fichier = evenement.target.files?.[0];
     if (!fichier) return;
+
+    if (fichier.size > 5 * 1024 * 1024) {
+      alert("L'image est trop volumineuse (max 5 Mo).");
+      return;
+    }
 
     const lecteur = new FileReader();
     lecteur.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        // Redimensionnement à 400px maximum pour la photo de profil
         const MAX_TAILLE = 400;
         let largeur = img.width;
         let hauteur = img.height;
@@ -1353,19 +1713,16 @@ function OngletParametres({ pseudo, photoProfil, onEnregistrerPhotoProfil, enreg
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, largeur, hauteur);
 
-        // Compression en WebP ou JPEG (qualité 0.8) pour réduire drastiquement la taille (moins de 100ko)
         const dataUrlCompresser = canvas.toDataURL('image/jpeg', 0.8);
 
         setPhotoDataUrl(dataUrlCompresser);
-        setPositionPhoto({ x: 50, y: 50 }); // recentre par défaut à chaque nouvelle photo
+        setPositionPhoto({ x: 50, y: 50 });
       };
       img.src = e.target.result;
     };
     lecteur.readAsDataURL(fichier);
   };
 
-  // Glisser pour recentrer : on déplace le point de recadrage (object-position)
-  // en sens inverse du mouvement de la souris, borné entre 0 et 100%.
   const gererGlissement = (evenement) => {
     if (!glissementRef.current || !zonePhotoRef.current) return;
     const rect = zonePhotoRef.current.getBoundingClientRect();
@@ -1386,7 +1743,7 @@ function OngletParametres({ pseudo, photoProfil, onEnregistrerPhotoProfil, enreg
   };
 
   const demarrerGlissement = (evenement) => {
-    if (!photoDataUrl) return; // rien à recentrer sans photo
+    if (!photoDataUrl) return;
     glissementRef.current = {
       startX: evenement.clientX,
       startY: evenement.clientY,
@@ -1397,22 +1754,25 @@ function OngletParametres({ pseudo, photoProfil, onEnregistrerPhotoProfil, enreg
     window.addEventListener('mouseup', arreterGlissement);
   };
 
-  // Nettoyage des écouteurs si le composant est démonté pendant un glissement
   useEffect(() => {
     return () => {
       window.removeEventListener('mousemove', gererGlissement);
       window.removeEventListener('mouseup', arreterGlissement);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const enregistrerModifications = async () => {
-    // La photo de profil est réellement enregistrée sur Supabase (seulement
-    // pour un utilisateur connecté, jamais pour un invité). Le reste
-    // (e-mail, mot de passe, infos personnelles) reste un emplacement
-    // réservé, prêt à être branché sur une vraie API plus tard.
+    if (bioTemp.length > 350) {
+      setBioErreur('Votre bio ne peut pas dépasser 350 caractères.');
+      return;
+    }
+    setBioErreur('');
+
     if (connecte) {
       await onEnregistrerPhotoProfil({ dataUrl: photoDataUrl, position: positionPhoto });
+      if (typeof setBio === 'function') {
+        setBio(bioTemp);
+      }
     }
     console.log('Modifications des paramètres (placeholder) :', {
       email,
@@ -1424,10 +1784,9 @@ function OngletParametres({ pseudo, photoProfil, onEnregistrerPhotoProfil, enreg
   return (
     <div className="profil_onglet_panneau profil_onglet_panneau--parametres">
 
-      {/* --- Photo de profil : choix depuis le PC + repositionnement --- */}
       <div className="parametres_section">
         <div className="parametres_section_entete">
-          <h4 className="profil_section_titre">Photo de profil</h4>
+          <h4 className="profil_section_titre">Profil Public</h4>
           <button
             type="button"
             className="btn_primaire parametres_btn_enregistrer"
@@ -1438,50 +1797,108 @@ function OngletParametres({ pseudo, photoProfil, onEnregistrerPhotoProfil, enreg
           </button>
         </div>
 
-        {connecte ? (
-          <>
-            <div
-              className="parametres_photo_zone"
-              ref={zonePhotoRef}
-              onMouseDown={demarrerGlissement}
-            >
-              {photoDataUrl ? (
-                <img
-                  src={photoDataUrl}
-                  alt={`Photo de profil de ${pseudo}`}
-                  className="parametres_photo_apercu"
-                  style={{ objectPosition: `${positionPhoto.x}% ${positionPhoto.y}%` }}
-                  draggable={false}
-                />
-              ) : (
-                <span className="parametres_photo_icone_defaut">👤</span>
-              )}
+        <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', marginTop: '16px' }}>
+          {/* Section Photo */}
+          <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+            <h5 style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', alignSelf: 'flex-start' }}>Photo de profil</h5>
+            {connecte ? (
+              <>
+                <div
+                  className="parametres_photo_zone"
+                  ref={zonePhotoRef}
+                  onMouseDown={demarrerGlissement}
+                >
+                  {photoDataUrl ? (
+                    <img
+                      src={photoDataUrl}
+                      alt={`Photo de profil de ${pseudo}`}
+                      className="parametres_photo_apercu"
+                      style={{ objectPosition: `${positionPhoto.x}% ${positionPhoto.y}%` }}
+                      draggable={false}
+                    />
+                  ) : (
+                    <span className="parametres_photo_icone_defaut">👤</span>
+                  )}
+                </div>
+
+                {photoDataUrl && (
+                  <p className="parametres_photo_aide" style={{ margin: 0, fontSize: '0.8rem' }}>Glissez pour recentrer</p>
+                )}
+
+                <label className="btn_secondaire parametres_photo_btn_choisir" style={{ margin: 0 }}>
+                  Choisir une photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={gererChoixPhoto}
+                    className="parametres_photo_input_fichier"
+                  />
+                </label>
+
+                {erreurPhotoProfil && (
+                  <p className="parametres_photo_erreur" style={{ margin: 0 }}>{erreurPhotoProfil}</p>
+                )}
+              </>
+            ) : (
+              <p className="parametres_photo_aide" style={{ maxWidth: '200px', textAlign: 'center' }}>
+                Connecte-toi avec un compte pour choisir une photo.
+              </p>
+            )}
+          </div>
+
+          {/* Section Bio */}
+          <div style={{ flex: '0 1 70%', minWidth: '300px', display: 'flex', flexDirection: 'column' }}>
+            <h5 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#1f2430', fontWeight: '600' }}>Bio</h5>
+            <textarea
+              className="param_input"
+              rows={5}
+              style={{
+                resize: 'vertical',
+                background: '#ffffff',
+                border: bioTemp.length > 350 ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '12px',
+                color: '#1f2430',
+                width: '100%',
+                flex: 1,
+                boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)'
+              }}
+              placeholder="Présentez-vous..."
+              value={bioTemp}
+              onChange={(e) => {
+                setBioTemp(e.target.value);
+                setBioErreur('');
+              }}
+            />
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginTop: '8px'
+            }}>
+              <span style={{
+                fontSize: '0.8rem',
+                color: bioTemp.length > 350 ? '#ef4444' : '#64748b',
+                fontWeight: '500'
+              }}>
+                {bioTemp.length} / 350
+              </span>
             </div>
-
-            {photoDataUrl && (
-              <p className="parametres_photo_aide">Glissez la photo pour la recentrer</p>
+            {bioErreur && (
+              <div style={{
+                marginTop: '12px',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                color: '#ef4444',
+                border: '1px solid rgba(239, 68, 68, 0.2)'
+              }}>
+                {bioErreur}
+              </div>
             )}
-
-            <label className="btn_secondaire parametres_photo_btn_choisir">
-              Choisir une photo depuis mon PC
-              <input
-                type="file"
-                accept="image/*"
-                onChange={gererChoixPhoto}
-                className="parametres_photo_input_fichier"
-              />
-            </label>
-
-            {erreurPhotoProfil && (
-              <p className="parametres_photo_erreur">{erreurPhotoProfil}</p>
-            )}
-          </>
-        ) : (
-          <p className="parametres_photo_aide">
-            Connecte-toi avec un compte pour choisir et enregistrer une photo de profil. En mode
-            invité, aucune photo n'est affichée.
-          </p>
-        )}
+          </div>
+        </div>
       </div>
 
       {/* --- Compte : e-mail et mot de passe --- */}
@@ -2237,18 +2654,10 @@ function PomodoroTracker({ points }) {
   );
 }
 
-function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre, pointsPomodoro, modeLecture, setModeLecture, sessionConsultee, setSessionConsultee, sessionsSauvegardees, setSessionsSauvegardees, sessionsChargeesPourRef, remplacerTachesActives }) {
+function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre, pointsPomodoro, modeLecture, setModeLecture, sessionConsultee, setSessionConsultee, sessionsSauvegardees, setSessionsSauvegardees, sessionsChargeesPourRef, remplacerTachesActives, titreSession, setTitreSession, numeroSession }) {
   const { connecte, utilisateur } = useAuth();
 
   const [idAgrandie, setIdAgrandie] = useState(null);
-
-  // Session en cours : le numéro dépend des sessions déjà archivées, donc il
-  // est recalculé dès que celles-ci sont (re)chargées (changement de compte).
-  const [numeroSession, setNumeroSession] = useState('0001');
-  useEffect(() => {
-    setNumeroSession(genererNumeroSession(sessionsSauvegardees));
-  }, [sessionsSauvegardees]);
-  const [titreSession, setTitreSession] = useState('');
 
   // Date de création de la session en cours, utilisée pour le compteur de
   // progression et affichée à côté du score (voir session_progression_ligne)
@@ -2445,7 +2854,6 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
       ajouterTache();
     }
     setTitreSession('');
-    setNumeroSession(genererNumeroSession(sessionsActuelles));
     setDateCreationSession(new Date().toISOString());
     setConfirmationOuverte(false);
 
@@ -2513,7 +2921,7 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     if (!sessionConsultee) return;
     const nonTerminees = (sessionConsultee.notes || []).filter((n) => !n.terminee);
     const terminees = (sessionConsultee.notes || []).filter((n) => n.terminee);
-    
+
     if (nonTerminees.length === 0) return;
 
     // 1. Sauvegarder la session de travail actuelle (en arrière-plan) pour ne rien perdre
@@ -2527,7 +2935,7 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
       notes: terminees
     };
 
-    const sessionsMisesAJour = sessionsSauvegardees.map((s) => 
+    const sessionsMisesAJour = sessionsSauvegardees.map((s) =>
       s.id === ancienneSessionMiseAJour.id ? ancienneSessionMiseAJour : s
     );
     setSessionsSauvegardees(sessionsMisesAJour);
@@ -2542,9 +2950,7 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
       remplacerTachesActives(nouvellesTaches);
     }
 
-    // Mettre à jour les métadonnées de la session active
     setTitreSession(`Suite de ${sessionConsultee.titre || 'Session'}`);
-    setNumeroSession(genererNumeroSession(sessionsMisesAJour));
     setDateCreationSession(new Date().toISOString());
 
     // 4. Quitter le mode lecture pour afficher la nouvelle session en cours
@@ -3603,6 +4009,7 @@ function Param({
   onRemplacerPrereglage,
   onOuvrirCreationPrereglage
 }) {
+
   return (
     <div className='param'>
       <h2>Paramètre 2</h2>
@@ -3630,18 +4037,12 @@ function Param({
               id="couleur-fond"
               type="text"
               className="param_input"
-              placeholder="rgb(255, 0, 0)"
               value={couleurFondInput}
               onChange={(e) => setCouleurFondInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') onAppliquerCouleur(couleurFondInput);
-              }}
+              placeholder="ex: 25, 25, 25"
             />
-            <button
-              className="param_btn_valider"
-              onClick={() => onAppliquerCouleur(couleurFondInput)}
-            >
-              Valider
+            <button className="param_btn_valider" onClick={onAppliquerCouleur}>
+              Appliquer
             </button>
           </div>
         </div>
@@ -4264,9 +4665,11 @@ function BlocDeux({
   sessionsSauvegardees,
   setSessionsSauvegardees,
   sessionsChargeesPourRef,
-  remplacerTachesActives
+  remplacerTachesActives,
+  titreSession,
+  setTitreSession,
+  numeroSession
 }) {
-
 
   const choisirOnglet = (id) => {
     setVueActive(id);
@@ -4325,6 +4728,9 @@ function BlocDeux({
               setSessionsSauvegardees={setSessionsSauvegardees}
               sessionsChargeesPourRef={sessionsChargeesPourRef}
               remplacerTachesActives={remplacerTachesActives}
+              titreSession={titreSession}
+              setTitreSession={setTitreSession}
+              numeroSession={numeroSession}
             />
           )}
           {vueActive === 2 && (
@@ -4382,7 +4788,7 @@ function BarreDefilante({ actif, phase }) {
           scrolling="no"
           allowTransparency="true"
         />
-        
+
         {/* Coureur au repos (En pause) */}
         <iframe
           src="/runner_pose.html"
@@ -4640,6 +5046,7 @@ function App() {
   const [couleurFondInput, setCouleurFondInput] = useState('');
   const [couleurFondAppliquee, setCouleurFondAppliquee] = useState(null);
   const [imageFond, setImageFond] = useState(null);
+  const [bio, setBio] = useState('');
 
   // --- Réglages Pomodoro (durées + couleurs) ---
   // Restaurés depuis Supabase pour un compte connecté (voir plus bas, table
@@ -4737,6 +5144,12 @@ function App() {
   // Id de la note pour laquelle une confirmation de désépinglage est demandée
   const [idADesepingler, setIdADesepingler] = useState(null);
 
+  const [numeroSession, setNumeroSession] = useState('0001');
+  const [titreSession, setTitreSession] = useState('');
+  useEffect(() => {
+    setNumeroSession(genererNumeroSession(sessionsProfilArchivees));
+  }, [sessionsProfilArchivees]);
+
   // --- Musique d'ambiance : piste choisie (persistée) + visibilité du lecteur ---
   // L'objet musiqueAmbiance regroupe toute l'information sur la piste en
   // cours : type/source, titre, artiste, durée, miniature/pochette, position
@@ -4788,6 +5201,7 @@ function App() {
         setMusiqueAmbiance(null);
         setLecteurMusiqueVisible(false);
       }
+      setBio(config.bio ?? '');
       preferencesChargeesPourRef.current = utilisateur.id;
     })();
     return () => { annule = true; };
@@ -4825,16 +5239,20 @@ function App() {
         musiqueAmbiance: musiqueAmbiance ? { ...musiqueAmbiance, enLecture: false } : null,
         couleurFondAppliquee,
         imageFond,
+        bio,
       });
       // Sauvegarde des coins et temps (via sauvegarderProfil)
+      // On en profite pour synchroniser le pseudo et l'email pour la recherche sociale !
       sauvegarderProfil(idUtilisateur, {
         coins: coins,
-        temps_total_pomodoro: tempsTotalPomodoro
+        temps_total_pomodoro: tempsTotalPomodoro,
+        pseudo: utilisateur?.displayName || utilisateur?.email?.split('@')[0] || 'Utilisateur',
+        email: utilisateur?.email
       });
     }, 300);
 
     return () => clearTimeout(minuteur);
-  }, [reglages, musiqueAmbiance, couleurFondAppliquee, imageFond, coins, tempsTotalPomodoro, connecte, utilisateur?.id]);
+  }, [reglages, musiqueAmbiance, couleurFondAppliquee, imageFond, bio, coins, tempsTotalPomodoro, connecte, utilisateur?.id]);
 
   const validerMusiqueAmbiance = (musique) => {
     setMusiqueAmbiance({
@@ -5484,6 +5902,10 @@ function App() {
               sessionsSauvegardees={sessionsProfilArchivees}
               setSessionsSauvegardees={setSessionsProfilArchivees}
               sessionsChargeesPourRef={sessionsChargeesPourRef}
+              remplacerTachesActives={remplacerTachesActives}
+              titreSession={titreSession}
+              setTitreSession={setTitreSession}
+              numeroSession={numeroSession}
             />
           )}
 
@@ -5502,7 +5924,7 @@ function App() {
                 />
               </div>
             ) : null}
-            
+
             <button
               type="button"
               className="poignee_musique_btn"
@@ -5555,6 +5977,11 @@ function App() {
             erreurPhotoProfil={erreurPhotoProfil}
             coins={coins}
             musiqueAmbiance={musiqueAmbiance}
+            bio={bio}
+            setBio={setBio}
+            titreSession={titreSession}
+            numeroSession={numeroSession}
+            taches={taches}
             sessionsSauvegardees={sessionsProfilArchivees}
             onConsulterSession={(session) => {
               setSessionConsulteeApp(session);
