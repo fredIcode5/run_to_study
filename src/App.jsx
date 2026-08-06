@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { Play, Pause, SquarePen, Gift, Headphones } from 'lucide-react'
+import { Play, Pause, SquarePen, Gift, Headphones, Pin } from 'lucide-react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
+import frLocale from '@fullcalendar/core/locales/fr'
 import './App.css'
 import { useAuth } from './context/AuthContext.jsx'
 import {
@@ -1064,10 +1065,11 @@ function OngletPlanning() {
   const [titreSession, setTitreSession] = useState('');
   const [themeSession, setThemeSession] = useState('Concentration (par défaut)');
   const [notes, setNotes] = useState([]);
+  const [texteEvenement, setTexteEvenement] = useState('');
 
   const [enChargement, setEnChargement] = useState(true);
 
-  // Charger les données globales du mois (les compteurs de notes)
+  // Charger les données globales du mois (les compteurs de notes et événements)
   useEffect(() => {
     if (!utilisateur?.id) return;
 
@@ -1091,6 +1093,7 @@ function OngletPlanning() {
         setTitreSession(data.titreSession || '');
         setThemeSession(data.themeSession || 'Concentration (par défaut)');
         setNotes(data.notes || []);
+        setTexteEvenement(data.evenement || '');
         setEnChargement(false);
       }
     };
@@ -1106,31 +1109,45 @@ function OngletPlanning() {
       sauvegarderPlanningJour(utilisateur.id, dateSelectionnee, {
         titreSession,
         themeSession,
-        notes
+        notes,
+        evenement: texteEvenement
       });
 
       // Mettre à jour le compteur du mois en local sans recharger depuis Firebase
       setDonneesMois(prev => ({
         ...prev,
-        [dateSelectionnee]: notes.length
+        [dateSelectionnee]: {
+          count: notes.length,
+          evenement: texteEvenement
+        }
       }));
     }, 500);
 
     return () => clearTimeout(timeout);
-  }, [titreSession, themeSession, notes, dateSelectionnee, utilisateur?.id, enChargement]);
+  }, [titreSession, themeSession, notes, texteEvenement, dateSelectionnee, utilisateur?.id, enChargement]);
 
   // Événements pour afficher les bulles sur le calendrier
   const events = Object.entries(donneesMois)
-    .filter(([_, count]) => count > 0)
-    .map(([date, count]) => ({
+    .filter(([_, data]) => data?.count > 0 || !!data?.evenement)
+    .map(([date, data]) => ({
       date: date,
-      extendedProps: { count }
+      extendedProps: { count: data?.count || 0, evenement: data?.evenement || '' }
     }));
 
   const renderEventContent = (eventInfo) => {
+    const { count, evenement } = eventInfo.event.extendedProps;
     return (
-      <div className="planning_bulle_indicateur_fc">
-        {eventInfo.event.extendedProps.count}
+      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+        {count > 0 && (
+          <div className="planning_bulle_indicateur_fc">
+            {count}
+          </div>
+        )}
+        {evenement && (
+          <div style={{ color: '#f59e0b', fontSize: '12px', lineHeight: 1 }} title={evenement}>
+            ⭐
+          </div>
+        )}
       </div>
     );
   };
@@ -1170,10 +1187,12 @@ function OngletPlanning() {
         <div className="planning_calendrier_conteneur">
           <FullCalendar
             plugins={[dayGridPlugin, interactionPlugin]}
-            initialView="dayGridMonth"
+            initialView="dayGridWeek"
             initialDate={moisAffiche}
             events={events}
             eventContent={renderEventContent}
+            locale={frLocale}
+            contentHeight="auto"
             dateClick={(info) => {
               setDateSelectionnee(info.dateStr);
             }}
@@ -1190,8 +1209,47 @@ function OngletPlanning() {
               right: ''
             }}
             firstDay={1} // Lundi
-            height="100%"
+            aspectRatio={1.8}
+            dayCellClassNames={(arg) => {
+              if (formaterJourIso(arg.date) === dateSelectionnee) {
+                return 'fc-day-selectionne';
+              }
+              return '';
+            }}
           />
+        </div>
+
+        {/* Section Événements séparée */}
+        <div className="planning_evenements_section" style={{ marginTop: '24px' }}>
+          <h4 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '1.05rem', fontWeight: 600, color: '#1f2430', marginBottom: '12px', paddingLeft: '4px' }}>
+            Événements
+          </h4>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            border: '1px solid rgba(31, 36, 48, 0.06)',
+            boxShadow: 'var(--shadow-soft)',
+            padding: '12px',
+            position: 'relative'
+          }}>
+            <textarea
+              className="todo_contenu"
+              style={{ minHeight: '60px', width: '100%', fontSize: '0.95rem', background: 'transparent', resize: 'vertical' }}
+              placeholder="Décris un événement pour ce jour (max 100 mots)..."
+              value={texteEvenement}
+              onChange={(e) => {
+                const mots = e.target.value.split(/\s+/).filter(w => w.length > 0);
+                if (mots.length <= 100) {
+                  setTexteEvenement(e.target.value);
+                }
+              }}
+            />
+            <div style={{ textAlign: 'right', marginTop: '4px' }}>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                {texteEvenement.split(/\s+/).filter(w => w.length > 0).length} / 100 mots
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1205,30 +1263,6 @@ function OngletPlanning() {
           <p className="social_message_info">Chargement...</p>
         ) : (
           <>
-            <div className="planning_groupe_champ">
-              <label className="planning_label">Titre de la session</label>
-              <input
-                type="text"
-                className="planning_input"
-                placeholder="Ex: Révision Mathématiques..."
-                value={titreSession}
-                onChange={(e) => setTitreSession(e.target.value)}
-              />
-            </div>
-
-            <div className="planning_groupe_champ">
-              <label className="planning_label">Thème</label>
-              <select
-                className="planning_select"
-                value={themeSession}
-                onChange={(e) => setThemeSession(e.target.value)}
-              >
-                {THEMES_SESSION.map(theme => (
-                  <option key={theme} value={theme}>{theme}</option>
-                ))}
-              </select>
-            </div>
-
             <div className="planning_groupe_champ" style={{ marginTop: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <label className="planning_label">Tâches / Notes</label>
@@ -1242,28 +1276,34 @@ function OngletPlanning() {
                   <p className="social_message_info" style={{ textAlign: 'left', fontSize: '0.9rem' }}>Aucune note pour ce jour.</p>
                 ) : (
                   notes.map((note) => (
-                    <div key={note.id} className="planning_note_item">
-                      <input
-                        type="checkbox"
-                        checked={note.terminee}
-                        onChange={() => handleToggleNote(note.id)}
-                        style={{ cursor: 'pointer' }}
+                    <div key={note.id} className={`todo_carte ${note.terminee ? 'todo_carte--terminee' : ''}`} style={{ marginBottom: '12px' }}>
+                      <div className="todo_carte_actions_haut">
+                        <button
+                          type="button"
+                          className="todo_carte_suppr"
+                          onClick={() => handleSupprimerNote(note.id)}
+                          aria-label="Supprimer la tâche"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      <TacheZoneTexte
+                        className="todo_contenu"
+                        valeur={note.contenu}
+                        onChange={(valeur) => handleModifierNote(note.id, valeur)}
+                        placeholder="Écris ta tâche..."
                       />
-                      <input
-                        type="text"
-                        className={`planning_note_input ${note.terminee ? 'terminee' : ''}`}
-                        value={note.contenu}
-                        onChange={(e) => handleModifierNote(note.id, e.target.value)}
-                        placeholder="Texte de la note..."
-                      />
-                      <button
-                        type="button"
-                        className="planning_note_btn_supprimer"
-                        onClick={() => handleSupprimerNote(note.id)}
-                        title="Supprimer"
-                      >
-                        ✕
-                      </button>
+
+                      <div className="todo_carte_actions">
+                        <button
+                          type="button"
+                          className={`todo_btn_terminer ${note.terminee ? 'actif' : ''}`}
+                          onClick={() => handleToggleNote(note.id)}
+                        >
+                          {note.terminee ? '✓ Terminé' : 'Terminé'}
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -2320,7 +2360,7 @@ function TacheZoneTexte({ className, valeur, onChange, placeholder, autoFocus })
 }
 
 // Une carte = une tâche, éditable directement dans la liste
-function TacheCarte({ tache, actions, onAgrandir, lectureSeule }) {
+function TacheCarte({ tache, actions, onAgrandir, lectureSeule, estProgramme }) {
   const zoneTexteRef = useRef(null);
 
   // Clique n'importe où dans la carte (hors boutons/inputs déjà gérés) -> focus l'édition
@@ -2330,7 +2370,7 @@ function TacheCarte({ tache, actions, onAgrandir, lectureSeule }) {
 
   return (
     <div
-      className={`todo_carte ${tache.terminee ? 'todo_carte--terminee' : ''}${lectureSeule && !tache.terminee ? ' todo_carte--non-terminee-lecture' : ''}`}
+      className={`todo_carte ${tache.terminee ? 'todo_carte--terminee' : ''}${lectureSeule && !tache.terminee ? ' todo_carte--non-terminee-lecture' : ''}${estProgramme ? ' todo_carte--programme' : ''}`}
       onClick={focaliserEdition}
     >
       <div className="todo_carte_actions_haut">
@@ -2362,8 +2402,9 @@ function TacheCarte({ tache, actions, onAgrandir, lectureSeule }) {
           onClick={(e) => { e.stopPropagation(); actions.epingler(); }}
           title="Épingler sur le fond de la page"
           disabled={lectureSeule}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          📌 Épingler
+          <Pin size={16} />
         </button>
         <button
           type="button"
@@ -2414,8 +2455,9 @@ function ModalTache({ tache, actions, fermer }) {
               className="todo_btn_epingler"
               onClick={actions.epingler}
               title="Épingler sur le fond de la page"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              📌 Épingler
+              <Pin size={16} />
             </button>
             <button
               type="button"
@@ -2680,6 +2722,34 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
   const [themeSession, setThemeSession] = useState('');
   const [themeDropdownOuvert, setThemeDropdownOuvert] = useState(false);
 
+  // --- Toggle Daily : affiche/masque les notes du calendrier pour aujourd'hui ---
+  const [filtreDaily, setFiltreDaily] = useState(true);
+  const [notesProgrammes, setNotesProgrammes] = useState([]);
+
+  useEffect(() => {
+    if (!utilisateur?.id || !filtreDaily) return;
+    
+    let annule = false;
+    const chargerNotes = async () => {
+      try {
+        const dateAujourdhui = formaterJourIso(new Date());
+        const data = await chargerPlanningJour(utilisateur.id, dateAujourdhui);
+        if (!annule && data && data.notes) {
+          setNotesProgrammes(data.notes.map(n => ({ ...n, isProgramme: true })));
+        }
+      } catch (e) {
+        console.error("Erreur chargement notes programmées", e);
+      }
+    };
+    chargerNotes();
+    
+    return () => { annule = true; };
+  }, [utilisateur?.id, filtreDaily]);
+
+  const toggleDaily = () => {
+    setFiltreDaily(!filtreDaily);
+  };
+
 
   // --- Mode "organiser" : numérotation manuelle de l'ordre des notes ---
   const [modeOrganisationActif, setModeOrganisationActif] = useState(false);
@@ -2695,10 +2765,14 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     ? (sessionConsultee?.notes || [])
     : taches;
 
-  const tachesListe = sourceTaches
+  const tachesListeBase = sourceTaches
     .filter((t) => !t.epinglee)
     .slice()
     .sort((a, b) => (a.ordre ?? Infinity) - (b.ordre ?? Infinity));
+
+  const tachesListe = (filtreDaily && !modeLecture)
+    ? [...notesProgrammes, ...tachesListeBase]
+    : tachesListeBase;
 
 
 
@@ -2978,7 +3052,7 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
         <div className="session_section">
 
           {/* Barre supérieure */}
-          <div className="todo_actions_top">
+          <div className="todo_actions_top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
 
             {!modeLecture && (
               <button
@@ -3015,13 +3089,30 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
                 </div>
               </div>
             ) : (
-              <button
-                type="button"
-                className="session_action_btn"
-                onClick={enregistrerSession}
-              >
-                Enregistrer la session
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <button
+                  type="button"
+                  className="session_action_btn"
+                  onClick={enregistrerSession}
+                >
+                  Enregistrer la session
+                </button>
+
+                <div
+                  className="switch_ligne"
+                  onClick={toggleDaily}
+                  role="switch"
+                  aria-checked={filtreDaily}
+                  style={{ gap: '8px', cursor: 'pointer' }}
+                >
+                  <span className="switch_label" style={{ fontSize: '0.85rem', fontWeight: 700, color: filtreDaily ? '#10b981' : '#6b7280' }}>
+                    Daily
+                  </span>
+                  <span className={`switch ${filtreDaily ? 'switch--actif' : ''}`} style={{ backgroundColor: filtreDaily ? '#10b981' : undefined }}>
+                    <span className="switch_bouton"></span>
+                  </span>
+                </div>
+              </div>
             )}
 
           </div>
@@ -3145,9 +3236,41 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
               )}
               <TacheCarte
                 tache={tache}
-                actions={actionsPour(tache.id)}
+                actions={
+                  tache.isProgramme ? {
+                    toggleTerminee: () => {
+                      const nouvellesNotes = notesProgrammes.map(n => n.id === tache.id ? { ...n, terminee: !n.terminee } : n);
+                      setNotesProgrammes(nouvellesNotes);
+                      if (utilisateur?.id) {
+                        sauvegarderPlanningJour(utilisateur.id, formaterJourIso(new Date()), {
+                          notes: nouvellesNotes.map(({ isProgramme, ...reste }) => reste)
+                        });
+                      }
+                    },
+                    modifierContenu: (nouveauContenu) => {
+                      const nouvellesNotes = notesProgrammes.map(n => n.id === tache.id ? { ...n, contenu: nouveauContenu } : n);
+                      setNotesProgrammes(nouvellesNotes);
+                      if (utilisateur?.id) {
+                        sauvegarderPlanningJour(utilisateur.id, formaterJourIso(new Date()), {
+                          notes: nouvellesNotes.map(({ isProgramme, ...reste }) => reste)
+                        });
+                      }
+                    },
+                    supprimer: () => {
+                      const nouvellesNotes = notesProgrammes.filter(n => n.id !== tache.id);
+                      setNotesProgrammes(nouvellesNotes);
+                      if (utilisateur?.id) {
+                        sauvegarderPlanningJour(utilisateur.id, formaterJourIso(new Date()), {
+                          notes: nouvellesNotes.map(({ isProgramme, ...reste }) => reste)
+                        });
+                      }
+                    },
+                    epingler: () => { } // Pas d'épinglage pour les notes programmées
+                  } : actionsPour(tache.id)
+                }
                 onAgrandir={() => setIdAgrandie(tache.id)}
                 lectureSeule={modeLecture}
+                estProgramme={tache.isProgramme}
               />
             </div>
           ))}
@@ -5902,7 +6025,6 @@ function App() {
               sessionsSauvegardees={sessionsProfilArchivees}
               setSessionsSauvegardees={setSessionsProfilArchivees}
               sessionsChargeesPourRef={sessionsChargeesPourRef}
-              remplacerTachesActives={remplacerTachesActives}
               titreSession={titreSession}
               setTitreSession={setTitreSession}
               numeroSession={numeroSession}

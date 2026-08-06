@@ -1853,7 +1853,8 @@ select option {
 }
 
 .todo_zone--lecture {
-  background: rgba(31, 36, 48, 0.08); /* Gris doux pour le fond du mode lecture */
+  background: rgba(31, 36, 48, 0.08);
+  /* Gris doux pour le fond du mode lecture */
 }
 
 .todo_entete {
@@ -2190,7 +2191,12 @@ select option {
 }
 
 /* --- Modale d'agrandissement d'une tÃ¢che --- */
-/* Surcharge du fond plein-Ã©cran opaque de .modal_fond pour cette modale prÃ©cise */
+/* Surcharge du fond plein-Ã©cran opaque de .modal_fond pour cette modale pr©cise */
+
+.todo_carte--programme {
+  border: 2px solid #3b82f6 !important;
+}
+
 .todo_modal_fond {
   background: rgba(31, 36, 48, 0.45);
   backdrop-filter: blur(3px);
@@ -3449,7 +3455,8 @@ select option {
 }
 
 .note_btn_ajouter:disabled {
-  background: #475569; /* Gris un peu foncé */
+  background: #475569;
+  /* Gris un peu foncé */
   color: #f1f5f9;
   cursor: not-allowed;
   box-shadow: none;
@@ -3842,7 +3849,8 @@ select option {
    Pomodoro Tracker : barre de points reprÃ©sentant les sÃ©ances terminÃ©es
    ====================================================================== */
 .pomodoro_compteur {
-  color: #8b5cf6; /* Violet */
+  color: #8b5cf6;
+  /* Violet */
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 700;
@@ -5054,9 +5062,11 @@ body,
   position: fixed;
   left: 0;
   top: 50%;
-  transform: translateY(-50%) translateX(calc(-100% + 41px)); /* Cache exactement le lecteur, laisse dépasser le bouton (41px) */
+  transform: translateY(-50%) translateX(calc(-100% + 41px));
+  /* Cache exactement le lecteur, laisse dépasser le bouton (41px) */
   display: flex;
-  align-items: stretch; /* Permet à la poignée de prendre toute la hauteur */
+  align-items: stretch;
+  /* Permet à la poignée de prendre toute la hauteur */
   z-index: 100;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -5070,14 +5080,16 @@ body,
   backdrop-filter: blur(8px);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-left: none; /* Fusionne avec la bordure droite du lecteur */
-  border-radius: 0 16px 16px 0; /* Même arrondi que le lecteur */
+  border-left: none;
+  /* Fusionne avec la bordure droite du lecteur */
+  border-radius: 0 16px 16px 0;
+  /* Même arrondi que le lecteur */
   padding: 16px 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
   transition: background 0.2s;
   height: auto;
 }
@@ -5088,7 +5100,8 @@ body,
 
 .lecteur_vinyle--tiroir {
   position: relative !important;
-  border-radius: 0 !important; /* Pas d'arrondi pour fusionner parfaitement avec le bouton */
+  border-radius: 0 !important;
+  /* Pas d'arrondi pour fusionner parfaitement avec le bouton */
   border-right: none !important;
   box-shadow: none !important;
   margin: 0;
@@ -5143,11 +5156,14 @@ body,
   z-index: 100;
 }
 
-.btn_ranger_notes, .btn_deployer_notes {
-  background: #111827; /* Noir */
+.btn_ranger_notes,
+.btn_deployer_notes {
+  background: #111827;
+  /* Noir */
   color: #ffffff;
   border: 1px solid #374151;
-  border-radius: 9999px; /* Force les coins totalement arrondis */
+  border-radius: 9999px;
+  /* Force les coins totalement arrondis */
   padding: 10px 24px;
   font-weight: 600;
   font-size: 0.9rem;
@@ -5156,17 +5172,21 @@ body,
   transition: all 0.2s ease;
 }
 
-.btn_ranger_notes:hover, .btn_deployer_notes:hover {
-  background: #1f2937; /* Noir un peu plus clair au survol */
+.btn_ranger_notes:hover,
+.btn_deployer_notes:hover {
+  background: #1f2937;
+  /* Noir un peu plus clair au survol */
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
 .btn_mode_concentration {
-  background: #111827; /* Noir */
+  background: #111827;
+  /* Noir */
   color: #ffffff;
   border: 1px solid #374151;
-  border-radius: 9999px; /* Force les coins totalement arrondis */
+  border-radius: 9999px;
+  /* Force les coins totalement arrondis */
   padding: 10px 24px;
   font-weight: 600;
   font-size: 0.9rem;
@@ -5176,7 +5196,8 @@ body,
 }
 
 .btn_mode_concentration:hover {
-  background: #1f2937; /* Noir un peu plus clair au survol */
+  background: #1f2937;
+  /* Noir un peu plus clair au survol */
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
@@ -5194,7 +5215,8 @@ body,
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #10b981; /* Vert */
+  background: #10b981;
+  /* Vert */
   color: white;
   border: none;
   font-size: 14px;
@@ -5216,28 +5238,33 @@ body,
 }
 
 .todo_carte_check:hover {
-  background: #059669; /* Vert plus foncé */
+  background: #059669;
+  /* Vert plus foncé */
   transform: scale(1.1) !important;
 }
 
 .todo_carte--terminee .todo_carte_check {
-  background: #6b7280; /* Gris quand terminée pour pouvoir l'annuler */
+  background: #6b7280;
+  /* Gris quand terminée pour pouvoir l'annuler */
 }
 
 /* --- 4. Mode lecture avancé --- */
 .todo_zone--lecture {
-  background-color: #f3f4f6; /* Gris clair */
+  background-color: #f3f4f6;
+  /* Gris clair */
 }
 
 .todo_carte--non-terminee-lecture {
-  border: 2px solid #ef4444 !important; /* Contour rouge vif */
+  border: 2px solid #ef4444 !important;
+  /* Contour rouge vif */
   box-shadow: 0 0 5px rgba(239, 68, 68, 0.5) !important;
 }
 
 .session_lecture_zone {
   display: flex;
   align-items: center;
-  gap: 150px; /* 150px de gap demandé */
+  gap: 150px;
+  /* 150px de gap demandé */
 }
 
 .session_lecture_texte {
@@ -5281,16 +5308,20 @@ body,
 .pomodoro_tours_compteur {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #8b5cf6; /* Violet */
+  color: #8b5cf6;
+  /* Violet */
   background: rgba(139, 92, 246, 0.1);
   padding: 6px 12px;
   border-radius: var(--radius-full);
 }
 
 /* --- 6. Tri historique en noir/blanc --- */
-.historique_tri_select, .historique_tri_btn {
-  background: #111827; /* Noir */
-  color: #ffffff; /* Blanc */
+.historique_tri_select,
+.historique_tri_btn {
+  background: #111827;
+  /* Noir */
+  color: #ffffff;
+  /* Blanc */
   border: 1px solid #374151;
   border-radius: var(--radius-sm);
   padding: 8px 12px;
@@ -5342,102 +5373,137 @@ body,
 .planning_layout {
   display: flex;
   gap: 24px;
-  height: 100%;
+  height: 100%; /* S'assure que ça prend toute la hauteur disponible */
   width: 100%;
-  align-items: flex-start;
+  align-items: stretch; /* Les deux colonnes prennent toute la hauteur */
+  overflow: hidden; /* Empêche le conteneur principal de scroller */
+}
+
+.planning_colonne_gauche {
+  flex: 0 0 50%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden; /* Fixe, ne scrolle pas */
 }
 
 .planning_colonne_calendrier {
-  flex: 0 0 60%;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--couleur-secondaire, #2c3343);
+  background-color: #ffffff;
+  /* Fond blanc */
   border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid rgba(31, 36, 48, 0.06);
 }
 
 .planning_calendrier_conteneur {
   width: 100%;
-  height: 500px; /* Hauteur fixe pour le calendrier */
 }
 
-/* Surcharges FullCalendar pour le thème sombre */
+.planning_texte_info {
+  margin-top: 24px;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  text-align: center;
+  font-style: italic;
+  line-height: 1.4;
+  padding: 0 16px;
+}
+
+/* Surcharges FullCalendar pour le thème clair (fond blanc) */
 .fc-theme-standard {
-  --fc-border-color: rgba(255, 255, 255, 0.1);
-  --fc-daygrid-event-dot-width: 0px; /* On cache les points par défaut */
-  --fc-button-text-color: #fff;
-  --fc-button-bg-color: rgba(255, 255, 255, 0.1);
+  --fc-border-color: rgba(31, 36, 48, 0.1);
+  --fc-daygrid-event-dot-width: 0px;
+  --fc-button-text-color: #1f2430;
+  --fc-button-bg-color: transparent;
   --fc-button-border-color: transparent;
-  --fc-button-hover-bg-color: rgba(255, 255, 255, 0.2);
+  --fc-button-hover-bg-color: rgba(31, 36, 48, 0.05);
   --fc-button-hover-border-color: transparent;
-  --fc-button-active-bg-color: rgba(255, 255, 255, 0.3);
+  --fc-button-active-bg-color: rgba(31, 36, 48, 0.1);
   --fc-button-active-border-color: transparent;
-  --fc-today-bg-color: rgba(226, 71, 42, 0.1);
+  --fc-today-bg-color: rgba(226, 71, 42, 0.05);
 }
 
 .fc .fc-toolbar-title {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: #fff;
+  color: #1f2430;
   text-transform: capitalize;
 }
 
-.fc .fc-button-primary:not(:disabled):active, 
+.fc .fc-toolbar.fc-header-toolbar {
+  margin-bottom: 12px !important;
+}
+
+.fc .fc-button {
+  font-size: 0.85rem !important;
+  padding: 4px 10px !important;
+}
+
+.fc .fc-button-primary:not(:disabled):active,
 .fc .fc-button-primary:not(:disabled).fc-button-active {
-  background-color: rgba(255, 255, 255, 0.3) !important;
+  background-color: rgba(31, 36, 48, 0.1) !important;
   border-color: transparent !important;
   box-shadow: none !important;
 }
 
 .fc .fc-button-primary:focus {
-  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 0 0 0.2rem rgba(31, 36, 48, 0.1) !important;
 }
 
 .fc-daygrid-day {
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, box-shadow 0.2s;
 }
 
 .fc-daygrid-day:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(31, 36, 48, 0.02);
+}
+
+.fc-day-selectionne {
+  box-shadow: inset 0 0 0 2px #e2472a !important;
+  background-color: rgba(226, 71, 42, 0.05) !important;
 }
 
 .fc-daygrid-day-number {
-  color: #fff;
-  font-weight: 500;
+  color: #1f2430;
+  font-weight: 600;
   padding: 8px !important;
+  text-decoration: none !important;
 }
 
 .fc-col-header-cell-cushion {
-  color: #94a3b8;
+  color: #64748b;
   text-transform: uppercase;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
   padding: 8px 0 !important;
+  text-decoration: none !important;
 }
 
 .planning_bulle_indicateur_fc {
-  background-color: var(--couleur-accent, #e2472a);
-  color: #fff;
-  font-size: 0.7rem;
+  background-color: rgba(96, 165, 250, 0.4); /* Bleu clair transparent */
+  color: #ffffff; /* Texte en blanc 100% opacité */
+  font-size: 0.8rem;
   font-weight: 700;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px; /* Carré avec coins arrondis */
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
   margin: 0 auto;
+  opacity: 1;
 }
 
 /* Colonne Détails */
 .planning_colonne_details {
-  flex: 0 0 calc(40% - 24px);
+  flex: 0 0 calc(50% - 24px);
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overflow-y: auto; /* Scrolle uniquement cette colonne */
+  padding-right: 8px; /* Évite que la barre de défilement ne colle au contenu */
 }
 
 .planning_details_entete {
@@ -5464,7 +5530,8 @@ body,
   letter-spacing: 0.5px;
 }
 
-.planning_input, .planning_select {
+.planning_input,
+.planning_select {
   width: 100%;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -5476,56 +5543,18 @@ body,
   transition: border-color 0.2s;
 }
 
-.planning_input:focus, .planning_select:focus {
+.planning_input:focus,
+.planning_select:focus {
   border-color: var(--couleur-accent, #e2472a);
 }
 
 .planning_notes_liste {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
   margin-top: 8px;
 }
 
-.planning_note_item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: background 0.2s;
-}
-
-.planning_note_item:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.planning_note_input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: #fff;
-  font-size: 0.95rem;
-  outline: none;
-}
-
-.planning_note_input.terminee {
-  text-decoration: line-through;
-  opacity: 0.5;
-}
-
-.planning_note_btn_supprimer {
-  background: transparent;
-  border: none;
-  color: #ef4444;
-  cursor: pointer;
-  opacity: 0.6;
-  padding: 4px;
-  transition: opacity 0.2s;
-}
-
-.planning_note_btn_supprimer:hover {
-  opacity: 1;
+.planning_notes_liste .todo_carte {
+  max-width: 100%;
 }

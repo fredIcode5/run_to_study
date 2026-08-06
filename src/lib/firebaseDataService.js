@@ -533,7 +533,10 @@ export async function chargerPlanningMois(userId, prefixeMois) {
     querySnapshot.forEach((doc) => {
       const data = doc.data();
       if (data.date && data.date.startsWith(prefixeMois)) {
-        resultats[data.date] = data.notes ? data.notes.length : 0;
+        resultats[data.date] = {
+          count: data.notes ? data.notes.length : 0,
+          evenement: data.evenement || ''
+        };
       }
     });
     return resultats;
