@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Play, Pause, SquarePen, Gift, Headphones, Pin } from 'lucide-react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import frLocale from '@fullcalendar/core/locales/fr'
 import './App.css'
+import InfiniteLoopAnimation from './infinitloop'
 import { useAuth } from './context/AuthContext.jsx'
 import {
   chargerProfil,
@@ -730,6 +732,9 @@ function OngletMonRunner() {
     return saved ? JSON.parse(saved) : DEFAULT_COLORS;
   });
   const [savedFeedback, setSavedFeedback] = useState(false);
+  const [hideRunner, setHideRunner] = useState(() => {
+    return localStorage.getItem('hideRunner') === 'true';
+  });
 
   const handleCategoryChange = (category, value) => {
     const newColors = { ...colors };
@@ -748,6 +753,9 @@ function OngletMonRunner() {
 
   const handleSave = () => {
     localStorage.setItem('runnerColors', JSON.stringify(colors));
+    localStorage.setItem('hideRunner', hideRunner);
+    window.dispatchEvent(new Event('runnerVisibilityChanged'));
+    
     const iframes = document.querySelectorAll('iframe.coureur_defilant, iframe.mon_runner_iframe');
     iframes.forEach(iframe => {
       if (iframe.contentWindow) {
@@ -794,6 +802,18 @@ function OngletMonRunner() {
                 </div>
               );
             })}
+          </div>
+          <div className="mon_runner_options" style={{ marginTop: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <label htmlFor="hideRunnerToggle" style={{ fontSize: '1.1rem', color: '#1f2937', fontWeight: '500', cursor: 'pointer' }}>
+              Masquer le coureur (fond d'écran)
+            </label>
+            <input 
+              type="checkbox" 
+              id="hideRunnerToggle"
+              checked={hideRunner}
+              onChange={(e) => setHideRunner(e.target.checked)}
+              style={{ transform: 'scale(1.5)', cursor: 'pointer', marginLeft: '5px' }}
+            />
           </div>
           <button type="button" className="btn_primaire mon_runner_btn_save" onClick={handleSave}>
             {savedFeedback ? 'Enregistré ✓' : 'Enregistrer'}
@@ -2083,7 +2103,7 @@ function OngletParametres({ pseudo, photoProfil, onEnregistrerPhotoProfil, enreg
 // pilotées par les réglages (props dureeTravailMinutes / dureePauseMinutes).
 // Les couleurs (chrono, boutons) sont appliquées globalement via des
 // variables CSS (voir App > useEffect couleurs), pas via des props ici.
-function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes, dureePauseMinutes, modeLecture, onPhaseChange }) {
+function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes, dureePauseMinutes, modeLecture, onPhaseChange, onReset, hideTimeDisplay, renderLoop }) {
   // 'travail' = session Pomodoro classique, 'pause' = pause qui suit
   const [phase, setPhase] = useState('travail');
 
@@ -2175,6 +2195,7 @@ function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes,
   const reset = () => {
     setEnMarche(false);
     setSecondesRestantes(dureeActuelle);
+    if (onReset) onReset();
   };
 
   const basculer = () => {
@@ -2207,12 +2228,18 @@ function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes,
 
   return (
     <div className='chrono'>
-      {/* Badge indiquant la phase actuelle (utile car le cycle travail/pause est automatique) */}
-      <span className={`chrono_phase chrono_phase--${phase}`}>
-        {phase === 'travail' ? '🎯 Session de travail' : '☕ Pause'}
-      </span>
+      {!hideTimeDisplay && (
+        <span className={`chrono_phase chrono_phase--${phase}`}>
+          {phase === 'travail' ? '🎯 Session de travail' : '☕ Pause'}
+        </span>
+      )}
 
-      <div className="chrono_affichage">{formaterTemps(secondesRestantes)}</div>
+      {!hideTimeDisplay && (
+        <div className="chrono_affichage">{formaterTemps(secondesRestantes)}</div>
+      )}
+
+      {renderLoop && renderLoop(secondesRestantes)}
+
       <div className="chrono_controles">
         <button className="btn_primaire" onClick={basculer} disabled={secondesRestantes === 0}>
           {libelleBouton}
@@ -2236,14 +2263,17 @@ function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes,
         </p>
       )}
 
-      <div className="chrono_distance">
-        <span className="chrono_distance_valeur">{distanceSession} m</span>
-        <span className="chrono_distance_label">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256">
-            <path d="M152,88a32,32,0,1,0-32-32A32,32,0,0,0,152,88Zm0-48a16,16,0,1,1-16,16A16,16,0,0,1,152,40Zm67.31,100.68c-.61.28-7.49,3.28-19.67,3.28-13.85,0-34.55-3.88-60.69-20a169.31,169.31,0,0,1-15.41,32.34,104.29,104.29,0,0,1,31.31,15.81C173.92,186.65,184,207.35,184,232a8,8,0,0,1-16,0c0-41.7-34.69-56.71-54.14-61.85-.55.7-1.12,1.41-1.69,2.1-19.64,23.8-44.25,36.18-71.63,36.18A92.29,92.29,0,0,1,31.2,208,8,8,0,0,1,32.8,192c25.92,2.58,48.47-7.49,67-30,12.49-15.14,21-33.61,25.25-47C86.13,92.35,61.27,111.63,61,111.84A8,8,0,1,1,51,99.36c1.5-1.2,37.22-29,89.51,6.57,45.47,30.91,71.93,20.31,72.18,20.19a8,8,0,1,1,6.63,14.56Z"></path>
-          </svg>
-        </span>
-      </div>
+      {createPortal(
+        <div className="chrono_distance" style={{ position: 'fixed', bottom: '30px', left: '30px', zIndex: 100 }}>
+          <span className="chrono_distance_valeur">{distanceSession} m</span>
+          <span className="chrono_distance_label">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256">
+              <path d="M152,88a32,32,0,1,0-32-32A32,32,0,0,0,152,88Zm0-48a16,16,0,1,1-16,16A16,16,0,0,1,152,40Zm67.31,100.68c-.61.28-7.49,3.28-19.67,3.28-13.85,0-34.55-3.88-60.69-20a169.31,169.31,0,0,1-15.41,32.34,104.29,104.29,0,0,1,31.31,15.81C173.92,186.65,184,207.35,184,232a8,8,0,0,1-16,0c0-41.7-34.69-56.71-54.14-61.85-.55.7-1.12,1.41-1.69,2.1-19.64,23.8-44.25,36.18-71.63,36.18A92.29,92.29,0,0,1,31.2,208,8,8,0,0,1,32.8,192c25.92,2.58,48.47-7.49,67-30,12.49-15.14,21-33.61,25.25-47C86.13,92.35,61.27,111.63,61,111.84A8,8,0,1,1,51,99.36c1.5-1.2,37.22-29,89.51,6.57,45.47,30.91,71.93,20.31,72.18,20.19a8,8,0,1,1,6.63,14.56Z"></path>
+            </svg>
+          </span>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
@@ -4899,29 +4929,43 @@ function BarreDefilante({ actif, phase }) {
   const fleches = Array.from({ length: 16 }, (_, i) => i);
   const isRunning = actif && phase === 'travail';
 
+  const [hideRunner, setHideRunner] = useState(() => {
+    return localStorage.getItem('hideRunner') === 'true';
+  });
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setHideRunner(localStorage.getItem('hideRunner') === 'true');
+    };
+    window.addEventListener('runnerVisibilityChanged', handleVisibilityChange);
+    return () => window.removeEventListener('runnerVisibilityChanged', handleVisibilityChange);
+  }, []);
+
   return (
     <div className="bas_page">
-      <div className="coureurs_container">
-        {/* Coureur animé (En mouvement) */}
-        <iframe
-          src="/runner.html"
-          title="Coureur animé"
-          className={`coureur_defilant coureur_course ${isRunning ? 'visible' : 'hidden'}`}
-          frameBorder="0"
-          scrolling="no"
-          allowTransparency="true"
-        />
+      {!hideRunner && (
+        <div className="coureurs_container">
+          {/* Coureur animé (En mouvement) */}
+          <iframe
+            src="/runner.html"
+            title="Coureur animé"
+            className={`coureur_defilant coureur_course ${isRunning ? 'visible' : 'hidden'}`}
+            frameBorder="0"
+            scrolling="no"
+            allowTransparency="true"
+          />
 
-        {/* Coureur au repos (En pause) */}
-        <iframe
-          src="/runner_pose.html"
-          title="Coureur au repos"
-          className={`coureur_defilant coureur_pose ${!isRunning ? 'visible' : 'hidden'}`}
-          frameBorder="0"
-          scrolling="no"
-          allowTransparency="true"
-        />
-      </div>
+          {/* Coureur au repos (En pause) */}
+          <iframe
+            src="/runner_pose.html"
+            title="Coureur au repos"
+            className={`coureur_defilant coureur_pose ${!isRunning ? 'visible' : 'hidden'}`}
+            frameBorder="0"
+            scrolling="no"
+            allowTransparency="true"
+          />
+        </div>
+      )}
 
       <div className="fleches_bande">
         <div className={`fleches_piste ${actif ? '' : 'arret'}`}>
@@ -4938,6 +4982,20 @@ function App() {
   const [panelOuvert, setPanelOuvert] = useState(true);
   const [enMarche, setEnMarche] = useState(false);
   const [chronoPhase, setChronoPhase] = useState('travail');
+  const [chronoResetKey, setChronoResetKey] = useState(0);
+
+  const [hideRunner, setHideRunner] = useState(() => {
+    return localStorage.getItem('hideRunner') === 'true';
+  });
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setHideRunner(localStorage.getItem('hideRunner') === 'true');
+    };
+    window.addEventListener('runnerVisibilityChanged', handleVisibilityChange);
+    return () => window.removeEventListener('runnerVisibilityChanged', handleVisibilityChange);
+  }, []);
+  
   // Navigation ultra simple entre la vitrine d'accueil et l'appli Pomodoro,
   // sans routeur : on affiche l'un ou l'autre selon cet état.
   const [pageActuelle, setPageActuelle] = useState('accueil');
@@ -5972,7 +6030,7 @@ function App() {
             />
           )}
 
-          <main className={`stage ${panelOuvert && !modeConcentration ? 'stage--panel-ouvert' : ''}`}>
+          <main className={`stage ${panelOuvert && !modeConcentration ? 'stage--panel-ouvert' : ''}`} style={{ position: 'relative' }}>
             <Chrono
               enMarche={enMarche}
               setEnMarche={setEnMarche}
@@ -5981,6 +6039,20 @@ function App() {
               dureePauseMinutes={reglages.dureePause}
               modeLecture={modeLectureSession}
               onPhaseChange={setChronoPhase}
+              onReset={() => setChronoResetKey(k => k + 1)}
+              hideTimeDisplay={hideRunner}
+              renderLoop={(secondesRestantes) => hideRunner && (
+                <div style={{ marginTop: '110px', pointerEvents: 'none', display: 'flex', justifyContent: 'center' }}>
+                  <InfiniteLoopAnimation 
+                    enMarche={enMarche} 
+                    photoProfil={photoProfil} 
+                    dureeTotale={chronoPhase === 'travail' ? reglages.dureeTravail * 60 : reglages.dureePause * 60}
+                    phase={chronoPhase}
+                    resetKey={chronoResetKey}
+                    secondesRestantes={secondesRestantes}
+                  />
+                </div>
+              )}
             />
           </main>
 
