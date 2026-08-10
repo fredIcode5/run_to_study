@@ -4200,13 +4200,14 @@ body,
   transform: translateX(-50%);
   color: #ffffff;
   font-family: 'DM Sans', sans-serif;
-  font-size: 3rem;
+  font-size: 1.4rem;
   font-weight: 700;
   text-align: center;
   z-index: 10;
   letter-spacing: 2px;
   text-transform: lowercase;
   text-shadow: 0 4px 24px rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
 }
 
 .accueil_personnage {
@@ -4271,9 +4272,9 @@ body,
 
 .accueil_fonctionnalites_grille {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 24px;
-  max-width: 1400px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 32px; /* Un peu plus d'espace entre les blocs agrandis */
+  max-width: 1200px;
   margin: 0 auto;
   width: 100%;
 }

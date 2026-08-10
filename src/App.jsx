@@ -220,7 +220,7 @@ function Accueil({ onCommencer }) {
           style={{ cursor: 'pointer' }}
         />
         <h1 className="accueil_titre_principal" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          pomodoro timer and more <Clock9 size={48} strokeWidth={2.5} />
+          pomodoro timer and more <Clock9 size={24} strokeWidth={2.5} />
         </h1>
         <div className="accueil_animation_container">
           <img src="/p1.png" alt="" className="accueil_personnage p_un" />
