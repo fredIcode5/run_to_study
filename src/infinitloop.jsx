@@ -24,7 +24,7 @@ function applyGroupTransform(x, y) {
   return { x: sx + CX, y: sy + CY };
 }
 
-const DURATION = 22000; // durée d'un tour complet (en millisecondes) - augmenté pour réduire la vitesse
+const DURATION = 35000; // durée d'un tour complet (en millisecondes) - augmenté pour réduire la vitesse
 const PERP_LENGTH = 70; // longueur de la ligne perpendiculaire
 const AVATAR_RADIUS = 24;
 
@@ -38,12 +38,14 @@ const POINTS = [
   { id: "p3", color: "#eab308", phase: 0.75, isPlayer: false },
 ];
 
-export default function InfiniteLoopAnimation({ enMarche, photoProfil, dureeTotale = 1500, phase = 'travail', resetKey = 0, secondesRestantes = 0 }) {
+export default function InfiniteLoopAnimation({ enMarche, photoProfil, dureeTotale = 1500, phase = 'travail', resetKey = 0, secondesRestantes = 0, variante = 'pomodoro', pointsPersonnalises }) {
   const pathRef = useRef(null);
   const [animState, setAnimState] = useState({ pointsState: null, progress: 0, totalLength: 0 });
   const accumulatedTimeRef = useRef(0);
   const lastTimestampRef = useRef(null);
   const enMarcheRef = useRef(enMarche);
+  
+  const POINTS_ACTIFS = pointsPersonnalises || POINTS;
 
   useEffect(() => {
     enMarcheRef.current = enMarche;
@@ -71,7 +73,7 @@ export default function InfiniteLoopAnimation({ enMarche, photoProfil, dureeTota
       const safeDuree = dureeTotale > 0 ? dureeTotale : 1;
       const fillProgress = Math.min(accumulatedTimeRef.current / (safeDuree * 1000), 1);
 
-      const results = POINTS.map((cfg) => {
+      const results = POINTS_ACTIFS.map((cfg) => {
         const pointProgress = (((accumulatedTimeRef.current / DURATION) + cfg.phase) % 1 + 1) % 1;
         const dist = pointProgress * totalLength;
 
@@ -92,6 +94,7 @@ export default function InfiniteLoopAnimation({ enMarche, photoProfil, dureeTota
           id: cfg.id,
           color: cfg.color,
           isPlayer: cfg.isPlayer,
+          avatar: cfg.avatar,
           point: pointScreen,
           perpEnd: perpEndScreen,
         };
@@ -163,37 +166,41 @@ export default function InfiniteLoopAnimation({ enMarche, photoProfil, dureeTota
           )}
         </g>
 
-        {/* Textes intégrés aux boucles */}
-        {/* Boucle gauche : Phase (Travail / Pause) */}
-        <foreignObject x="125" y="170" width="200" height="60">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', height: '100%', color: '#FFFFFF', fontSize: '24px', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 'bold', opacity: 0.9 }}>
-            {phase === 'travail' ? (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 256 256">
-                  <path d="M152,88a32,32,0,1,0-32-32A32,32,0,0,0,152,88Zm0-48a16,16,0,1,1-16,16A16,16,0,0,1,152,40Zm67.31,100.68c-.61.28-7.49,3.28-19.67,3.28-13.85,0-34.55-3.88-60.69-20a169.31,169.31,0,0,1-15.41,32.34,104.29,104.29,0,0,1,31.31,15.81C173.92,186.65,184,207.35,184,232a8,8,0,0,1-16,0c0-41.7-34.69-56.71-54.14-61.85-.55.7-1.12,1.41-1.69,2.1-19.64,23.8-44.25,36.18-71.63,36.18A92.29,92.29,0,0,1,31.2,208,8,8,0,0,1,32.8,192c25.92,2.58,48.47-7.49,67-30,12.49-15.14,21-33.61,25.25-47C86.13,92.35,61.27,111.63,61,111.84A8,8,0,1,1,51,99.36c1.5-1.2,37.22-29,89.51,6.57,45.47,30.91,71.93,20.31,72.18,20.19a8,8,0,1,1,6.63,14.56Z"></path>
-                </svg>
-                Travail
-              </>
-            ) : (
-              '☕ Pause'
-            )}
-          </div>
-        </foreignObject>
+        {/* Textes intégrés aux boucles (uniquement pour le mode Pomodoro) */}
+        {variante === 'pomodoro' && (
+          <>
+            {/* Boucle gauche : Phase (Travail / Pause) */}
+            <foreignObject x="125" y="170" width="200" height="60">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', height: '100%', color: '#FFFFFF', fontSize: '24px', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 'bold', opacity: 0.9 }}>
+                {phase === 'travail' ? (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 256 256">
+                      <path d="M152,88a32,32,0,1,0-32-32A32,32,0,0,0,152,88Zm0-48a16,16,0,1,1-16,16A16,16,0,0,1,152,40Zm67.31,100.68c-.61.28-7.49,3.28-19.67,3.28-13.85,0-34.55-3.88-60.69-20a169.31,169.31,0,0,1-15.41,32.34,104.29,104.29,0,0,1,31.31,15.81C173.92,186.65,184,207.35,184,232a8,8,0,0,1-16,0c0-41.7-34.69-56.71-54.14-61.85-.55.7-1.12,1.41-1.69,2.1-19.64,23.8-44.25,36.18-71.63,36.18A92.29,92.29,0,0,1,31.2,208,8,8,0,0,1,32.8,192c25.92,2.58,48.47-7.49,67-30,12.49-15.14,21-33.61,25.25-47C86.13,92.35,61.27,111.63,61,111.84A8,8,0,1,1,51,99.36c1.5-1.2,37.22-29,89.51,6.57,45.47,30.91,71.93,20.31,72.18,20.19a8,8,0,1,1,6.63,14.56Z"></path>
+                    </svg>
+                    Travail
+                  </>
+                ) : (
+                  '☕ Pause'
+                )}
+              </div>
+            </foreignObject>
 
-        {/* Boucle droite : Chronomètre (secondesRestantes) */}
-        <text 
-          x="575" 
-          y="200" 
-          fill="#FFFFFF" 
-          fontSize="36" 
-          fontFamily="'Space Grotesk', sans-serif" 
-          fontWeight="bold" 
-          textAnchor="middle" 
-          dominantBaseline="middle"
-          opacity="0.9"
-        >
-          {Math.floor(secondesRestantes / 60).toString().padStart(2, '0')}:{(secondesRestantes % 60).toString().padStart(2, '0')}
-        </text>
+            {/* Boucle droite : Chronomètre (secondesRestantes) */}
+            <text 
+              x="575" 
+              y="200" 
+              fill="#FFFFFF" 
+              fontSize="36" 
+              fontFamily="'Space Grotesk', sans-serif" 
+              fontWeight="bold" 
+              textAnchor="middle" 
+              dominantBaseline="middle"
+              opacity="0.9"
+            >
+              {Math.floor(secondesRestantes / 60).toString().padStart(2, '0')}:{(secondesRestantes % 60).toString().padStart(2, '0')}
+            </text>
+          </>
+        )}
 
         {/* Points, lignes perpendiculaires et avatars — dessinés hors du <g>
             car les coordonnées écran sont déjà calculées via applyGroupTransform */}
@@ -231,16 +238,16 @@ export default function InfiniteLoopAnimation({ enMarche, photoProfil, dureeTota
                 />
                 <g clipPath="url(#avatarClip)">
                   <circle r={AVATAR_RADIUS} fill="#3a3a4a" />
-                  {pt.isPlayer && photoProfil?.dataUrl ? (
+                  {((pt.isPlayer && photoProfil?.dataUrl) || pt.avatar) ? (
                     <foreignObject x={-AVATAR_RADIUS} y={-AVATAR_RADIUS} width={AVATAR_RADIUS * 2} height={AVATAR_RADIUS * 2}>
                       <img
-                        src={photoProfil.dataUrl}
+                        src={pt.avatar ? pt.avatar : photoProfil.dataUrl}
                         alt="Avatar"
                         style={{
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
-                          objectPosition: `${photoProfil.position?.x ?? 50}% ${photoProfil.position?.y ?? 50}%`,
+                          objectPosition: pt.avatar ? 'center' : `${photoProfil.position?.x ?? 50}% ${photoProfil.position?.y ?? 50}%`,
                           borderRadius: '50%'
                         }}
                       />

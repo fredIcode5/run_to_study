@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Play, Pause, SquarePen, Gift, Headphones, Pin } from 'lucide-react'
+import { Play, Pause, SquarePen, Gift, Headphones, Pin, Clock9 } from 'lucide-react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -157,35 +157,108 @@ function Accueil({ onCommencer }) {
       texte: 'Débloquez des médaillons en accomplissant vos sessions, complétez votre collection et échangez-les avec d\'autres utilisateurs pour enrichir votre profil.',
     },
     {
+      id: 'planification',
+      titre: 'Organiser et planifier votre travail',
+      texte: 'Profitez d\'un système de notes intelligentes permettant d\'organiser vos tâches, de les programmer pour maintenant ou pour plus tard, et bénéficiez d\'un système de rappel efficace via des notifications.',
+    },
+    {
       id: 'statistiques',
       titre: 'Trackez vos statistiques avec des outils adaptés',
       texte: 'Visualisez votre temps de concentration, vos séries de Pomodoro et votre progression grâce à des graphiques clairs et des outils de suivi pensés pour vous.',
     },
   ];
 
+  const POINTS_HOME = [
+    { id: "p1", color: "#22c55e", phase: 0.0 },
+    { id: "p2", color: "#3b82f6", phase: 0.2 },
+    { id: "p3", color: "#eab308", phase: 0.4 },
+    { id: "p4", color: "#ec4899", phase: 0.6 },
+    { id: "p6", color: "#a855f7", phase: 0.8 },
+  ];
+
+  const handleScrollLent = () => {
+    const target = document.getElementById('presentation');
+    if (!target) return;
+    
+    const targetPosition = target.getBoundingClientRect().top + window.scrollY;
+    const startPosition = window.scrollY;
+    const distance = targetPosition - startPosition;
+    let startTime = null;
+    
+    // Durée du défilement : 2 secondes pour que ce soit lent
+    const duration = 2000; 
+
+    // Fonction d'easing (ease-in-out) pour un mouvement très doux
+    const ease = (t, b, c, d) => {
+      t /= d / 2;
+      if (t < 1) return (c / 2) * t * t + b;
+      t--;
+      return (-c / 2) * (t * (t - 2) - 1) + b;
+    };
+
+    const animation = (currentTime) => {
+      if (startTime === null) startTime = currentTime;
+      const timeElapsed = currentTime - startTime;
+      const run = ease(timeElapsed, startPosition, distance, duration);
+      window.scrollTo(0, run);
+      if (timeElapsed < duration) {
+        requestAnimationFrame(animation);
+      }
+    };
+
+    requestAnimationFrame(animation);
+  };
+
   return (
     <div className="accueil">
       <div className="accueil_fond">
+        <img 
+          src="/logop.svg" 
+          alt="Logo" 
+          className="accueil_logo" 
+          onClick={handleScrollLent}
+          style={{ cursor: 'pointer' }}
+        />
+        <h1 className="accueil_titre_principal" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          pomodoro timer and more <Clock9 size={48} strokeWidth={2.5} />
+        </h1>
+        <div className="accueil_animation_container">
+          <img src="/p1.png" alt="" className="accueil_personnage p_un" />
+          <img src="/p2.png" alt="" className="accueil_personnage p_deux" />
+          <img src="/p3.png" alt="" className="accueil_personnage p_trois" />
+          <img src="/p4.png" alt="" className="accueil_personnage p_quatre" />
+          <img src="/p6.png" alt="" className="accueil_personnage p_cinq" />
+          <InfiniteLoopAnimation 
+            enMarche={true} 
+            variante="home" 
+            pointsPersonnalises={POINTS_HOME} 
+          />
+        </div>
         <button
           type="button"
           className="btn_primaire accueil_btn_commencer"
           onClick={onCommencer}
         >
-          Commencer à travailler
+          run rest and repeat
         </button>
       </div>
 
       {/* --- Seconde partie de la vitrine : accessible par défilement naturel --- */}
       <div className="accueil_suite">
 
-        <section className="accueil_presentation">
-          <h2 className="accueil_presentation_titre">Qu'est-ce que la méthode Pomodoro ?</h2>
+        <section id="presentation" className="accueil_presentation">
+          <h2 className="accueil_presentation_titre">Run, rest and repeat</h2>
           <p className="accueil_presentation_texte">
             La méthode Pomodoro consiste à alterner des périodes de travail
             concentré, généralement de 25 minutes, avec de courtes pauses
-            régulières. Ce rythme aide à maintenir un haut niveau de
-            concentration, réduit la fatigue mentale et améliore la
-            productivité en structurant naturellement la gestion du temps.
+            régulières. Tout comme dans la course à pied, le secret réside dans le 
+            fractionné : il s'agit de fournir un effort intense sur une période de 
+            temps définie, puis de prendre un temps de repos pour s'hydrater et 
+            souffler. Que ce soit sur une piste ou devant un écran, courir ou 
+            travailler à plusieurs permet de se motiver mutuellement. La 
+            persévérance est la clé pour aller infiniment plus loin. Le but de 
+            cette application est de vous accompagner dans cet effort, de vous aider 
+            à repousser vos limites et à atteindre tous vos objectifs.
           </p>
         </section>
 

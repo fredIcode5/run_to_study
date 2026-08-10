@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
   --radius-lg: 28px;
@@ -4151,10 +4151,99 @@ body,
 }
 
 .accueil_fond {
-  background-image: url('/runtostudybg.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  overflow: hidden;
+  background-color: #000000;
+}
+
+.accueil_animation_container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.accueil_btn_commencer {
+  position: absolute;
+  bottom: 100px;
+  z-index: 10;
+  background: #22c55e; /* Vert */
+  color: #ffffff;
+}
+
+.accueil_btn_commencer:hover {
+  background: #16a34a;
+}
+
+.accueil_logo {
+  position: absolute;
+  top: 10px;
+  left: 32px;
+  width: 170px;
+  height: auto;
+  z-index: 10;
+}
+
+.accueil_titre_principal {
+  position: absolute;
+  top: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 3rem;
+  font-weight: 700;
+  text-align: center;
+  z-index: 10;
+  letter-spacing: 2px;
+  text-transform: lowercase;
+  text-shadow: 0 4px 24px rgba(255, 255, 255, 0.2);
+}
+
+.accueil_personnage {
+  position: absolute;
+  width: 750px; /* Agrandissement 500% */
+  height: auto;
+  z-index: 2;
+  filter: drop-shadow(0 10px 15px rgba(0,0,0,0.15));
+  transform: translate(-50%, -50%); /* Centre l'image exactement sur les coordonnées */
+}
+
+/* Positionnement par rapport au centre de l'écran et de la boucle */
+.p_un {
+  top: calc(50% - 100px);
+  left: calc(50% - 400px);
+}
+
+.p_deux {
+  top: calc(50% + 120px);
+  left: calc(50% - 350px);
+}
+
+.p_trois {
+  top: calc(50% - 80px);
+  left: calc(50% + 400px);
+}
+
+.p_quatre {
+  top: calc(50% + 120px);
+  left: calc(50% + 360px);
+  width: 675px;
+}
+
+.p_cinq {
+  top: calc(50% + 120px);
+  left: calc(50% + 500px);
+  width: 675px;
 }
 
 .accueil_suite {
@@ -4165,7 +4254,7 @@ body,
 }
 
 .accueil_presentation {
-  max-width: 700px;
+  max-width: 1100px;
   margin: 0 auto;
   text-align: center;
 }
@@ -4182,9 +4271,9 @@ body,
 
 .accueil_fonctionnalites_grille {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(5, 1fr);
   gap: 24px;
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   width: 100%;
 }
