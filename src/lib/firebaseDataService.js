@@ -19,7 +19,8 @@ import {
   addDoc,
   deleteDoc,
   limit,
-  or
+  or,
+  onSnapshot
 } from "firebase/firestore";
 
 // -------------------------------------------------------
@@ -39,6 +40,79 @@ export async function chargerProfil(userId) {
     return null;
   }
 }
+
+// -------------------------------------------------------
+// Sessions de Course (collection « sessions_course »)
+// -------------------------------------------------------
+
+export async function creerSession(sessionData) {
+  try {
+    const docRef = await addDoc(collection(db, "sessions_course"), {
+      ...sessionData,
+      created_at: new Date().toISOString()
+    });
+    return docRef.id;
+  } catch (err) {
+    console.error('Erreur création session :', err);
+    throw err;
+  }
+}
+
+export async function rejoindreSession(sessionId, participant) {
+  try {
+    const docRef = doc(db, "sessions_course", sessionId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const participants = data.participants || [];
+      // Vérifier si le participant est déjà dedans
+      if (!participants.some(p => p.uid === participant.uid)) {
+        await updateDoc(docRef, {
+          participants: [...participants, participant]
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Erreur rejoindre session :', err);
+    throw err;
+  }
+}
+
+export async function quitterSession(sessionId, userId) {
+  try {
+    const docRef = doc(db, "sessions_course", sessionId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const participants = data.participants || [];
+      const nouveauxParticipants = participants.filter(p => p.uid !== userId);
+      
+      // Si la session est vide, on peut la supprimer ou juste la mettre à jour
+      if (nouveauxParticipants.length === 0) {
+        await deleteDoc(docRef);
+      } else {
+        await updateDoc(docRef, { participants: nouveauxParticipants });
+      }
+    }
+  } catch (err) {
+    console.error('Erreur quitter session :', err);
+    throw err;
+  }
+}
+
+export function ecouterSessions(callback) {
+  const q = query(collection(db, "sessions_course"), orderBy("created_at", "desc"));
+  return onSnapshot(q, (snapshot) => {
+    const sessions = [];
+    snapshot.forEach((doc) => {
+      sessions.push({ id: doc.id, ...doc.data() });
+    });
+    callback(sessions);
+  }, (err) => {
+    console.error("Erreur ecouterSessions :", err);
+  });
+}
+
 
 export async function sauvegarderProfil(userId, { pseudo, photo_profil, preferences, coins, temps_total_pomodoro, email }) {
   try {

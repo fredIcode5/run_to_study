@@ -33,6 +33,10 @@ import {
   chargerPlanningMois,
   chargerPlanningJour,
   sauvegarderPlanningJour,
+  creerSession,
+  rejoindreSession,
+  quitterSession,
+  ecouterSessions
 } from './lib/firebaseDataService'
 
 
@@ -4479,317 +4483,364 @@ function Param({
 // ======================================================================
 
 // Jeu de données statique temporaire, en attendant une vraie source (API/back)
-const SALONS_DEMO = [
-  { id: 's1', nom: 'Foulées du Matin', theme: 'Endurance', duree: '30 min' },
-  { id: 's2', nom: 'Sprint Éclair', theme: 'Vitesse', duree: '15 min' },
-  { id: 's3', nom: 'Trail Zen', theme: 'Trail', duree: '45 min' },
-  { id: 's4', nom: 'Cardio Boost', theme: 'Cardio', duree: '20 min' },
-  { id: 's5', nom: 'Marathon Découverte', theme: 'Endurance', duree: '60 min' },
-  { id: 's6', nom: 'Côte Infernale', theme: 'Trail', duree: '40 min' },
-];
-
-// Carte représentant un salon rejoignable : image (placeholder), nom,
-// thème et nombre de participants (valeur statique temporaire "4/5")
 function CarteSalon({ salon, onRejoindre }) {
   return (
-    <div className="salon_carte">
-      <div className="salon_carte_image" aria-hidden="true">
+    <div className="salon_carte" onClick={() => onRejoindre(salon)}>
+      <div 
+        className="salon_carte_image" 
+        aria-hidden="true" 
+        style={salon.imageFond ? { backgroundImage: `url(${salon.imageFond})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+      >
         <span className="salon_carte_image_icone">🏞️</span>
+        <span className="salon_carte_code">{salon.code}</span>
       </div>
       <div className="salon_carte_info">
         <span className="salon_carte_nom">{salon.nom}</span>
         <div className="salon_carte_meta">
-          <span className="salon_carte_theme">{salon.theme}</span>
-          <span className="salon_carte_participants">4/5</span>
+          <span className="salon_carte_tag">⏱ {salon.tempsTravail} / {salon.tempsPause}</span>
+          <span className="salon_carte_tag">🏷️ {salon.theme}</span>
         </div>
-        <button
-          type="button"
-          className="salon_carte_btn_rejoindre"
-          onClick={() => onRejoindre(salon)}
-        >
-          Rejoindre
-        </button>
       </div>
     </div>
   );
 }
-// Modale de création d'un salon : image de fond, musique de fond
-// (lien YouTube ou recherche via un compte Spotify connecté),
-// nombre de participants et thème du salon.
-function ModalCreerSalon({ ouvert, fermer }) {
-  const [imageFond, setImageFond] = useState(null);
-  const [typeMusique, setTypeMusique] = useState('youtube');
-  const [lienYoutube, setLienYoutube] = useState('');
-  const [spotifyConnecte, setSpotifyConnecte] = useState(false);
-  const [rechercheSpotify, setRechercheSpotify] = useState('');
-  const [nbParticipants, setNbParticipants] = useState(5);
-  const [themeSalon, setThemeSalon] = useState('');
 
-  if (!ouvert) return null;
-
-  const gererImage = (fichier) => {
-    if (!fichier) return;
-    const lecteur = new FileReader();
-    lecteur.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        // Redimensionnement à 1920px maximum (Full HD) pour éviter
-        // les payloads trop lourds vers Supabase
-        const MAX_TAILLE = 1920;
-        let largeur = img.width;
-        let hauteur = img.height;
-
-        if (largeur > hauteur && largeur > MAX_TAILLE) {
-          hauteur *= MAX_TAILLE / largeur;
-          largeur = MAX_TAILLE;
-        } else if (hauteur > MAX_TAILLE) {
-          largeur *= MAX_TAILLE / hauteur;
-          hauteur = MAX_TAILLE;
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = largeur;
-        canvas.height = hauteur;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, largeur, hauteur);
-
-        // Compression en JPEG qualité 0.8
-        const dataUrlCompresser = canvas.toDataURL('image/jpeg', 0.8);
-        setImageFond(dataUrlCompresser);
-      };
-      img.src = e.target.result;
-    };
-    lecteur.readAsDataURL(fichier);
-  };
-
-  // Simulation de connexion à un compte Spotify (pas d'appel réel à l'API ici)
-  const connecterSpotify = () => {
-    setSpotifyConnecte(true);
-  };
-
-  const validerCreation = () => {
-    alert('Salon créé (simulation) !');
-    fermer();
-  };
-
+function CarteAmi({ ami, onRejoindre, onInviter }) {
+  const photoSrc = ami.photo?.dataUrl || ami.photo;
   return (
-    <div className="modal_fond salon_modal_fond" onClick={fermer}>
-      <div className="modal_fenetre salon_modal_fenetre" onClick={(e) => e.stopPropagation()}>
-        <button className="modal_fermer" onClick={fermer} aria-label="Fermer">×</button>
-
-        <div className="salon_modal_contenu">
-          <h3 className="salon_modal_titre">Créer un salon</h3>
-
-          {/* Image de fond du salon */}
-          <div className="salon_champ">
-            <label className="salon_label" htmlFor="salon-image-fond">Image de fond</label>
-            <label htmlFor="salon-image-fond" className="param_file_label">
-              📁 Parcourir...
-            </label>
-            <input
-              id="salon-image-fond"
-              type="file"
-              accept="image/*,.gif"
-              className="param_file_input"
-              onChange={(e) => gererImage(e.target.files?.[0])}
-            />
-            {imageFond && <span className="param_file_nom">Image sélectionnée ✓</span>}
-          </div>
-
-          {/* Musique de fond : lien YouTube ou recherche Spotify */}
-          <div className="salon_champ">
-            <label className="salon_label">Musique de fond</label>
-            <div className="salon_musique_choix">
-              <button
-                type="button"
-                className={`salon_musique_onglet ${typeMusique === 'youtube' ? 'actif' : ''}`}
-                onClick={() => setTypeMusique('youtube')}
-              >
-                Lien YouTube
-              </button>
-              <button
-                type="button"
-                className={`salon_musique_onglet ${typeMusique === 'spotify' ? 'actif' : ''}`}
-                onClick={() => setTypeMusique('spotify')}
-              >
-                Spotify
-              </button>
-            </div>
-
-            {typeMusique === 'youtube' ? (
-              <input
-                type="text"
-                className="param_input"
-                placeholder="https://youtube.com/..."
-                value={lienYoutube}
-                onChange={(e) => setLienYoutube(e.target.value)}
-              />
-            ) : (
-              <div className="salon_spotify_zone">
-                {!spotifyConnecte ? (
-                  <button type="button" className="salon_btn_spotify" onClick={connecterSpotify}>
-                    🎧 Connecter mon compte Spotify
-                  </button>
-                ) : (
-                  <input
-                    type="text"
-                    className="param_input"
-                    placeholder="Rechercher un son sur Spotify..."
-                    value={rechercheSpotify}
-                    onChange={(e) => setRechercheSpotify(e.target.value)}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Nombre de participants */}
-          <div className="salon_champ">
-            <label className="salon_label" htmlFor="salon-participants">
-              Nombre de participants
-            </label>
-            <input
-              id="salon-participants"
-              type="number"
-              min="2"
-              max="20"
-              className="param_input"
-              value={nbParticipants}
-              onChange={(e) => setNbParticipants(e.target.value)}
-            />
-          </div>
-
-          {/* Thème du salon */}
-          <div className="salon_champ">
-            <label className="salon_label" htmlFor="salon-theme">Thème du salon</label>
-            <input
-              id="salon-theme"
-              type="text"
-              className="param_input"
-              placeholder="Ex : Endurance, Trail, Sprint..."
-              value={themeSalon}
-              onChange={(e) => setThemeSalon(e.target.value)}
-            />
-          </div>
-
-          <button type="button" className="salon_btn_valider_creation" onClick={validerCreation}>
-            Créer le salon
-          </button>
+    <div className="ami_carte">
+      <div className="ami_carte_gauche">
+        <div className="ami_avatar">
+          {photoSrc && typeof photoSrc === 'string' ? (
+            <img src={photoSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+          ) : '🧑'}
         </div>
+        <span className="ami_pseudo">{ami.pseudo}</span>
+      </div>
+      <div className="ami_carte_droite">
+        {ami.enSession ? (
+          <button className="ami_btn_rejoindre" onClick={() => onRejoindre(ami.codeSession)}>Rejoindre</button>
+        ) : (
+          <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginRight: '8px' }}>Pas en ligne</span>
+        )}
+        <button className="ami_btn_inviter" onClick={() => onInviter(ami)}>Inviter</button>
       </div>
     </div>
   );
 }
 
-function Salon_course() {
+function ParticipantRow({ participant }) {
+  const photoSrc = participant.photo?.dataUrl || participant.photo;
+  return (
+    <div className="participant_row">
+      <div className="participant_avatar">
+        {photoSrc && typeof photoSrc === 'string' ? (
+          <img src={photoSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+        ) : '🧑'}
+      </div>
+      <span className="participant_pseudo">{participant.pseudo}</span>
+      <span className="participant_statut">{participant.enSession ? 'En ligne' : ''}</span>
+    </div>
+  );
+}
+
+function Salon_course({ reglages, imageFondActuelle, musiqueActuelle }) {
+  const { utilisateur } = useAuth();
+  const [modeActif, setModeActif] = useState('recherche'); // Default to recherche
   const [recherche, setRecherche] = useState('');
-  const [filtreTheme, setFiltreTheme] = useState('tous');
-  const [filtreDuree, setFiltreDuree] = useState('toutes');
-  const [rejoindreOuvert, setRejoindreOuvert] = useState(false);
-  const [codeSalon, setCodeSalon] = useState('');
-  const [creerOuvert, setCreerOuvert] = useState(false);
-  const rejoindreSalonDirect = (salon) => {
-    alert(`Vous avez rejoint le salon « ${salon.nom} » (simulation) !`);
+  const [codeSaisi, setCodeSaisi] = useState('');
+  const [sessionActive, setSessionActive] = useState(null);
+  const [salons, setSalons] = useState([]);
+  const [amis, setAmis] = useState([]);
+
+  useEffect(() => {
+    if (utilisateur?.uid) {
+      getAmis(utilisateur.uid).then(setAmis).catch(console.error);
+    }
+  }, [utilisateur]);
+
+  useEffect(() => {
+    const unsubscribe = ecouterSessions((sessionsRecues) => {
+      setSalons(sessionsRecues);
+      
+      // Update active session in real-time if the user is in one
+      setSessionActive(prevSession => {
+        if (!prevSession) return null;
+        const updated = sessionsRecues.find(s => s.id === prevSession.id);
+        if (!updated) {
+          setModeActif('recherche');
+          return null; // Session was deleted
+        }
+        return updated;
+      });
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Toggle modes
+  const handleModeRecherche = () => setModeActif(modeActif === 'recherche' ? 'recherche' : 'recherche');
+  const handleModeRejoindre = () => setModeActif(modeActif === 'rejoindre' ? 'recherche' : 'rejoindre');
+  const handleModeCreer = () => setModeActif(modeActif === 'creer' ? 'recherche' : 'creer');
+
+  const executerCreation = async () => {
+    if (!utilisateur) return alert("Vous devez être connecté pour créer une session.");
+    const nvCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    const tTravail = reglages?.dureeTravail || 25;
+    const tPause = reglages?.dureePause || 5;
+    let themeStr = 'Focus';
+    if (musiqueActuelle?.type === 'spotify') themeStr = 'Spotify';
+    else if (musiqueActuelle?.type === 'youtube') themeStr = 'YouTube';
+
+    const nvSalon = {
+      nom: 'Session de ' + (utilisateur?.pseudo || 'Anonyme'),
+      proprietaire: utilisateur?.pseudo || 'Anonyme',
+      proprietaireId: utilisateur?.uid,
+      theme: themeStr,
+      tempsTravail: tTravail, 
+      tempsPause: tPause,
+      imageFond: imageFondActuelle,
+      code: nvCode,
+      etatPomodoro: 'En attente',
+      participants: [{
+        uid: utilisateur.uid,
+        pseudo: utilisateur.pseudo || 'Anonyme',
+        photo: utilisateur.photo_profil || '🧑',
+        enSession: true
+      }]
+    };
+    
+    try {
+      const id = await creerSession(nvSalon);
+      setRecherche(''); 
+      setModeActif('recherche');
+    } catch (e) {
+      alert("Erreur lors de la création de la session.");
+    }
   };
 
-  const themesDisponibles = ['tous', ...new Set(SALONS_DEMO.map((s) => s.theme))];
-  const dureesDisponibles = ['toutes', ...new Set(SALONS_DEMO.map((s) => s.duree))];
+  const validerCodeRejoindre = async (code) => {
+    if (!utilisateur) return alert("Vous devez être connecté pour rejoindre une session.");
+    const codeNettoye = code.trim().toUpperCase();
+    const salonTrouve = salons.find(s => s.code.toUpperCase() === codeNettoye);
+    if (salonTrouve) {
+      try {
+        await rejoindreSession(salonTrouve.id, {
+          uid: utilisateur.uid,
+          pseudo: utilisateur.pseudo || 'Anonyme',
+          photo: utilisateur.photo_profil || '🧑',
+          enSession: true
+        });
+        setSessionActive(salonTrouve);
+        setModeActif('session');
+      } catch (e) {
+        alert("Erreur en rejoignant la session.");
+      }
+    } else {
+      alert("Code de session invalide ou session introuvable.");
+    }
+  };
 
-  const salonsFiltres = SALONS_DEMO.filter((s) => {
-    const correspondNom = s.nom.toLowerCase().includes(recherche.trim().toLowerCase());
-    const correspondTheme = filtreTheme === 'tous' || s.theme === filtreTheme;
-    const correspondDuree = filtreDuree === 'toutes' || s.duree === filtreDuree;
-    return correspondNom && correspondTheme && correspondDuree;
+  const handleRejoindreDirect = async (salon) => {
+    if (!utilisateur) return alert("Vous devez être connecté pour rejoindre une session.");
+    try {
+      await rejoindreSession(salon.id, {
+        uid: utilisateur.uid,
+        pseudo: utilisateur.pseudo || 'Anonyme',
+        photo: utilisateur.photo_profil || '🧑',
+        enSession: true
+      });
+      setSessionActive(salon);
+      setModeActif('session');
+    } catch (e) {
+      alert("Erreur en rejoignant la session.");
+    }
+  };
+
+  const handleQuitterSession = async () => {
+    if (sessionActive && utilisateur) {
+      try {
+        await quitterSession(sessionActive.id, utilisateur.uid);
+      } catch(e) {
+        console.error(e);
+      }
+    }
+    setSessionActive(null);
+    setModeActif('recherche');
+  };
+
+  const handleInviter = (ami) => {
+    alert(`Invitation envoyée à ${ami.pseudo}`);
+  };
+
+  const salonsFiltres = salons.filter((s) => 
+    s.nom.toLowerCase().includes(recherche.trim().toLowerCase()) ||
+    s.theme.toLowerCase().includes(recherche.trim().toLowerCase()) ||
+    s.code.toLowerCase().includes(recherche.trim().toLowerCase())
+  );
+
+  // Prepare enriched friends (with active session info if they are in one)
+  const amisEnrichis = amis.map(ami => {
+    let enSession = false;
+    let codeSession = null;
+    
+    for (const salon of salons) {
+      if (salon.participants && salon.participants.some(p => p.uid === ami.amiId)) {
+        enSession = true;
+        codeSession = salon.code;
+        break;
+      }
+    }
+    
+    return {
+      ...ami,
+      photo: ami.photo_profil,
+      enSession,
+      codeSession
+    };
   });
-
-  const validerCodeSalon = () => {
-    if (!codeSalon.trim()) return;
-    alert(`Tentative de connexion au salon avec le code : ${codeSalon.trim()}`);
-    setCodeSalon('');
-    setRejoindreOuvert(false);
-  };
 
   return (
     <div className="salon_course">
-      <div className="salon_entete">
-        <h2>Salons de course</h2>
-        <div className="salon_actions_principales">
-          <button
-            type="button"
-            className="salon_btn_rejoindre"
-            onClick={() => setRejoindreOuvert((v) => !v)}
+      
+      {modeActif !== 'session' && (
+        <div className="salon_entete_actions">
+          <button 
+            className={`salon_btn_action ${modeActif === 'recherche' || modeActif === 'accueil' ? 'actif' : ''}`} 
+            onClick={handleModeRecherche}
           >
-            Rejoindre
+            🔎 Rechercher
           </button>
-          <button type="button" className="salon_btn_creer" onClick={() => setCreerOuvert(true)}>
-            + Créer
+          <button 
+            className={`salon_btn_action salon_btn_creer ${modeActif === 'creer' ? 'actif' : ''}`} 
+            onClick={handleModeCreer}
+          >
+            ➕ Créer
           </button>
-        </div>
-      </div>
-
-      {/* Encart de saisie du code de salon, affiché au clic sur "Rejoindre" */}
-      {rejoindreOuvert && (
-        <div className="salon_rejoindre_encart">
-          <input
-            type="text"
-            className="salon_rejoindre_input"
-            placeholder="Code du salon"
-            value={codeSalon}
-            onChange={(e) => setCodeSalon(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') validerCodeSalon(); }}
-            autoFocus
-          />
-          <button type="button" className="salon_rejoindre_valider" onClick={validerCodeSalon}>
-            Valider
+          <button 
+            className={`salon_btn_action ${modeActif === 'rejoindre' ? 'actif' : ''}`} 
+            onClick={handleModeRejoindre}
+          >
+            🔗 Rejoindre
           </button>
         </div>
       )}
 
-      {/* Barre de recherche + filtres (thème, durée) */}
-      <div className="salon_recherche_zone">
-        <input
-          type="text"
-          className="salon_recherche_input"
-          placeholder="Rechercher un salon..."
-          value={recherche}
-          onChange={(e) => setRecherche(e.target.value)}
-        />
-        <div className="salon_filtres">
-          <select
-            className="salon_filtre_select"
-            value={filtreTheme}
-            onChange={(e) => setFiltreTheme(e.target.value)}
-            aria-label="Filtrer par thème"
-          >
-            {themesDisponibles.map((t) => (
-              <option key={t} value={t}>{t === 'tous' ? 'Tous les thèmes' : t}</option>
-            ))}
-          </select>
-          <select
-            className="salon_filtre_select"
-            value={filtreDuree}
-            onChange={(e) => setFiltreDuree(e.target.value)}
-            aria-label="Filtrer par durée"
-          >
-            {dureesDisponibles.map((d) => (
-              <option key={d} value={d}>{d === 'toutes' ? 'Toutes durées' : d}</option>
-            ))}
-          </select>
-        </div>
+      <div className="salon_contenu">
+        {modeActif === 'creer' && (
+          <div className="salon_section_creer" style={{ textAlign: 'center', padding: '32px 16px', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <p style={{ marginBottom: '24px', color: '#64748b', fontSize: '0.95rem', lineHeight: '1.5' }}>
+              Vos paramètres de session vont servir à créer une session.
+            </p>
+            <button 
+              className="salon_btn_valider_code" 
+              style={{ padding: '10px 24px', fontSize: '1rem', background: '#10b981' }}
+              onClick={executerCreation}
+            >
+              Créer
+            </button>
+          </div>
+        )}
+
+        {(modeActif === 'recherche' || modeActif === 'accueil') && (
+          <div className="salon_section_recherche">
+            <input
+              type="text"
+              className="salon_input_saisie"
+              placeholder="Rechercher par nom, thème ou code..."
+              value={recherche}
+              onChange={(e) => setRecherche(e.target.value)}
+              autoFocus
+            />
+            <div className="salon_liste">
+              {salonsFiltres.length === 0 ? (
+                <p className="salon_vide">Aucune session disponible</p>
+              ) : (
+                salonsFiltres.map(salon => (
+                  <CarteSalon key={salon.id} salon={salon} onRejoindre={handleRejoindreDirect} />
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {modeActif === 'rejoindre' && (
+          <div className="salon_section_rejoindre">
+            <div className="salon_input_groupe">
+              <input
+                type="text"
+                className="salon_input_saisie code_saisie"
+                placeholder="Code (ex: AAA25b)"
+                value={codeSaisi}
+                onChange={(e) => setCodeSaisi(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') validerCodeRejoindre(codeSaisi); }}
+                autoFocus
+              />
+              <button className="salon_btn_valider_code" onClick={() => validerCodeRejoindre(codeSaisi)}>
+                Rejoindre
+              </button>
+            </div>
+            
+            <h3 className="salon_section_titre mt-4">Mes amis</h3>
+            <div className="amis_liste">
+              {amisEnrichis.length === 0 ? (
+                <p className="salon_vide">Vous n'avez pas encore d'amis connectés.</p>
+              ) : (
+                amisEnrichis.map(ami => (
+                  <CarteAmi 
+                    key={ami.id} 
+                    ami={ami} 
+                    onRejoindre={validerCodeRejoindre} 
+                    onInviter={handleInviter} 
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {modeActif === 'session' && sessionActive && (
+          <div className="salon_section_active">
+            <div className="session_active_entete">
+              <div>
+                <h2 className="session_active_titre">{sessionActive.nom}</h2>
+                <span className="session_active_proprio">par {sessionActive.proprietaire}</span>
+              </div>
+              <button className="salon_btn_quitter" onClick={handleQuitterSession}>Quitter</button>
+            </div>
+            
+            <div className="session_active_resume">
+              <div className="resume_info_groupe">
+                <span className="resume_label">Code</span>
+                <span className="resume_valeur code_valeur">{sessionActive.code}</span>
+              </div>
+              <div className="resume_info_groupe">
+                <span className="resume_label">Thème</span>
+                <span className="resume_valeur">{sessionActive.theme}</span>
+              </div>
+              <div className="resume_info_groupe">
+                <span className="resume_label">Chrono</span>
+                <span className="resume_valeur">{sessionActive.tempsTravail} / {sessionActive.tempsPause}</span>
+              </div>
+              <div className="resume_info_groupe etat_pomodoro_groupe">
+                <span className="resume_label">État</span>
+                <span className="resume_valeur etat_valeur">{sessionActive.etatPomodoro}</span>
+              </div>
+            </div>
+
+            <h3 className="salon_section_titre">Participants</h3>
+            <div className="participants_liste">
+              {sessionActive.participants && sessionActive.participants.length > 0 ? (
+                sessionActive.participants.map(p => (
+                  <ParticipantRow key={p.uid} participant={p} />
+                ))
+              ) : (
+                <p className="salon_vide">Aucun participant (1/5)</p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* Liste des salons rejoignables, filtrée */}
-      {salonsFiltres.length === 0 ? (
-        <p className="salon_vide">Aucun salon ne correspond à votre recherche.</p>
-      ) : (
-        <div className="salon_liste">
-          {salonsFiltres.map((salon) => (
-            <CarteSalon key={salon.id} salon={salon} onRejoindre={rejoindreSalonDirect} />
-          ))}
-        </div>
-      )}
-
-      <ModalCreerSalon ouvert={creerOuvert} fermer={() => setCreerOuvert(false)} />
     </div>
   );
 }
@@ -4981,7 +5032,13 @@ function BlocDeux({
               onOuvrirCreationPrereglage={onOuvrirCreationPrereglage}
             />
           )}
-          {vueActive === 3 && <Salon_course />}
+          {vueActive === 3 && (
+            <Salon_course 
+              reglages={reglages} 
+              imageFondActuelle={imageFondActuelle} 
+              musiqueActuelle={musiqueActuelle} 
+            />
+          )}
           {vueActive === 4 && (
             <OngletRecompenses
               recompenses={recompenses}

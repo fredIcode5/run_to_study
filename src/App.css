@@ -5648,3 +5648,411 @@ body,
 .planning_notes_liste .todo_carte {
   max-width: 100%;
 }
+
+/* ==========================================================================
+   REFONTE SALON DE COURSE (MENU LATÉRAL)
+   ========================================================================== */
+
+.salon_course {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: #1f2430;
+  font-family: 'Inter', sans-serif;
+  overflow-y: auto;
+}
+
+/* En-tête des actions principales */
+.salon_entete_actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  background: #f1f5f9;
+  padding: 6px;
+  border-radius: 12px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.salon_btn_action {
+  flex: 1;
+  padding: 10px 4px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.salon_btn_action:hover {
+  color: #334155;
+  background: rgba(0,0,0,0.05);
+}
+
+.salon_btn_action.actif {
+  background: #ffffff;
+  color: #4f46e5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.salon_btn_creer {
+  color: #10b981;
+}
+
+.salon_btn_creer:hover {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+/* Contenu commun */
+.salon_contenu {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.salon_section_titre {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #1f2430;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.salon_section_titre::before {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 16px;
+  background: #4f46e5;
+  border-radius: 2px;
+}
+
+/* --- SECTION RECHERCHE / SESSIONS --- */
+.salon_input_saisie {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1f2430;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border 0.2s, box-shadow 0.2s;
+  margin-bottom: 16px;
+}
+
+.salon_input_saisie:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+.salon_input_groupe {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.salon_btn_valider_code {
+  background: #6366f1;
+  color: white;
+  border: none;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.salon_btn_valider_code:hover {
+  background: #4f46e5;
+}
+
+.salon_liste, .amis_liste, .participants_liste {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Carte Salon (Session) */
+.salon_carte {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(31, 36, 48, 0.04);
+}
+
+.salon_carte:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(31, 36, 48, 0.1);
+  border-color: #cbd5e1;
+}
+
+.salon_carte_image {
+  height: 80px;
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 8px 12px;
+  position: relative;
+}
+
+.salon_carte_image_icone {
+  font-size: 2rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.3;
+}
+
+.salon_carte_code {
+  background: rgba(255,255,255,0.9);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 0.8rem;
+  color: #0369a1;
+  z-index: 1;
+  border: 1px solid #e0f2fe;
+}
+
+.salon_carte_info {
+  padding: 12px;
+}
+
+.salon_carte_nom {
+  display: block;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 8px;
+  color: #0f172a;
+}
+
+.salon_carte_meta {
+  display: flex;
+  gap: 8px;
+}
+
+.salon_carte_tag {
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Carte Ami */
+.ami_carte {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  transition: 0.2s;
+}
+
+.ami_carte:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.ami_carte_gauche {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ami_avatar, .participant_avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.2);
+}
+
+.ami_pseudo, .participant_pseudo {
+  font-weight: 500;
+  color: #334155;
+}
+
+.ami_carte_droite {
+  display: flex;
+  gap: 6px;
+}
+
+.ami_btn_rejoindre, .ami_btn_inviter {
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.ami_btn_rejoindre {
+  background: #d1fae5;
+  color: #059669;
+}
+.ami_btn_rejoindre:hover { background: #a7f3d0; }
+
+.ami_btn_inviter {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.ami_btn_inviter:hover { background: #e2e8f0; color: #334155; }
+
+/* --- SESSION ACTIVE --- */
+.salon_section_active {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.session_active_entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.session_active_titre {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.session_active_proprio {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.salon_btn_quitter {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.salon_btn_quitter:hover {
+  background: #fecaca;
+}
+
+.session_active_resume {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.resume_info_groupe {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.resume_label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.resume_valeur {
+  font-size: 0.95rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.code_valeur {
+  font-family: monospace;
+  color: #0284c7;
+  font-size: 1.1rem;
+}
+
+.etat_pomodoro_groupe {
+  grid-column: span 2;
+  background: #ecfdf5;
+  padding: 12px;
+  border-radius: 8px;
+  align-items: center;
+  border: 1px solid #d1fae5;
+}
+
+.etat_valeur {
+  color: #059669;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.participant_row {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  gap: 12px;
+}
+
+.participant_avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 1rem;
+}
+
+.participant_statut {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #059669;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.participant_statut::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
