@@ -307,6 +307,69 @@ export async function ajouterJourHistorique(userId, jour) {
 }
 
 // -------------------------------------------------------
+// Activités Pomodoro & Statistiques (collection « activites_pomodoro »)
+// -------------------------------------------------------
+
+export async function chargerActivitesPomodoro(userId) {
+  try {
+    const q = query(
+      collection(db, "activites_pomodoro"),
+      where("user_id", "==", userId)
+    );
+    const querySnapshot = await getDocs(q);
+    const activites = [];
+    querySnapshot.forEach((doc) => {
+      activites.push({ id: doc.id, ...doc.data() });
+    });
+    return activites.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  } catch (err) {
+    console.error('Erreur chargement activites pomodoro :', err);
+    return [];
+  }
+}
+
+export async function enregistrerActivitePomodoro(userId, activite) {
+  try {
+    const docRef = doc(collection(db, "activites_pomodoro"));
+    const data = {
+      ...activite,
+      user_id: userId,
+      timestamp: activite.timestamp || Date.now(),
+      created_at: new Date().toISOString()
+    };
+    await setDoc(docRef, data);
+    return { id: docRef.id, ...data };
+  } catch (err) {
+    console.error('Erreur enregistrement activite pomodoro :', err);
+    return null;
+  }
+}
+
+export async function chargerLeaderboardGlobal(currentUserId) {
+  try {
+    const q = query(collection(db, "preferences_utilisateur"), limit(30));
+    const querySnapshot = await getDocs(q);
+    const coureurs = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      const id = doc.id;
+      coureurs.push({
+        id,
+        pseudo: data.pseudo || data.email?.split('@')[0] || 'Coureur',
+        photo_profil: data.photo_profil || null,
+        temps_total_pomodoro: data.temps_total_pomodoro || 0,
+        coins: data.coins || 0,
+        estMoi: id === currentUserId
+      });
+    });
+    return coureurs.sort((a, b) => b.temps_total_pomodoro - a.temps_total_pomodoro);
+  } catch (err) {
+    console.error("Erreur chargement leaderboard :", err);
+    return [];
+  }
+}
+
+// -------------------------------------------------------
 // Sessions archivées (collection « sessions_notes »)
 // -------------------------------------------------------
 
