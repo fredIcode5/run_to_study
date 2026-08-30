@@ -57,7 +57,9 @@ function BlocDeux({
   remplacerTachesActives,
   titreSession,
   setTitreSession,
-  numeroSession
+  numeroSession,
+  modeCarnet,
+  setModeCarnet
 }) {
 
   const choisirOnglet = (id) => {
@@ -120,6 +122,8 @@ function BlocDeux({
               titreSession={titreSession}
               setTitreSession={setTitreSession}
               numeroSession={numeroSession}
+              modeCarnet={modeCarnet}
+              setModeCarnet={setModeCarnet}
             />
           </div>
           <div style={{ display: vueActive === 2 ? 'block' : 'none', width: '100%', height: '100%' }}>

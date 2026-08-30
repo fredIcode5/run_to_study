@@ -1,5 +1,4 @@
-import React from 'react';
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { chargerNotes, sauvegarderSessionArchivee, chargerPlanningJour, sauvegarderPlanningJour } from '../../lib/firebaseDataService';
@@ -11,8 +10,28 @@ import ModalTache from './ModalTache';
 import DialogueNouvelleSession from './DialogueNouvelleSession';
 import FenetreAnciennesSessions from '../profile/FenetreAnciennesSessions';
 
-
-function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTache, reinitialiserOrdre, pointsPomodoro, modeLecture, setModeLecture, sessionConsultee, setSessionConsultee, sessionsSauvegardees, setSessionsSauvegardees, sessionsChargeesPourRef, remplacerTachesActives, titreSession, setTitreSession, numeroSession }) {
+function Note({
+  taches,
+  ajouterTache,
+  actionsPour,
+  viderTaches,
+  definirOrdreTache,
+  reinitialiserOrdre,
+  pointsPomodoro,
+  modeLecture,
+  setModeLecture,
+  sessionConsultee,
+  setSessionConsultee,
+  sessionsSauvegardees,
+  setSessionsSauvegardees,
+  sessionsChargeesPourRef,
+  remplacerTachesActives,
+  titreSession,
+  setTitreSession,
+  numeroSession,
+  modeCarnet,
+  setModeCarnet
+}) {
   const { connecte, utilisateur } = useAuth();
 
   const [idAgrandie, setIdAgrandie] = useState(null);
@@ -27,10 +46,6 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
   // Fenêtre "consulter les anciennes notes"
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const [recherche, setRecherche] = useState('');
-
-  // mode_lecture : reçu depuis App (props) afin d'être partagé avec le Chrono
-  // sessionConsultee : reçue depuis App (props) pour permettre la consultation
-  // depuis l'onglet Historique de la modale de profil.
 
   // --- Thème de session : menu déroulant remplaçant l'ancien affichage
   // « Session : #XXXX ». Permet de catégoriser la session en cours. ---
@@ -66,7 +81,6 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     setFiltreDaily(!filtreDaily);
   };
 
-
   // --- Mode "organiser" : numérotation manuelle de l'ordre des notes ---
   const [modeOrganisationActif, setModeOrganisationActif] = useState(false);
   // Id de la première note sélectionnée lors d'une interversion (2e clic = échange)
@@ -90,10 +104,7 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     ? [...notesProgrammes, ...tachesListeBase]
     : tachesListeBase;
 
-
-
   const tacheAgrandie = taches.find((t) => t.id === idAgrandie) || null;
-
 
   // Score de progression de la session en cours : toutes les notes comptent
   // (épinglées ou non), une tâche "terminée" compte comme accomplie
@@ -126,7 +137,6 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     }
 
     idsConnusRef.current = idsActuels;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taches]);
 
   // Quitte le mode organisation (clic droit ou touche Échap)
@@ -142,7 +152,6 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
   };
 
   // Retire les pastilles de toutes les notes (remise à zéro de l'ordre manuel).
-  // Les notes redeviennent numérotables une à une, comme au tout premier usage.
   const reinitialiserPastilles = () => {
     if (typeof reinitialiserOrdre !== 'function') return;
     reinitialiserOrdre();
@@ -163,9 +172,7 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     return () => window.removeEventListener('keydown', gererTouche);
   }, [modeOrganisationActif]);
 
-  // Clic sur une note pendant le mode organisation :
-  // - si elle n'a pas encore de numéro, elle reçoit le prochain numéro libre
-  // - sinon, elle entre dans une sélection à deux clics qui intervertit les numéros
+  // Clic sur une note pendant le mode organisation
   const gererClicNoteEnModeOrganisation = (tache) => {
     if (typeof definirOrdreTache !== 'function') return;
 
@@ -180,7 +187,6 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     }
 
     if (notePremiereSelection === tache.id) {
-      // Reclique sur la même note : annule la sélection en cours
       setNotePremiereSelection(null);
       return;
     }
@@ -193,14 +199,12 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     setNotePremiereSelection(null);
   };
 
-  // Clique sur "+nouvelle session" : on n'écrase rien tout de suite,
-  // on demande d'abord ce qu'il faut faire de la session en cours.
+  // Clique sur "+nouvelle session"
   const demarrerNouvelleSession = () => {
     setConfirmationOuverte(true);
   };
 
-  // Enregistre la session actuelle (titre, numéro, date, heure, notes),
-  // puis repart sur une session vierge.
+  // Enregistre la session actuelle puis repart sur une session vierge
   const enregistrerSessionEtRepartir = () => {
     const maintenant = new Date();
 
@@ -214,13 +218,9 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
       notes: taches,
     };
 
-
-
     const sessionsMisesAJour = [...sessionsSauvegardees, sessionArchivee];
     setSessionsSauvegardees(sessionsMisesAJour);
 
-    // Mode invité, ou changement de compte encore en cours de chargement :
-    // rien à enregistrer dans Supabase (pas de compte cible fiable).
     if (connecte && utilisateur?.id && sessionsChargeesPourRef.current === utilisateur.id) {
       sauvegarderSessionArchivee(utilisateur.id, sessionArchivee);
     }
@@ -228,34 +228,26 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     repartirSurNouvelleSession(sessionsMisesAJour);
   };
 
-  // Supprime la session actuelle sans l'enregistrer, puis repart sur une session vierge.
+  // Supprime la session actuelle sans l'enregistrer
   const supprimerSessionEtRepartir = () => {
     repartirSurNouvelleSession(sessionsSauvegardees);
   };
 
-  // Vide l'éditeur, réinitialise le titre et génère un nouveau numéro unique.
+  // Vide l'éditeur et réinitialise
   const repartirSurNouvelleSession = (sessionsActuelles) => {
     if (typeof viderTaches === 'function') {
       viderTaches();
     } else if (typeof ajouterTache === 'function') {
-      // Solution de repli si "viderTaches" n'a pas encore été branché côté parent :
-      // au minimum on ouvre une nouvelle tâche, mais l'idéal est d'implémenter
-      // "viderTaches" pour vraiment vider la liste précédente.
       ajouterTache();
     }
     setTitreSession('');
     setDateCreationSession(new Date().toISOString());
     setConfirmationOuverte(false);
-
-    // On quitte le mode lecture seule : sans ça, la session vierge reste
-    // masquée derrière les notes (en lecture seule) de l'ancienne session
-    // qu'on était en train de consulter.
     setModeLecture(false);
     setSessionConsultee(null);
   };
 
-
-  //consulter les sessions
+  // Consulter les sessions
   const consulterSession = (session) => {
     setSessionConsultee(session);
     setModeLecture(true);
@@ -277,7 +269,6 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     };
 
     const sessionsMisesAJour = [...sessionsSauvegardees, sessionArchivee];
-
     setSessionsSauvegardees(sessionsMisesAJour);
 
     if (connecte && utilisateur?.id && sessionsChargeesPourRef.current === utilisateur.id) {
@@ -285,7 +276,7 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     }
   };
 
-  // Filtre les sessions sauvegardées selon la barre de recherche (titre ou numéro)
+  // Filtre les sessions sauvegardées selon la barre de recherche
   const sessionsFiltrees = sessionsSauvegardees.filter((s) => {
     const cible = recherche.trim().toLowerCase();
     if (!cible) return true;
@@ -295,7 +286,7 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     );
   });
 
-  // --- Mode lecture : nombre de tâches non terminées dans la session consultée
+  // Mode lecture : nombre de tâches non terminées
   const tachesNonTerminees = modeLecture && sessionConsultee
     ? (sessionConsultee.notes || []).filter((n) => !n.terminee).length
     : 0;
@@ -306,7 +297,7 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     setSessionConsultee(null);
   };
 
-  // Déplace les tâches non terminées de la session consultée vers une nouvelle session active
+  // Déplace les tâches non terminées vers une nouvelle session
   const deplacerTachesNonTerminees = () => {
     if (!sessionConsultee) return;
     const nonTerminees = (sessionConsultee.notes || []).filter((n) => !n.terminee);
@@ -314,12 +305,10 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
 
     if (nonTerminees.length === 0) return;
 
-    // 1. Sauvegarder la session de travail actuelle (en arrière-plan) pour ne rien perdre
     if (taches.length > 0) {
       enregistrerSession();
     }
 
-    // 2. Mettre à jour l'ancienne session en retirant les non terminées
     const ancienneSessionMiseAJour = {
       ...sessionConsultee,
       notes: terminees
@@ -334,7 +323,6 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
       sauvegarderSessionArchivee(utilisateur.id, ancienneSessionMiseAJour);
     }
 
-    // 3. Remplacer l'espace de travail actif par les tâches non terminées
     const nouvellesTaches = nonTerminees.map((n) => ({ ...n, id: genererIdTache() }));
     if (typeof remplacerTachesActives === 'function') {
       remplacerTachesActives(nouvellesTaches);
@@ -343,7 +331,6 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
     setTitreSession(`Suite de ${sessionConsultee.titre || 'Session'}`);
     setDateCreationSession(new Date().toISOString());
 
-    // 4. Quitter le mode lecture pour afficher la nouvelle session en cours
     setModeLecture(false);
     setSessionConsultee(null);
   };
@@ -359,17 +346,9 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
       }}
     >
       <div className="todo_entete">
-
-
-        {/* ===========================
-      Barre de session
-  ============================ */}
-
         <div className="session_section">
-
           {/* Barre supérieure */}
           <div className="todo_actions_top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-
             {!modeLecture && (
               <button
                 type="button"
@@ -430,14 +409,11 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
                 </div>
               </div>
             )}
-
           </div>
 
           {/* Barre de session */}
           <div className="todo_actions">
-
             <div className="session_infos">
-
               <div className="session_titre_ligne">
                 <div className="theme_dropdown_wrapper">
                   <button
@@ -480,10 +456,9 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
               <span className="session_progression_score">
                 <strong>{tachesTerminees}</strong> / {tachesTotal} tâches accomplies
               </span>
-
             </div>
-
           </div>
+
           <div className="session_liste_actions">
             <button
               type="button"
@@ -500,6 +475,15 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
               onClick={basculerModeOrganisation}
             >
               Organiser
+            </button>
+
+            <button
+              type="button"
+              className={`session_action_btn${modeCarnet ? ' session_action_btn--actif' : ''}`}
+              onClick={() => setModeCarnet && setModeCarnet((prev) => !prev)}
+              title="Afficher les notes sous forme de carnet empilé dans l'espace de travail"
+            >
+              Carnet
             </button>
 
             <PomodoroTracker points={pointsPomodoro || []} />
@@ -519,12 +503,8 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
                 </button>
               </>
             )}
-
           </div>
         </div>
-
-
-
       </div>
 
       {tachesListe.length === 0 ? (
@@ -581,7 +561,7 @@ function Note({ taches, ajouterTache, actionsPour, viderTaches, definirOrdreTach
                         });
                       }
                     },
-                    epingler: () => { } // Pas d'épinglage pour les notes programmées
+                    epingler: () => { }
                   } : actionsPour(tache.id)
                 }
                 onAgrandir={() => setIdAgrandie(tache.id)}

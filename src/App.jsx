@@ -19,12 +19,14 @@ import ModalChoixAcces from './components/auth/ModalChoixAcces';
 import Chrono from './components/timer/Chrono';
 import Note from './components/tasks/Note';
 import NoteEpinglee from './components/tasks/NoteEpinglee';
+import Carnet from './components/tasks/Carnet';
 import ModalProfil from './components/profile/ModalProfil';
 import OngletParametres from './components/profile/OngletParametres';
 import PanneauJoueur from './components/social/PanneauJoueur';
 import Param from './components/settings/Param';
 import ModalPrereglage from './components/settings/ModalPrereglage';
 import Accueil from './components/pages/Accueil';
+import EcranChargement from './components/ui/EcranChargement';
 import { useAuth } from './context/AuthContext.jsx';
 import {
   chargerProfil,
@@ -232,6 +234,8 @@ function App() {
   // Vrai après avoir choisi "Continuer en tant qu'invité" ; réinitialisé
   // dès qu'un vrai compte se connecte ou se déconnecte.
   const [modeInvite, setModeInvite] = useState(false);
+  const [ecranChargementActif, setEcranChargementActif] = useState(false);
+  const [modeCarnet, setModeCarnet] = useState(false);
 
   const [coins, setCoins] = useState(0);
   const [recompenses, setRecompenses] = useState([]);
@@ -301,13 +305,15 @@ function App() {
     const etaitConnecte = etaitConnecteRef.current;
     etaitConnecteRef.current = connecte;
 
-    if (connecte) {
+    if (connecte && !etaitConnecte) {
       setModeInvite(false);
       setChoixAccesOuvert(false);
       setPageActuelle('pomodoro');
-    } else if (etaitConnecte) {
+      setEcranChargementActif(true);
+    } else if (!connecte && etaitConnecte) {
       setModeInvite(false);
       setPageActuelle('accueil');
+      setEcranChargementActif(false);
     }
   }, [connecte]);
 
@@ -330,6 +336,7 @@ function App() {
 
   const gererCommencer = () => {
     if (connecte) {
+      setEcranChargementActif(true);
       setPageActuelle('pomodoro');
     } else {
       demanderAcces();
@@ -337,8 +344,14 @@ function App() {
   };
 
   const allerPomodoro = () => {
-    if (connecte) setPageActuelle('pomodoro');
-    else demanderAcces();
+    if (connecte) {
+      if (pageActuelle !== 'pomodoro') {
+        setEcranChargementActif(true);
+      }
+      setPageActuelle('pomodoro');
+    } else {
+      demanderAcces();
+    }
   };
 
   const choisirInscription = () => {
@@ -1038,6 +1051,8 @@ function App() {
   // Épingle une tâche sur le fond principal, en cascade pour éviter
   // que toutes les notes n'apparaissent superposées au même endroit
   const epinglerTache = (id) => {
+    // Si l'option carnet est active, elle est désactivée si l'utilisateur épingle une note
+    setModeCarnet(false);
     setTaches((prev) => {
       const dejaEpinglees = prev.filter((t) => t.epinglee).length;
       return prev.map((t) => (
@@ -1433,6 +1448,8 @@ function App() {
               titreSession={titreSession}
               setTitreSession={setTitreSession}
               numeroSession={numeroSession}
+              modeCarnet={modeCarnet}
+              setModeCarnet={setModeCarnet}
             />
           )}
 
@@ -1529,6 +1546,14 @@ function App() {
             <NoteEpinglee key={tache.id} tache={tache} actions={actionsPourTache(tache.id)} />
           ))}
 
+          {/* Carnet de notes : widget empilé dans l'espace de travail */}
+          <Carnet
+            ouvert={modeCarnet}
+            fermer={() => setModeCarnet(false)}
+            taches={taches}
+            actionsPourTache={actionsPourTache}
+          />
+
           <ModalChoisirMusique
             ouvert={choixMusiqueOuvert}
             fermer={() => setChoixMusiqueOuvert(false)}
@@ -1587,6 +1612,13 @@ function App() {
         fermer={() => setConnexionOuverte(false)}
         vueInitiale={vueConnexionInitiale}
       />
+
+      {ecranChargementActif && (
+        <EcranChargement
+          pseudo={pseudoJoueur}
+          onTermine={() => setEcranChargementActif(false)}
+        />
+      )}
     </>
   )
 }
