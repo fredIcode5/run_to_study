@@ -212,13 +212,13 @@ function Salon_course({ reglages, imageFondActuelle, musiqueActuelle, onOuvrirBo
 
       <div className="salon_contenu">
         {modeActif === 'creer' && (
-          <div className="salon_section_creer" style={{ textAlign: 'center', padding: '32px 16px', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <p style={{ marginBottom: '24px', color: '#64748b', fontSize: '0.95rem', lineHeight: '1.5' }}>
+          <div className="salon_section_creer" style={{ textAlign: 'center', padding: '32px 16px', background: 'var(--dc-bg-surface, #2b2d31)', borderRadius: '12px', border: '1px solid var(--dc-border-strong, #383a40)' }}>
+            <p style={{ marginBottom: '24px', color: 'var(--dc-text-secondary, #b5bac1)', fontSize: '0.95rem', lineHeight: '1.5' }}>
               Vos paramètres de session vont servir à créer une session.
             </p>
             <button 
               className="salon_btn_valider_code" 
-              style={{ padding: '10px 24px', fontSize: '1rem', background: '#10b981' }}
+              style={{ padding: '10px 24px', fontSize: '1rem', background: 'var(--dc-blurple, #5865f2)' }}
               onClick={executerCreation}
             >
               Créer
@@ -230,7 +230,7 @@ function Salon_course({ reglages, imageFondActuelle, musiqueActuelle, onOuvrirBo
           <div className="salon_section_recherche">
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', flex: '1' }}>
-                <label style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '4px', fontWeight: '500' }}>Temps de travail</label>
+                <label style={{ fontSize: '0.85rem', color: 'var(--dc-text-secondary, #b5bac1)', marginBottom: '4px', fontWeight: '500' }}>Temps de travail</label>
                 <input
                   type="number"
                   className="salon_input_saisie"
@@ -244,7 +244,7 @@ function Salon_course({ reglages, imageFondActuelle, musiqueActuelle, onOuvrirBo
                 />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', flex: '1' }}>
-                <label style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '4px', fontWeight: '500' }}>Temps de repos</label>
+                <label style={{ fontSize: '0.85rem', color: 'var(--dc-text-secondary, #b5bac1)', marginBottom: '4px', fontWeight: '500' }}>Temps de repos</label>
                 <input
                   type="number"
                   className="salon_input_saisie"
@@ -258,7 +258,7 @@ function Salon_course({ reglages, imageFondActuelle, musiqueActuelle, onOuvrirBo
                 />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', flex: '1' }}>
-                <label style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '4px', fontWeight: '500' }}>
+                <label style={{ fontSize: '0.85rem', color: 'var(--dc-text-secondary, #b5bac1)', marginBottom: '4px', fontWeight: '500' }}>
                   Écart : {rechercheEcart === 31 ? 'Toutes les séances' : `±${rechercheEcart} min`}
                 </label>
                 <input
@@ -267,7 +267,7 @@ function Salon_course({ reglages, imageFondActuelle, musiqueActuelle, onOuvrirBo
                   max="31"
                   value={rechercheEcart}
                   onChange={(e) => setRechercheEcart(parseInt(e.target.value) || 0)}
-                  style={{ cursor: 'pointer', height: '42px', accentColor: '#10b981', margin: 0 }}
+                  style={{ cursor: 'pointer', height: '42px', accentColor: 'var(--dc-blurple, #5865f2)', margin: 0 }}
                 />
               </div>
             </div>
@@ -321,8 +321,8 @@ function Salon_course({ reglages, imageFondActuelle, musiqueActuelle, onOuvrirBo
         {modeActif === 'session' && sessionActive && (
           <div className="salon_section_active">
             <div className="session_active_entete" style={{ alignItems: 'center' }}>
-              <div style={{ fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>
-                Code : {sessionActive.code} - Chrono : {sessionActive.tempsTravail}/{sessionActive.tempsPause}
+              <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--dc-text-primary, #F2F3F5)', fontFamily: "'Inter', 'gg sans', sans-serif" }}>
+                Code : <span style={{ color: 'var(--dc-blurple, #5865F2)' }}>{sessionActive.code}</span> — Chrono : {sessionActive.tempsTravail}/{sessionActive.tempsPause}
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <button

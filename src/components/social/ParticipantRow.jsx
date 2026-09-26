@@ -48,7 +48,7 @@ function ParticipantRow({ participant, estMoi, musiqueCourante, nbTours }) {
           écoute <span className="participant_ecoute_titre">{titreMusique}</span>
         </span>
       ) : (
-        <span className="participant_ecoute" style={{ color: '#94a3b8' }}>—</span>
+        <span className="participant_ecoute" style={{ color: 'var(--dc-text-muted, #80848e)' }}>—</span>
       )}
       <button className="participant_btn_desk" type="button">Desk</button>
       <span className="participant_statut">{participant.enSession ? 'En ligne' : ''}</span>

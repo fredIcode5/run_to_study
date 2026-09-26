@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Play, Pause, SquarePen, Gift, Headphones, Pin, Clock9 } from 'lucide-react'
+import { Play, Pause, SquarePen, Gift, Headphones, Pin, Clock9, Eye, Timer, Users } from 'lucide-react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -12,7 +12,7 @@ import BlocDeux from './components/layout/BlocDeux';
 import ModalConfirmation from './components/ui/ModalConfirmation';
 import ModalConfirmationSortie from './components/ui/ModalConfirmationSortie';
 import ModalChoisirMusique from './components/ui/ModalChoisirMusique';
-import LecteurVinyle from './components/ui/LecteurVinyle';
+import LecteurProfilMusique from './components/ui/LecteurProfilMusique';
 import ModalConnexion from './components/auth/ModalConnexion';
 import ModalConfirmationAccueil from './components/auth/ModalConfirmationAccueil';
 import ModalChoixAcces from './components/auth/ModalChoixAcces';
@@ -78,9 +78,9 @@ import {
 const REGLAGES_PAR_DEFAUT = {
   dureeTravail: 25,        // minutes
   dureePause: 5,           // minutes
-  couleurChrono: '#1f2430',
-  couleurPoignee: '#e2472a',
-  couleurBoutons: '#e2472a',
+  couleurChrono: '#F2F3F5',
+  couleurPoignee: '#5865F2',
+  couleurBoutons: '#5865F2',
 };
 
 
@@ -157,8 +157,8 @@ const REGLAGES_PAR_DEFAUT = {
 const ONGLETS_POIGNEE = [
   { id: 1, icone: <SquarePen size={18} />, label: 'Notes', notif: true },
   { id: 4, icone: <Gift size={18} />, label: 'Récompenses', notif: true },
-  { id: 2, icone: '⚙️', label: 'Réglages', notif: true },
-  { id: 3, icone: '🏁', label: 'Salon de course', notif: true },
+  { id: 2, icone: <Timer size={18} />, label: 'Mon Pomodoro', notif: true },
+  { id: 3, icone: <Users size={18} />, label: 'Salon de course', notif: true },
 ];
 
 
@@ -167,37 +167,37 @@ const PREREGLAGES_PAR_DEFAUT = [
   {
     id: 'defaut_focus',
     nom: 'Focus 25/5',
-    couleurFondAppliquee: '#1f2430',
+    couleurFondAppliquee: '#313338',
     reglages: {
       dureeTravail: 25,
       dureePause: 5,
-      couleurChrono: '#ffffff',
-      couleurPoignee: '#e2472a',
-      couleurBoutons: '#e2472a',
+      couleurChrono: '#F2F3F5',
+      couleurPoignee: '#5865F2',
+      couleurBoutons: '#5865F2',
     },
   },
   {
     id: 'defaut_intense',
     nom: 'Session 50/10',
-    couleurFondAppliquee: '#2f6f6b',
+    couleurFondAppliquee: '#2B2D31',
     reglages: {
       dureeTravail: 50,
       dureePause: 10,
-      couleurChrono: '#ffffff',
-      couleurPoignee: '#2f6f6b',
-      couleurBoutons: '#2f6f6b',
+      couleurChrono: '#F2F3F5',
+      couleurPoignee: '#23A559',
+      couleurBoutons: '#23A559',
     },
   },
   {
     id: 'defaut_sprint',
     nom: 'Sprint 15/3',
-    couleurFondAppliquee: '#b8371d',
+    couleurFondAppliquee: '#1E1F22',
     reglages: {
       dureeTravail: 15,
       dureePause: 3,
-      couleurChrono: '#ffffff',
-      couleurPoignee: '#b8371d',
-      couleurBoutons: '#b8371d',
+      couleurChrono: '#F2F3F5',
+      couleurPoignee: '#F0B232',
+      couleurBoutons: '#F0B232',
     },
   },
 ];
@@ -208,17 +208,36 @@ function App() {
   const [chronoPhase, setChronoPhase] = useState('travail');
   const [chronoResetKey, setChronoResetKey] = useState(0);
 
-  const [hideRunner, setHideRunner] = useState(() => {
-    return localStorage.getItem('hideRunner') === 'true';
+  const [styleChrono, setStyleChrono] = useState(() => {
+    const saved = localStorage.getItem('styleChrono');
+    if (saved && ['classique', 'loop', 'barre'].includes(saved)) return saved;
+    return 'loop';
   });
 
   useEffect(() => {
     const handleVisibilityChange = () => {
-      setHideRunner(localStorage.getItem('hideRunner') === 'true');
+      const savedStyle = localStorage.getItem('styleChrono');
+      if (savedStyle && ['classique', 'loop', 'barre'].includes(savedStyle)) {
+        setStyleChrono(savedStyle);
+      }
     };
     window.addEventListener('runnerVisibilityChanged', handleVisibilityChange);
     return () => window.removeEventListener('runnerVisibilityChanged', handleVisibilityChange);
   }, []);
+
+  const getProchainStyleChrono = (styleActuel) => {
+    if (styleActuel === 'classique') return 'loop';
+    if (styleActuel === 'loop') return 'barre';
+    return 'classique';
+  };
+
+  const basculerStyleChrono = (nouveauStyle) => {
+    const style = nouveauStyle || getProchainStyleChrono(styleChrono);
+    setStyleChrono(style);
+    localStorage.setItem('styleChrono', style);
+    localStorage.setItem('hideRunner', style === 'loop' ? 'true' : 'false');
+    window.dispatchEvent(new Event('runnerVisibilityChanged'));
+  };
   
   // Navigation ultra simple entre la vitrine d'accueil et l'appli Pomodoro,
   // sans routeur : on affiche l'un ou l'autre selon cet état.
@@ -1355,6 +1374,8 @@ function App() {
           onCourse={allerPomodoro}
           onConnexion={choisirConnexion}
           modeInvite={modeInvite && !connecte}
+          autoMasquage={pageActuelle !== 'accueil'}
+          positionBas={pageActuelle !== 'accueil' && styleChrono === 'barre'}
         />
       )}
 
@@ -1363,15 +1384,24 @@ function App() {
       ) : (
         <>
           {!modeConcentration && (
-            <PanneauJoueur
-              pseudo={pseudoJoueur}
-              niveau={1}
-              distance={distanceTotale}
-              position={0}
-              ouvrirProfil={() => ouvrirProfilAvecOnglet('profil')}
-              photoProfil={photoProfil}
-              coins={coins}
-            />
+            <div className="barre_joueur_musique_flottante">
+              <PanneauJoueur
+                pseudo={pseudoJoueur}
+                niveau={1}
+                distance={distanceTotale}
+                position={0}
+                ouvrirProfil={() => ouvrirProfilAvecOnglet('profil')}
+                onOuvrirOnglet={ouvrirProfilAvecOnglet}
+                photoProfil={photoProfil}
+                coins={coins}
+              />
+              <LecteurProfilMusique
+                key={cleLecteurMusique}
+                musique={musiqueAmbiance}
+                onMettreAJour={mettreAJourMusique}
+                onOuvrirChoixMusique={() => setChoixMusiqueOuvert(true)}
+              />
+            </div>
           )}
 
           <main className={`stage ${panelOuvert && !modeConcentration ? 'stage--panel-ouvert' : ''}`} style={{ position: 'relative' }}>
@@ -1384,8 +1414,10 @@ function App() {
               modeLecture={modeLectureSession}
               onPhaseChange={setChronoPhase}
               onReset={() => setChronoResetKey(k => k + 1)}
-              hideTimeDisplay={hideRunner}
-              renderLoop={(secondesRestantes) => hideRunner && (
+              styleChrono={styleChrono}
+              onToggleStyle={basculerStyleChrono}
+              photoProfil={photoProfil}
+              renderLoop={(secondesRestantes) => (
                 <div style={{ marginTop: '110px', pointerEvents: 'none', display: 'flex', justifyContent: 'center' }}>
                   <InfiniteLoopAnimation 
                     enMarche={enMarche} 
@@ -1426,6 +1458,8 @@ function App() {
               musiqueActuelle={musiqueAmbiance}
               onOuvrirChoixMusique={() => setChoixMusiqueOuvert(true)}
               onSupprimerMusique={supprimerMusiqueAmbiance}
+              onMettreAJourMusique={mettreAJourMusique}
+              onChangerMusique={validerMusiqueAmbiance}
               onOuvrirBoutique={() => ouvrirProfilAvecOnglet('boutique')}
               onSessionEnLigneChange={setSessionEnLigne}
               sessionEnLigne={sessionEnLigne}
@@ -1455,29 +1489,29 @@ function App() {
 
 
 
-          {/* Poignée musique gauche */}
-          <div className={`poignee_musique${carteMusiqueOuverte ? ' poignee_musique--ouverte' : ''}`}>
-            {musiqueAmbiance ? (
-              <div style={{ position: 'relative' }}>
-                <LecteurVinyle
-                  key={cleLecteurMusique}
-                  musique={musiqueAmbiance}
-                  fermer={() => setCarteMusiqueOuverte(false)}
-                  onMettreAJour={mettreAJourMusique}
-                  modeTiroir={true}
-                />
-              </div>
-            ) : null}
 
-            <button
-              type="button"
-              className="poignee_musique_btn"
-              onClick={() => setCarteMusiqueOuverte(!carteMusiqueOuverte)}
-              aria-label={carteMusiqueOuverte ? 'Fermer le lecteur musique' : 'Ouvrir le lecteur musique'}
-            >
-              <Headphones size={20} />
-            </button>
-          </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
           {/* Boutons d'action en bas : Ranger/Déployer + Mode concentration */}
           <div className="actions_bas_page">
@@ -1503,9 +1537,11 @@ function App() {
             <button
               type="button"
               className="btn_mode_concentration"
+              title={modeConcentration ? 'Quitter le mode concentration' : 'Mode concentration'}
+              aria-label={modeConcentration ? 'Quitter le mode concentration' : 'Mode concentration'}
               onClick={modeConcentration ? demanderQuitterModeConcentration : activerModeConcentration}
             >
-              {modeConcentration ? 'Quitter le mode concentration' : 'Mode concentration'}
+              <Eye size={20} />
             </button>
           </div>
 

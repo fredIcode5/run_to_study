@@ -1,0 +1,350 @@
+/* ─── Styles Onglet Ambiance (Thème Discord Dark) ─────────────────── */
+
+.ambiance_conteneur {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  padding-bottom: 24px;
+  box-sizing: border-box;
+}
+
+.ambiance_carte {
+  background: var(--dc-bg-surface, #2b2d31);
+  border: 1px solid var(--dc-border, #383a40);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ambiance_carte:hover {
+  border-color: rgba(88, 101, 242, 0.4);
+}
+
+.ambiance_carte_entete {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ambiance_carte_icone {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ambiance_carte_icone--musique {
+  background: rgba(88, 101, 242, 0.15);
+  color: var(--dc-blurple, #5865f2);
+}
+
+.ambiance_carte_icone--sonnerie {
+  background: rgba(240, 178, 50, 0.15);
+  color: #f0b232;
+}
+
+.ambiance_carte_titre {
+  margin: 0;
+  font-family: 'Inter', 'gg sans', system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--dc-text-primary, #ffffff);
+}
+
+.ambiance_carte_soustitre {
+  margin: 2px 0 0 0;
+  font-size: 0.78rem;
+  color: var(--dc-text-muted, #949ba4);
+}
+
+/* --- Section 1 : Musique --- */
+.ambiance_musique_bloc {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  border: 1px solid var(--dc-border, #313338);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.ambiance_piste_infos {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ambiance_piste_cover_zone {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #111214;
+  border: 1px solid var(--dc-border-strong, #3f4147);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ambiance_piste_cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ambiance_piste_cover_vide {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dc-text-muted, #949ba4);
+}
+
+.ambiance_pulse_badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dc-success, #23a559);
+  box-shadow: 0 0 8px var(--dc-success, #23a559);
+  animation: pulse-green 1.5s infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+
+.ambiance_piste_texte {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.ambiance_piste_titre {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--dc-text-primary, #ffffff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ambiance_piste_artiste {
+  font-size: 0.78rem;
+  color: var(--dc-text-muted, #949ba4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ambiance_lecteur_actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ambiance_btn_play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: var(--dc-blurple, #5865f2);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(88, 101, 242, 0.35);
+}
+
+.ambiance_btn_play:hover {
+  background: var(--dc-blurple-dark, #4752c4);
+  transform: scale(1.05);
+}
+
+.ambiance_btn_suivant,
+.ambiance_btn_choisir {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--dc-bg-surface, #2b2d31);
+  border: 1px solid var(--dc-border-strong, #3f4147);
+  border-radius: 8px;
+  color: var(--dc-text-primary, #dbdee1);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.ambiance_btn_suivant:hover,
+.ambiance_btn_choisir:hover {
+  background: rgba(88, 101, 242, 0.15);
+  border-color: var(--dc-blurple, #5865f2);
+  color: #ffffff;
+}
+
+/* Sliders */
+.ambiance_slider_ligne {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.ambiance_slider_label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--dc-text-secondary, #b5bac1);
+}
+
+.ambiance_icone_vol {
+  color: var(--dc-text-muted, #949ba4);
+  display: flex;
+  align-items: center;
+}
+
+.ambiance_slider_controle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.ambiance_range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--dc-blurple, #5865f2) 0%, var(--dc-blurple, #5865f2) var(--val-pct, 50%), rgba(255, 255, 255, 0.15) var(--val-pct, 50%), rgba(255, 255, 255, 0.15) 100%);
+  outline: none;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.ambiance_range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ambiance_range::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 10px rgba(88, 101, 242, 0.8);
+}
+
+.ambiance_valeur_pct {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--dc-text-muted, #949ba4);
+  min-width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Section 2 : Sonneries --- */
+.ambiance_sonneries_liste {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ambiance_sonnerie_item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  border: 1px solid var(--dc-border, #313338);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.ambiance_sonnerie_details {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ambiance_sonnerie_label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--dc-text-primary, #ffffff);
+}
+
+.ambiance_sonnerie_desc {
+  font-size: 0.74rem;
+  color: var(--dc-text-muted, #949ba4);
+}
+
+.ambiance_sonnerie_select_groupe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ambiance_select {
+  flex: 1;
+  background: var(--dc-bg-surface, #2b2d31);
+  color: var(--dc-text-primary, #dbdee1);
+  border: 1px solid var(--dc-border-strong, #3f4147);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.ambiance_select:focus {
+  border-color: var(--dc-blurple, #5865f2);
+}
+
+.ambiance_btn_test {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--dc-border-strong, #3f4147);
+  background: var(--dc-bg-surface, #2b2d31);
+  color: var(--dc-text-primary, #dbdee1);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+}
+
+.ambiance_btn_test:hover,
+.ambiance_btn_test.test-actif {
+  background: rgba(240, 178, 50, 0.2);
+  border-color: #f0b232;
+  color: #f0b232;
+  transform: scale(1.05);
+}

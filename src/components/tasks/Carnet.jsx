@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Pin, Trash2, Check, ChevronLeft, ChevronRight, Layers, X } from 'lucide-react';
+import { Pin, Trash2, Check, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import './Carnet.css';
 
 export default function Carnet({
@@ -32,8 +32,8 @@ export default function Carnet({
     const gererDeplacement = (e) => {
       if (!enTrainDeGlisser.current) return;
       const marge = 10;
-      const largeur = conteneurRef.current?.offsetWidth || 340;
-      const hauteur = conteneurRef.current?.offsetHeight || 380;
+      const largeur = conteneurRef.current?.offsetWidth || 288;
+      const hauteur = conteneurRef.current?.offsetHeight || 250;
 
       let x = e.clientX - decalageRef.current.x;
       let y = e.clientY - decalageRef.current.y;
@@ -79,34 +79,81 @@ export default function Carnet({
     setIndexActuel((prev) => Math.min(notesTriees.length - 1, prev + 1));
   };
 
-  const defilerNotes = () => {
-    if (notesTriees.length <= 1) return;
-    setIndexActuel((prev) => (prev + 1) % notesTriees.length);
-  };
-
   return (
     <div
       ref={conteneurRef}
       className="carnet_widget"
       style={{ left: `${position.x}px`, top: `${position.y}px` }}
     >
-      {/* En-tête avec poignée de déplacement */}
+      {/* En-tête du carnet : Bouton Précédent (gauche), Barre de progression (centre), Bouton Suivant & Fermer (droite) */}
       <div className="carnet_entete" onPointerDown={demarrerDrag}>
-        <div className="carnet_titre_ligne">
-          <span className="carnet_poignee" title="Déplacer le carnet">⠿⠿</span>
-          <span className="carnet_titre">
-            <Layers size={16} /> Carnet de notes
-          </span>
-        </div>
+        {/* Navigation : Bouton Précédent en haut à gauche */}
         <button
           type="button"
-          className="carnet_btn_fermer"
-          onClick={fermer}
-          title="Fermer le carnet"
-          aria-label="Fermer le carnet"
+          className="carnet_entete_nav_btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            allerPrecedent();
+          }}
+          disabled={indexActuel <= 0 || notesTriees.length <= 1}
+          title="Note précédente"
+          aria-label="Note précédente"
         >
-          <X size={16} />
+          <ChevronLeft size={14} />
         </button>
+
+        {/* Barre de progression des tâches terminées au centre */}
+        <div className="carnet_entete_progression" title={`${notesTerminees} sur ${totalNotes} notes terminées`}>
+          <div className="carnet_entete_progression_infos">
+            <span className="carnet_progression_compteur_badge">
+              <strong>{notesTerminees}</strong> / {totalNotes}
+            </span>
+            <span className="carnet_progression_label">
+              terminées
+            </span>
+            {totalNotes > 0 && (
+              <span className="carnet_progression_pourcentage">
+                {Math.round((notesTerminees / totalNotes) * 100)}%
+              </span>
+            )}
+          </div>
+          <div className="carnet_entete_barre_piste">
+            <div
+              className="carnet_entete_barre_remplissage"
+              style={{ width: `${totalNotes > 0 ? (notesTerminees / totalNotes) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Actions à droite : Bouton Suivant en haut à droite + Bouton Fermer */}
+        <div className="carnet_entete_droite">
+          <button
+            type="button"
+            className="carnet_entete_nav_btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              allerSuivant();
+            }}
+            disabled={indexActuel >= notesTriees.length - 1 || notesTriees.length <= 1}
+            title="Note suivante"
+            aria-label="Note suivante"
+          >
+            <ChevronRight size={14} />
+          </button>
+
+          <button
+            type="button"
+            className="carnet_btn_fermer"
+            onClick={(e) => {
+              e.stopPropagation();
+              fermer();
+            }}
+            title="Fermer le carnet"
+            aria-label="Fermer le carnet"
+          >
+            <X size={14} />
+          </button>
+        </div>
       </div>
 
       {/* Pile de notes empilées */}
@@ -140,21 +187,21 @@ export default function Carnet({
               };
             } else if (diff === 1) {
               styleEmpilement = {
-                transform: 'translate(10px, 12px) rotate(2deg) scale(0.96)',
+                transform: 'translate(8px, 10px) rotate(2deg) scale(0.96)',
                 opacity: 0.78,
                 zIndex: 9,
                 pointerEvents: 'none',
               };
             } else if (diff === 2) {
               styleEmpilement = {
-                transform: 'translate(20px, 24px) rotate(-1.5deg) scale(0.92)',
+                transform: 'translate(16px, 20px) rotate(-1.5deg) scale(0.92)',
                 opacity: 0.52,
                 zIndex: 8,
                 pointerEvents: 'none',
               };
             } else {
               styleEmpilement = {
-                transform: 'translate(30px, 36px) rotate(1deg) scale(0.88)',
+                transform: 'translate(24px, 30px) rotate(1deg) scale(0.88)',
                 opacity: 0.22,
                 zIndex: 7,
                 pointerEvents: 'none',
@@ -167,14 +214,11 @@ export default function Carnet({
                 className={`carnet_carte ${tache.terminee ? 'carnet_carte--terminee' : ''} ${estActif ? 'carnet_carte--active' : ''}`}
                 style={styleEmpilement}
               >
-                {/* Numéro d'ordre en haut à gauche */}
+                {/* En-tête de la carte : uniquement la date d'échéance si définie */}
                 <div className="carnet_carte_entete">
-                  <span className="carnet_ordre_badge" title="Numéro d'ordre de la note">
-                    {tache.ordre != null ? tache.ordre : index + 1}
-                  </span>
-                  {tache.dateEcheance && (
+                  {tache.dateEcheance ? (
                     <span className="carnet_note_date">{tache.dateEcheance}</span>
-                  )}
+                  ) : <span className="carnet_carte_entete_spacer" />}
                 </div>
 
                 {/* Contenu de la note */}
@@ -186,7 +230,7 @@ export default function Carnet({
                   disabled={!estActif}
                 />
 
-                {/* Actions en bas de la carte : boutons Supprimer et Terminer à droite */}
+                {/* Actions en bas de la carte : boutons Épingler, Supprimer et Terminer */}
                 <div className="carnet_carte_actions_bas">
                   <button
                     type="button"
@@ -197,7 +241,7 @@ export default function Carnet({
                     }}
                     title="Épingler sur le fond"
                   >
-                    <Pin size={15} />
+                    <Pin size={13} />
                   </button>
 
                   <div className="carnet_carte_actions_droite">
@@ -210,7 +254,7 @@ export default function Carnet({
                       }}
                       title="Supprimer la note"
                     >
-                      <Trash2 size={15} />
+                      <Trash2 size={13} />
                       <span>Supprimer</span>
                     </button>
 
@@ -222,7 +266,7 @@ export default function Carnet({
                         actions.toggleTerminee?.();
                       }}
                     >
-                      <Check size={15} />
+                      <Check size={13} />
                       <span>{tache.terminee ? 'Terminé' : 'Terminer'}</span>
                     </button>
                   </div>
@@ -231,59 +275,6 @@ export default function Carnet({
             );
           })
         )}
-      </div>
-
-      {/* Barre de contrôle en dessous des notes empilées */}
-      <div className="carnet_barre_controle">
-        <div className="carnet_nav_boutons">
-          <button
-            type="button"
-            className="carnet_nav_btn"
-            onClick={allerPrecedent}
-            disabled={indexActuel <= 0 || notesTriees.length <= 1}
-            title="Note précédente"
-          >
-            <ChevronLeft size={18} />
-          </button>
-
-          <button
-            type="button"
-            className="carnet_btn_defiler"
-            onClick={defilerNotes}
-            disabled={notesTriees.length <= 1}
-            title="Faire défiler les notes"
-          >
-            <span>Défiler</span>
-            {notesTriees.length > 0 && (
-              <span className="carnet_pagination_badge">
-                {indexActuel + 1} / {notesTriees.length}
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            className="carnet_nav_btn"
-            onClick={allerSuivant}
-            disabled={indexActuel >= notesTriees.length - 1 || notesTriees.length <= 1}
-            title="Note suivante"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-
-        {/* Indicateur : nombre de notes terminées sur le total de la session */}
-        <div className="carnet_progression_compteur">
-          <span className="carnet_progression_texte">
-            <strong>{notesTerminees}</strong> / {totalNotes} terminées
-          </span>
-          <div className="carnet_progression_mini_barre">
-            <div
-              className="carnet_progression_mini_remplissage"
-              style={{ width: `${totalNotes > 0 ? (notesTerminees / totalNotes) * 100 : 0}%` }}
-            />
-          </div>
-        </div>
       </div>
     </div>
   );

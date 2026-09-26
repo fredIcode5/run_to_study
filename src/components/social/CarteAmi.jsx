@@ -1,6 +1,5 @@
 import React from 'react';
 
-
 function CarteAmi({ ami, onRejoindre, onInviter }) {
   const photoSrc = ami.photo?.dataUrl || ami.photo;
   return (
@@ -17,7 +16,7 @@ function CarteAmi({ ami, onRejoindre, onInviter }) {
         {ami.enSession ? (
           <button className="ami_btn_rejoindre" onClick={() => onRejoindre(ami.codeSession)}>Rejoindre</button>
         ) : (
-          <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginRight: '8px' }}>Pas en ligne</span>
+          <span style={{ fontSize: '0.8rem', color: 'var(--dc-text-muted, #80848e)', marginRight: '8px' }}>Pas en ligne</span>
         )}
         <button className="ami_btn_inviter" onClick={() => onInviter(ami)}>Inviter</button>
       </div>

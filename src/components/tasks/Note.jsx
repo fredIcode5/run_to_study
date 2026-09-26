@@ -400,10 +400,10 @@ function Note({
                   aria-checked={filtreDaily}
                   style={{ gap: '8px', cursor: 'pointer' }}
                 >
-                  <span className="switch_label" style={{ fontSize: '0.85rem', fontWeight: 700, color: filtreDaily ? '#10b981' : '#6b7280' }}>
+                  <span className="switch_label" style={{ fontSize: '0.85rem', fontWeight: 700, color: filtreDaily ? 'var(--dc-blurple, #5865f2)' : 'var(--dc-text-muted, #80848e)' }}>
                     Daily
                   </span>
-                  <span className={`switch ${filtreDaily ? 'switch--actif' : ''}`} style={{ backgroundColor: filtreDaily ? '#10b981' : undefined }}>
+                  <span className={`switch ${filtreDaily ? 'switch--actif' : ''}`} style={{ backgroundColor: filtreDaily ? 'var(--dc-blurple, #5865f2)' : undefined }}>
                     <span className="switch_bouton"></span>
                   </span>
                 </div>

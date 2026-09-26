@@ -185,20 +185,30 @@ function OngletPlanning() {
 
         {/* Section Événements séparée */}
         <div className="planning_evenements_section" style={{ marginTop: '24px' }}>
-          <h4 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '1.05rem', fontWeight: 600, color: '#1f2430', marginBottom: '12px', paddingLeft: '4px' }}>
+          <h4 className="planning_evenements_titre" style={{ fontFamily: "'Inter', 'gg sans', sans-serif", fontSize: '1.05rem', fontWeight: 600, color: 'var(--dc-text-primary, #F2F3F5)', marginBottom: '12px', paddingLeft: '4px' }}>
             Événements
           </h4>
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '16px',
-            border: '1px solid rgba(31, 36, 48, 0.06)',
-            boxShadow: 'var(--shadow-soft)',
-            padding: '12px',
+          <div className="planning_evenements_carte" style={{
+            backgroundColor: 'var(--dc-bg-tertiary, #1E1F22)',
+            borderRadius: '14px',
+            border: '1px solid var(--dc-border-strong, #383A40)',
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)',
+            padding: '12px 14px',
             position: 'relative'
           }}>
             <textarea
-              className="todo_contenu"
-              style={{ minHeight: '60px', width: '100%', fontSize: '0.95rem', background: 'transparent', resize: 'vertical' }}
+              className="todo_contenu planning_evenements_textarea"
+              style={{
+                minHeight: '60px',
+                width: '100%',
+                fontSize: '0.95rem',
+                background: 'transparent',
+                resize: 'vertical',
+                color: 'var(--dc-text-primary, #F2F3F5)',
+                border: 'none',
+                outline: 'none',
+                fontFamily: "'Inter', 'gg sans', sans-serif"
+              }}
               placeholder="Décris un événement pour ce jour (max 100 mots)..."
               value={texteEvenement}
               onChange={(e) => {
@@ -209,7 +219,7 @@ function OngletPlanning() {
               }}
             />
             <div style={{ textAlign: 'right', marginTop: '4px' }}>
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--dc-text-muted, #80848E)', fontFamily: "'Inter', 'gg sans', sans-serif" }}>
                 {texteEvenement.split(/\s+/).filter(w => w.length > 0).length} / 100 mots
               </span>
             </div>

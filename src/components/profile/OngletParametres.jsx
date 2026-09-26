@@ -201,20 +201,25 @@ function OngletParametres({ pseudo, photoProfil, onEnregistrerPhotoProfil, enreg
 
           {/* Section Bio */}
           <div style={{ flex: '0 1 70%', minWidth: '300px', display: 'flex', flexDirection: 'column' }}>
-            <h5 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#1f2430', fontWeight: '600' }}>Bio</h5>
+            <h5 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--dc-text-primary, #F2F3F5)', fontWeight: '600', fontFamily: "'Inter', 'gg sans', sans-serif" }}>Bio</h5>
             <textarea
-              className="param_input"
+              className="param_input parametres_bio_textarea"
               rows={5}
               style={{
                 resize: 'vertical',
-                background: '#ffffff',
-                border: bioTemp.length > 350 ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                background: 'var(--dc-bg-tertiary, #1E1F22)',
+                border: bioTemp.length > 350 ? '1px solid var(--dc-error, #F23F43)' : '1px solid var(--dc-border-strong, #383A40)',
                 borderRadius: '8px',
                 padding: '12px',
-                color: '#1f2430',
+                color: 'var(--dc-text-primary, #F2F3F5)',
                 width: '100%',
                 flex: 1,
-                boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)'
+                fontFamily: "'Inter', 'gg sans', sans-serif",
+                fontSize: '0.95rem',
+                lineHeight: '1.5',
+                boxShadow: 'none',
+                outline: 'none',
+                transition: 'border-color 0.2s ease, box-shadow 0.2s ease'
               }}
               placeholder="Présentez-vous..."
               value={bioTemp}
@@ -231,8 +236,9 @@ function OngletParametres({ pseudo, photoProfil, onEnregistrerPhotoProfil, enreg
             }}>
               <span style={{
                 fontSize: '0.8rem',
-                color: bioTemp.length > 350 ? '#ef4444' : '#64748b',
-                fontWeight: '500'
+                color: bioTemp.length > 350 ? 'var(--dc-error, #F23F43)' : 'var(--dc-text-muted, #80848E)',
+                fontWeight: '500',
+                fontFamily: "'Inter', 'gg sans', sans-serif"
               }}>
                 {bioTemp.length} / 350
               </span>
@@ -243,9 +249,10 @@ function OngletParametres({ pseudo, photoProfil, onEnregistrerPhotoProfil, enreg
                 padding: '8px 12px',
                 borderRadius: '6px',
                 fontSize: '0.85rem',
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                color: '#ef4444',
-                border: '1px solid rgba(239, 68, 68, 0.2)'
+                backgroundColor: 'rgba(242, 63, 67, 0.1)',
+                color: 'var(--dc-error, #F23F43)',
+                border: '1px solid rgba(242, 63, 67, 0.25)',
+                fontFamily: "'Inter', 'gg sans', sans-serif"
               }}>
                 {bioErreur}
               </div>

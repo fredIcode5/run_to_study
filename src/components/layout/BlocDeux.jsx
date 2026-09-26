@@ -1,13 +1,15 @@
 import React from 'react';
-import { SquarePen } from 'lucide-react';
+import { SquarePen, Headphones, Timer, Users } from 'lucide-react';
 import Note from '../tasks/Note';
 import Salon_course from '../social/Salon_course';
 import Param from '../settings/Param';
+import OngletAmbiance from '../ambiance/OngletAmbiance';
 
 const ONGLETS_POIGNEE = [
   { id: 1, icone: <SquarePen size={18} />, label: 'Notes', notif: true },
-  { id: 2, icone: '⚙️', label: 'Réglages', notif: true },
-  { id: 3, icone: '🏁', label: 'Salon de course', notif: true },
+  { id: 2, icone: <Timer size={18} />, label: 'Mon Pomodoro', notif: true },
+  { id: 3, icone: <Users size={18} />, label: 'Salon de course', notif: true },
+  { id: 4, icone: <Headphones size={18} />, label: 'Ambiance', notif: true },
 ];
 
 
@@ -37,6 +39,8 @@ function BlocDeux({
   musiqueActuelle,
   onOuvrirChoixMusique,
   onSupprimerMusique,
+  onMettreAJourMusique,
+  onChangerMusique,
   onOuvrirBoutique,
   onSessionEnLigneChange,
   sessionEnLigne,
@@ -99,6 +103,7 @@ function BlocDeux({
           <button className={vueActive === 1 ? 'actif' : ''} onClick={() => setVueActive(1)}>Notes</button>
           <button className={vueActive === 2 ? 'actif' : ''} onClick={() => setVueActive(2)}>Mon Pomodoro</button>
           <button className={vueActive === 3 ? 'actif' : ''} onClick={() => setVueActive(3)}>Salon de course</button>
+          <button className={vueActive === 4 ? 'actif' : ''} onClick={() => setVueActive(4)}>Ambiance</button>
         </div>
 
         <div className="panel_contenu">
@@ -158,6 +163,14 @@ function BlocDeux({
               onOuvrirBoutique={onOuvrirBoutique}
               onSessionEnLigneChange={onSessionEnLigneChange}
               pointsPomodoro={pointsPomodoro}
+            />
+          </div>
+          <div style={{ display: vueActive === 4 ? 'block' : 'none', width: '100%', height: '100%', overflowY: 'auto' }}>
+            <OngletAmbiance
+              musiqueActuelle={musiqueActuelle}
+              onMettreAJourMusique={onMettreAJourMusique}
+              onOuvrirChoixMusique={onOuvrirChoixMusique}
+              onChangerMusique={onChangerMusique}
             />
           </div>
         </div>

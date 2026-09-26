@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { rechercherUtilisateurs, envoyerDemandeAmi, repondreDemandeAmi, getDemandesAmis, getDemandesEnvoyees, getAmis } from '../../lib/firebaseDataService';
 
-
 // --- Onglet "Social" : partagé en deux colonnes.
 // Gauche : recherche d'utilisateurs (barre de recherche + résultats placeholder).
 // Droite : liste d'amis (placeholder), avec statut et actions rapides.
@@ -180,7 +179,7 @@ function OngletSocial() {
               <>
                 {demandesRecues.length > 0 && (
                   <div className="social_demandes_section">
-                    <h5 style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px', marginTop: 0 }}>Demandes reçues</h5>
+                    <h5 style={{ fontSize: '0.85rem', color: 'var(--dc-text-secondary, #b5bac1)', marginBottom: '8px', marginTop: 0 }}>Demandes reçues</h5>
                     {demandesRecues.map((demande) => (
                       <div key={demande.id} className="social_ami_rectangle social_carte_compacte">
                         <div className="social_ami_photo">
@@ -211,7 +210,7 @@ function OngletSocial() {
 
                 {amis.length > 0 ? (
                   <div className="social_amis_approuves">
-                    {demandesRecues.length > 0 && <h5 style={{ fontSize: '0.85rem', color: '#6b7280', margin: '16px 0 8px 0' }}>Amis</h5>}
+                    {demandesRecues.length > 0 && <h5 style={{ fontSize: '0.85rem', color: 'var(--dc-text-secondary, #b5bac1)', margin: '16px 0 8px 0' }}>Amis</h5>}
                     {amis.map((ami) => (
                       <div key={ami.id} className="social_ami_rectangle social_carte_compacte">
                         <div className="social_ami_photo">

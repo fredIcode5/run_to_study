@@ -1,15 +1,39 @@
 import React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause, Infinity as InfinityIcon, Timer, SlidersHorizontal } from 'lucide-react';
+import serviceAudio from '../../utils/audioService';
+import ChronoBarreProgression from './ChronoBarreProgression';
+
+// Ordre de navigation entre les 3 vues : Vue 1 -> Vue 2 -> Vue 3 -> Vue 1
+const ORDRE_STYLES = ['classique', 'loop', 'barre'];
+
+const getProchainStyle = (styleActuel) => {
+  if (styleActuel === 'classique') return 'loop';
+  if (styleActuel === 'loop') return 'barre';
+  return 'classique';
+};
 
 // --- Chrono : gère le cycle "travail" / "pause" dont les durées sont
 // pilotées par les réglages (props dureeTravailMinutes / dureePauseMinutes).
-// Les couleurs (chrono, boutons) sont appliquées globalement via des
-// variables CSS (voir App > useEffect couleurs), pas via des props ici.
-function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes, dureePauseMinutes, modeLecture, onPhaseChange, onReset, hideTimeDisplay, renderLoop }) {
+function Chrono({
+  enMarche,
+  setEnMarche,
+  onSessionTerminee,
+  dureeTravailMinutes,
+  dureePauseMinutes,
+  modeLecture,
+  onPhaseChange,
+  onReset,
+  hideTimeDisplay,
+  renderLoop,
+  styleChrono,
+  onToggleStyle,
+  photoProfil,
+}) {
   // 'travail' = session Pomodoro classique, 'pause' = pause qui suit
   const [phase, setPhase] = useState('travail');
+  const [compteurSessions, setCompteurSessions] = useState(0);
 
   const dureeTravail = dureeTravailMinutes * 60;
   const dureePause = dureePauseMinutes * 60;
@@ -17,6 +41,29 @@ function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes,
 
   const [secondesRestantes, setSecondesRestantes] = useState(dureeActuelle);
   const intervalRef = useRef(null);
+
+  // Style interne si la prop styleChrono n'est pas fournie
+  const [styleInterne, setStyleInterne] = useState(() => {
+    const saved = localStorage.getItem('styleChrono');
+    if (saved && ORDRE_STYLES.includes(saved)) return saved;
+    return hideTimeDisplay ? 'loop' : 'loop';
+  });
+
+  const styleActuel = styleChrono !== undefined
+    ? styleChrono
+    : (hideTimeDisplay !== undefined ? (hideTimeDisplay ? 'loop' : 'classique') : styleInterne);
+
+  const basculerStyle = () => {
+    const nouveauStyle = getProchainStyle(styleActuel);
+    if (onToggleStyle) {
+      onToggleStyle(nouveauStyle);
+    } else {
+      setStyleInterne(nouveauStyle);
+      localStorage.setItem('styleChrono', nouveauStyle);
+      localStorage.setItem('hideRunner', nouveauStyle === 'loop' ? 'true' : 'false');
+      window.dispatchEvent(new Event('runnerVisibilityChanged'));
+    }
+  };
 
   // Avertissement affiché quand on manipule le chrono pendant qu'on
   // consulte une ancienne session (onglet Notes en lecture seule) :
@@ -61,13 +108,23 @@ function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes,
             setEnMarche(false);
 
             if (phase === 'travail') {
-              // Fin d'une session de travail : on comptabilise la distance
-              // puis on bascule automatiquement sur la pause
+              // Fin d'une session de travail
+              const nouveauTotal = compteurSessions + 1;
+              setCompteurSessions(nouveauTotal);
+
+              // Si cycle complet de 4 sessions terminé
+              if (nouveauTotal % 4 === 0) {
+                serviceAudio.jouerSonnerie(serviceAudio.sonneries.finCycle || 'carillon_celeste');
+              } else {
+                serviceAudio.jouerSonnerie(serviceAudio.sonneries.finTravail || 'cloche_zen');
+              }
+
               onSessionTerminee?.(Math.floor(dureeTravail / 5));
               setPhase('pause');
               return dureePause;
             } else {
-              // Fin de la pause : retour à une nouvelle session de travail
+              // Début d'une nouvelle session de travail (fin de pause)
+              serviceAudio.jouerSonnerie(serviceAudio.sonneries.debutPause || 'marimba');
               setPhase('travail');
               return dureeTravail;
             }
@@ -80,7 +137,7 @@ function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes,
     }
 
     return () => clearInterval(intervalRef.current);
-  }, [enMarche, phase, dureeTravail, dureePause]);
+  }, [enMarche, phase, dureeTravail, dureePause, compteurSessions]);
 
   const formaterTemps = (s) => {
     const minutes = Math.floor(s / 60).toString().padStart(2, '0');
@@ -131,42 +188,96 @@ function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes,
   const distanceSession = Math.floor(secondesEcoulees / 5);
 
   return (
-    <div className='chrono'>
-      {!hideTimeDisplay && (
-        <span className={`chrono_phase chrono_phase--${phase}`}>
-          {phase === 'travail' ? '🎯 Session de travail' : '☕ Pause'}
-        </span>
+    <>
+      {/* ─── VUE 3 : Barre de progression compacte (Flottante en haut au centre de l'écran) ─── */}
+      {styleActuel === 'barre' && createPortal(
+        <ChronoBarreProgression
+          phase={phase}
+          secondesRestantes={secondesRestantes}
+          dureeTravail={dureeTravail}
+          dureePause={dureePause}
+          enMarche={enMarche}
+          onTogglePlay={basculer}
+          onToggleStyle={basculerStyle}
+          onReset={() => { signalerLectureSeule(); reset(); }}
+          onSauterPause={sauterPause}
+          formaterTemps={formaterTemps}
+          photoProfil={photoProfil}
+        />,
+        document.body
       )}
 
-      {!hideTimeDisplay && (
-        <div className="chrono_affichage">{formaterTemps(secondesRestantes)}</div>
+      {/* ─── VUES 1 & 2 : Affichées uniquement si le mode actuel est 'classique' ou 'loop' ─── */}
+      {(styleActuel === 'classique' || styleActuel === 'loop') && (
+        <div className={`chrono ${styleActuel === 'loop' ? 'chrono--mode-loop' : 'chrono--mode-classique'}`}>
+          {/* VUE 1 : Chronomètre classique (00:00) */}
+          {styleActuel === 'classique' && (
+            <>
+              <span className={`chrono_phase chrono_phase--${phase}`}>
+                {phase === 'travail' ? '🎯 Session de travail' : '☕ Pause'}
+              </span>
+              <div className="chrono_affichage">{formaterTemps(secondesRestantes)}</div>
+            </>
+          )}
+
+          {/* VUE 2 : Chronomètre Boucle Infinie */}
+          {styleActuel === 'loop' && renderLoop && renderLoop(secondesRestantes)}
+
+          <div className="chrono_controles">
+            <button
+              className="btn_primaire"
+              onClick={basculer}
+              disabled={secondesRestantes === 0}
+              title={enMarche ? 'Mettre en pause' : secondesRestantes === dureeActuelle ? 'Démarrer' : 'Reprendre'}
+              aria-label={enMarche ? 'Mettre en pause' : secondesRestantes === dureeActuelle ? 'Démarrer' : 'Reprendre'}
+            >
+              {libelleBouton}
+            </button>
+
+            <button
+              type="button"
+              className="btn_style_toggle"
+              onClick={basculerStyle}
+              title={
+                styleActuel === 'classique'
+                  ? 'Changer de style : Passer à la boucle infinie (Vue 2/3)'
+                  : 'Changer de style : Passer à la barre de progression (Vue 3/3)'
+              }
+              aria-label={
+                styleActuel === 'classique'
+                  ? 'Changer de style : Passer à la boucle infinie (Vue 2/3)'
+                  : 'Changer de style : Passer à la barre de progression (Vue 3/3)'
+              }
+            >
+              {styleActuel === 'classique' ? (
+                <InfinityIcon size={20} strokeWidth={2.2} className="btn_style_icon" />
+              ) : (
+                <SlidersHorizontal size={20} strokeWidth={2.2} className="btn_style_icon" />
+              )}
+            </button>
+
+            <button
+              className="btn_secondaire"
+              onClick={() => { signalerLectureSeule(); reset(); }}
+            >
+              Recommencer
+            </button>
+            {phase === 'pause' && (
+              <button className="btn_secondaire" onClick={sauterPause}>
+                Sauter la pause
+              </button>
+            )}
+          </div>
+
+          {avertissementLectureSeule && (
+            <p className="chrono_avertissement_lecture" role="status">
+              Le temps de travail ne sera pas ajouté à la session, vous êtes en lecture seule.
+            </p>
+          )}
+        </div>
       )}
 
-      {renderLoop && renderLoop(secondesRestantes)}
-
-      <div className="chrono_controles">
-        <button className="btn_primaire" onClick={basculer} disabled={secondesRestantes === 0}>
-          {libelleBouton}
-        </button>
-        <button
-          className="btn_secondaire"
-          onClick={() => { signalerLectureSeule(); reset(); }}
-        >
-          Recommencer
-        </button>
-        {phase === 'pause' && (
-          <button className="btn_secondaire" onClick={sauterPause}>
-            Sauter la pause
-          </button>
-        )}
-      </div>
-
-      {avertissementLectureSeule && (
-        <p className="chrono_avertissement_lecture" role="status">
-          Le temps de travail ne sera pas ajouté à la session, vous êtes en lecture seule.
-        </p>
-      )}
-
+      {/* Distance compteur toujours accessible */}
       {createPortal(
         <div className="chrono_distance" style={{ position: 'fixed', bottom: '30px', left: '30px', zIndex: 100 }}>
           <span className="chrono_distance_valeur">{distanceSession} m</span>
@@ -178,7 +289,7 @@ function Chrono({ enMarche, setEnMarche, onSessionTerminee, dureeTravailMinutes,
         </div>,
         document.body
       )}
-    </div>
+    </>
   );
 }
 

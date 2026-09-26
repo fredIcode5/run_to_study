@@ -1,5 +1,5 @@
 /* ======================================================================
-   Carnet de notes : Widget empilé sur l'espace de travail
+   Carnet de notes : Widget empilé sur l'espace de travail (Thème Discord)
    ====================================================================== */
 
 .carnet_widget {
@@ -7,10 +7,10 @@
   z-index: 40; /* Placé sous le panneau latéral droit (z-index: 90) pour être masqué lors de son ouverture */
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  width: 320px;
+  gap: 10px;
+  width: 288px;
   user-select: none;
-  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.18));
+  filter: drop-shadow(0 14px 32px rgba(0, 0, 0, 0.45));
   animation: carnetApparition 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -25,99 +25,178 @@
   }
 }
 
-/* En-tête de déplacement */
+/* ─── En-tête du carnet (Navigation + Barre de progression + Fermeture) ─── */
 .carnet_entete {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(31, 36, 48, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  padding: 8px 14px;
-  border-radius: 999px;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  gap: 8px;
+  background: rgba(30, 31, 34, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 6px 8px;
+  border-radius: 12px;
+  color: var(--dc-text-primary, #ffffff);
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.15));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
   cursor: grab;
+  box-sizing: border-box;
 }
 
 .carnet_entete:active {
   cursor: grabbing;
 }
 
-.carnet_titre_ligne {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-}
-
-.carnet_poignee {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 14px;
-}
-
-.carnet_titre {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.carnet_btn_fermer {
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.7);
+/* Boutons de navigation en haut (Précédent / Suivant) */
+.carnet_entete_nav_btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--dc-border, rgba(255, 255, 255, 0.12));
+  background: var(--dc-bg-surface, rgba(255, 255, 255, 0.08));
+  color: var(--dc-text-primary, #ffffff);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.carnet_entete_nav_btn:hover:not(:disabled) {
+  background: var(--dc-blurple, #5865f2);
+  border-color: var(--dc-blurple, #5865f2);
+  color: #ffffff;
+  transform: scale(1.08);
+  box-shadow: 0 2px 8px rgba(88, 101, 242, 0.4);
+}
+
+.carnet_entete_nav_btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  border-color: transparent;
+}
+
+/* Zone de la barre de progression au centre de l'en-tête */
+.carnet_entete_progression {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 2px;
+  min-width: 0;
+}
+
+.carnet_entete_progression_infos {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Inter', 'gg sans', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--dc-text-secondary, #b5bac1);
+  gap: 4px;
+}
+
+.carnet_progression_compteur_badge {
+  color: var(--dc-text-primary, #dbdee1);
+  font-size: 10.5px;
+}
+
+.carnet_progression_compteur_badge strong {
+  color: var(--dc-success, #23a559);
+  font-weight: 700;
+}
+
+.carnet_progression_label {
+  font-size: 9.5px;
+  color: var(--dc-text-muted, #949ba4);
+}
+
+.carnet_progression_pourcentage {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--dc-success, #23a559);
+  font-variant-numeric: tabular-nums;
+}
+
+.carnet_entete_barre_piste {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.carnet_entete_barre_remplissage {
+  height: 100%;
+  background: linear-gradient(90deg, var(--dc-success, #23a559), #2ecc71);
+  border-radius: 999px;
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 6px rgba(35, 165, 89, 0.45);
+}
+
+/* Actions à droite dans l'en-tête */
+.carnet_entete_droite {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.carnet_btn_fermer {
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  color: var(--dc-text-muted, rgba(255, 255, 255, 0.6));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 6px;
   transition: all 0.2s ease;
 }
 
 .carnet_btn_fermer:hover {
-  background: rgba(226, 71, 42, 0.2);
-  color: #e2472a;
+  background: rgba(242, 63, 67, 0.2);
+  color: var(--dc-error, #f23f43);
 }
 
-/* Pile de cartes */
+/* ─── Pile de cartes (Thème Discord) ──────────────────────────────── */
 .carnet_pile_conteneur {
   position: relative;
   width: 100%;
-  height: 230px;
+  height: 196px;
   perspective: 1000px;
 }
 
 .carnet_carte_vide {
   width: 100%;
   height: 100%;
-  background: #ffffff;
-  border-radius: 18px;
-  border: 1.5px dashed rgba(31, 36, 48, 0.18);
+  background: var(--dc-bg-surface, #2b2d31);
+  border-radius: 14px;
+  border: 1.5px dashed var(--dc-border-strong, #3f4147);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
   text-align: center;
-  color: #64748b;
+  color: var(--dc-text-muted, #949ba4);
   box-sizing: border-box;
 }
 
 .carnet_carte_vide p {
-  margin: 0 0 6px 0;
+  margin: 0 0 4px 0;
   font-weight: 600;
-  font-size: 14px;
-  color: #1f2430;
+  font-size: 13px;
+  color: var(--dc-text-primary, #ffffff);
 }
 
 .carnet_carte_vide span {
-  font-size: 12px;
-  color: #94a3b8;
+  font-size: 11px;
+  color: var(--dc-text-muted, #949ba4);
 }
 
 .carnet_carte {
@@ -125,12 +204,12 @@
   top: 0;
   left: 0;
   width: 100%;
-  height: 220px;
-  background: #ffffff;
-  border-radius: 18px;
-  border: 1px solid rgba(31, 36, 48, 0.08);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.09);
-  padding: 14px 16px 12px;
+  height: 188px;
+  background: var(--dc-bg-surface, #2b2d31);
+  border-radius: 14px;
+  border: 1px solid var(--dc-border-strong, #383a40);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  padding: 10px 12px 10px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -138,52 +217,44 @@
   transform-origin: center bottom;
   transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
               opacity 0.35s ease,
+              border-color 0.2s ease,
               box-shadow 0.25s ease;
 }
 
 .carnet_carte--active {
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  border-color: rgba(88, 101, 242, 0.5);
 }
 
 .carnet_carte--terminee {
-  background: #f8fafc;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  border-color: rgba(35, 165, 89, 0.35);
 }
 
 .carnet_carte--terminee .carnet_carte_contenu {
   text-decoration: line-through;
-  color: #94a3b8;
+  color: var(--dc-text-muted, #949ba4);
 }
 
 .carnet_carte_entete {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  justify-content: flex-end;
+  min-height: 16px;
+  margin-bottom: 4px;
 }
 
-/* Badge numéroté en haut à gauche */
-.carnet_ordre_badge {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #1f2430;
-  color: #ffffff;
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+.carnet_carte_entete_spacer {
+  height: 1px;
 }
 
 .carnet_note_date {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  color: #64748b;
-  background: rgba(31, 36, 48, 0.06);
-  padding: 2px 8px;
-  border-radius: 6px;
+  color: var(--dc-blurple-light, #808cf8);
+  background: rgba(88, 101, 242, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .carnet_carte_contenu {
@@ -192,17 +263,17 @@
   resize: none;
   border: none;
   background: transparent;
-  font-family: 'Inter', sans-serif;
-  font-size: 13.5px;
-  line-height: 1.45;
-  color: #1f2430;
+  font-family: 'Inter', 'gg sans', system-ui, sans-serif;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--dc-text-primary, #ffffff);
   padding: 0;
   outline: none;
   box-sizing: border-box;
 }
 
 .carnet_carte_contenu::placeholder {
-  color: #cbd5e1;
+  color: var(--dc-text-muted, #949ba4);
 }
 
 /* Actions en bas de la carte */
@@ -210,17 +281,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 10px;
-  border-top: 1px solid rgba(31, 36, 48, 0.06);
-  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--dc-border, rgba(255, 255, 255, 0.08));
+  margin-top: 4px;
 }
 
 .carnet_btn_epingler {
   background: transparent;
-  border: 1px solid rgba(124, 58, 237, 0.3);
-  color: #7c3aed;
-  border-radius: 8px;
-  padding: 5px 7px;
+  border: 1px solid rgba(88, 101, 242, 0.35);
+  color: var(--dc-blurple-light, #808cf8);
+  border-radius: 6px;
+  padding: 4px 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -229,36 +300,37 @@
 }
 
 .carnet_btn_epingler:hover {
-  background: rgba(124, 58, 237, 0.1);
+  background: rgba(88, 101, 242, 0.15);
+  border-color: var(--dc-blurple, #5865f2);
   transform: translateY(-1px);
 }
 
 .carnet_carte_actions_droite {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 /* Bouton Supprimer en bas à droite */
 .carnet_btn_supprimer {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  gap: 4px;
+  border: 1px solid rgba(242, 63, 67, 0.3);
   background: transparent;
-  color: #ef4444;
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
+  color: var(--dc-error, #f23f43);
+  font-family: 'Inter', 'gg sans', system-ui, sans-serif;
+  font-size: 11px;
   font-weight: 600;
-  padding: 5px 10px;
+  padding: 3px 8px;
   border-radius: 999px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .carnet_btn_supprimer:hover {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: #ef4444;
+  background: rgba(242, 63, 67, 0.15);
+  border-color: var(--dc-error, #f23f43);
   transform: translateY(-1px);
 }
 
@@ -266,150 +338,27 @@
 .carnet_btn_terminer {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  gap: 4px;
+  border: 1px solid rgba(35, 165, 89, 0.4);
   background: transparent;
-  color: #10b981;
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
+  color: var(--dc-success, #23a559);
+  font-family: 'Inter', 'gg sans', system-ui, sans-serif;
+  font-size: 11px;
   font-weight: 600;
-  padding: 5px 12px;
+  padding: 3px 9px;
   border-radius: 999px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .carnet_btn_terminer:hover {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: #10b981;
+  background: rgba(35, 165, 89, 0.15);
+  border-color: var(--dc-success, #23a559);
   transform: translateY(-1px);
 }
 
 .carnet_btn_terminer--actif {
-  background: #10b981;
-  border-color: #10b981;
+  background: var(--dc-success, #23a559);
+  border-color: var(--dc-success, #23a559);
   color: #ffffff;
-}
-
-/* ======================================================================
-   Barre de contrôle en dessous du carnet
-   ====================================================================== */
-
-.carnet_barre_controle {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: #ffffff;
-  border: 1px solid rgba(31, 36, 48, 0.08);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
-  border-radius: 16px;
-  padding: 10px 14px;
-}
-
-.carnet_nav_boutons {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.carnet_nav_btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid rgba(31, 36, 48, 0.12);
-  background: #f8fafc;
-  color: #1f2430;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.carnet_nav_btn:hover:not(:disabled) {
-  background: #e2472a;
-  color: #ffffff;
-  border-color: #e2472a;
-  transform: scale(1.08);
-}
-
-.carnet_nav_btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.carnet_btn_defiler {
-  flex: 1;
-  height: 34px;
-  border: none;
-  background: #1f2430;
-  color: #ffffff;
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(31, 36, 48, 0.25);
-  transition: all 0.2s ease;
-}
-
-.carnet_btn_defiler:hover:not(:disabled) {
-  background: #e2472a;
-  box-shadow: 0 6px 14px rgba(226, 71, 42, 0.35);
-  transform: translateY(-1px);
-}
-
-.carnet_btn_defiler:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.carnet_pagination_badge {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 2px 7px;
-  border-radius: 999px;
-  font-size: 11px;
-}
-
-/* Indicateur de progression (notes terminées / total) */
-.carnet_progression_compteur {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(31, 36, 48, 0.06);
-}
-
-.carnet_progression_texte {
-  font-family: 'Inter', sans-serif;
-  font-size: 11.5px;
-  font-weight: 500;
-  color: #64748b;
-  text-align: center;
-}
-
-.carnet_progression_texte strong {
-  color: #10b981;
-  font-weight: 700;
-}
-
-.carnet_progression_mini_barre {
-  width: 100%;
-  height: 4px;
-  background: #f1f5f9;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.carnet_progression_mini_remplissage {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981, #34d399);
-  border-radius: 999px;
-  transition: width 0.3s ease;
 }
