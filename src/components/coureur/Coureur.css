@@ -1,0 +1,338 @@
+/* ======================================================================
+   Coureur animé à droite du chronomètre (barre de progression)
+   ====================================================================== */
+
+/* La zone a la taille du chrono ; le coureur est posé en dehors, à droite,
+   sans décaler ni chevaucher le chronomètre */
+.piste_coureur_zone {
+  position: relative;
+}
+
+.coureur {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 16px);
+  /* Décalage réglé par l'utilisateur, ajouté à la position par défaut */
+  transform: translate(var(--coureur-dx, 0px), calc(-50% + var(--coureur-dy, 0px)));
+  pointer-events: none;
+  transition: width 0.25s ease;
+}
+
+/* Barre de progression : le coureur suit la barre flottante, à sa droite */
+.piste_coureur_zone--barre .coureur {
+  left: calc(100% + 12px);
+}
+
+/* Les deux animations sont superposées ; un fondu bascule de l'une à l'autre */
+.coureur_animation {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+}
+
+.coureur_animation--active {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease, visibility 0s linear 0s;
+}
+
+/* Écrans étroits : plus de place à droite du chrono, le coureur passe dessous */
+@media (max-width: 900px) {
+  .coureur {
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translate(calc(-50% + var(--coureur-dx, 0px)), var(--coureur-dy, 0px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coureur,
+  .coureur_animation,
+  .coureur_animation--active {
+    transition: none;
+  }
+}
+
+/* ======================================================================
+   Onglet « Coureur » du profil : éditeurs des deux animations
+   ====================================================================== */
+.coureur_onglet {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.coureur_onglet_intro {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--dc-text-secondary, #b5bac1);
+}
+
+.coureur_editeur {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.coureur_editeur_entete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.coureur_editeur_entete .profil_section_titre {
+  margin: 0;
+}
+
+.coureur_editeur_description {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--dc-text-muted, #80848e);
+}
+
+.coureur_editeur_badge {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--dc-bg-surface, #383a40);
+  color: var(--dc-text-secondary, #b5bac1);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.coureur_editeur_badge--perso {
+  background: rgba(88, 101, 242, 0.2);
+  color: var(--dc-blurple-light, #949cf7);
+}
+
+.coureur_editeur_grille {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.coureur_editeur_code {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.coureur_editeur_champ {
+  width: 100%;
+  height: 220px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  resize: vertical;
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  color: var(--dc-text-primary, #f2f3f5);
+  font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  tab-size: 2;
+  white-space: pre;
+  outline: none;
+}
+
+.coureur_editeur_champ:focus {
+  border-color: var(--dc-blurple, #5865f2);
+}
+
+.coureur_editeur_champ--erreur {
+  border-color: var(--dc-error, #f23f43);
+}
+
+.coureur_editeur_infos {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--dc-text-muted, #80848e);
+}
+
+.coureur_editeur_modifie {
+  color: var(--dc-warning, #f0b232);
+  font-weight: 600;
+}
+
+.coureur_editeur_apercu_zone {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Damier : rend visibles les zones transparentes du SVG */
+.coureur_editeur_apercu {
+  height: 220px;
+  box-sizing: border-box;
+  padding: 16px;
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  background-color: #2b2d31;
+  background-image:
+    linear-gradient(45deg, #313338 25%, transparent 25%),
+    linear-gradient(-45deg, #313338 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #313338 75%),
+    linear-gradient(-45deg, transparent 75%, #313338 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
+.coureur_editeur_apercu_svg {
+  width: 100%;
+  height: 100%;
+}
+
+.coureur_editeur_apercu_legende {
+  font-size: 0.72rem;
+  color: var(--dc-text-muted, #80848e);
+  text-align: center;
+}
+
+.coureur_editeur_erreur,
+.coureur_editeur_avertissement {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.coureur_editeur_erreur {
+  background: rgba(242, 63, 67, 0.12);
+  border: 1px solid rgba(242, 63, 67, 0.45);
+  color: #ff8a8d;
+}
+
+.coureur_editeur_avertissement {
+  background: rgba(240, 178, 50, 0.1);
+  border: 1px solid rgba(240, 178, 50, 0.35);
+  color: #f5c96b;
+}
+
+.coureur_editeur_actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.coureur_editeur_btn_defaut {
+  margin-left: auto;
+}
+
+.coureur_editeur_message {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--dc-success, #23a559);
+}
+
+@media (max-width: 720px) {
+  .coureur_editeur_grille {
+    grid-template-columns: 1fr;
+  }
+
+  .coureur_editeur_apercu {
+    height: 160px;
+  }
+}
+
+/* ─── Réglages de position et de taille ─────────────────────────────── */
+.coureur_reglages {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.coureur_reglages_lignes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.coureur_reglage {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr) 96px;
+  align-items: center;
+  gap: 12px;
+}
+
+.coureur_reglage_label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--dc-text-primary, #f2f3f5);
+}
+
+.coureur_reglage_aide {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--dc-text-muted, #80848e);
+}
+
+.coureur_reglage_curseur {
+  width: 100%;
+  accent-color: var(--dc-blurple, #5865f2);
+  cursor: pointer;
+}
+
+.coureur_reglage_valeur {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--dc-text-muted, #80848e);
+}
+
+.coureur_reglage_valeur input {
+  width: 64px;
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  color: var(--dc-text-primary, #f2f3f5);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+
+.coureur_reglage_valeur input:focus {
+  border-color: var(--dc-blurple, #5865f2);
+}
+
+@media (max-width: 720px) {
+  .coureur_reglage {
+    grid-template-columns: 1fr 96px;
+  }
+
+  .coureur_reglage_label {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Aperçu direct : la fenêtre du profil s'efface pendant un réglage pour
+   laisser voir le coureur sur le chronomètre */
+body.coureur_apercu_direct .modal_fond {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition: background 0.15s ease;
+}
+
+body.coureur_apercu_direct .profil_modal_fenetre {
+  opacity: 0.12;
+  transition: opacity 0.15s ease;
+}

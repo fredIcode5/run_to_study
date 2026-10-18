@@ -1,0 +1,775 @@
+/* ======================================================================
+   Panneau latéral (BlocDeux) — mise en page compacte des sections
+   Le cadre (poignée + panneau, dimensions fixes) est défini dans App.css ;
+   ce fichier adapte le contenu des 4 sections à la largeur du panneau.
+   Tout est préfixé par .panel pour primer sur les styles génériques.
+   ====================================================================== */
+
+/* ─── Sections superposées : fondu croisé sans changement de géométrie ── */
+.panel .panel_section {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.22s ease, visibility 0s linear 0.2s;
+}
+
+.panel .panel_section--active {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity 0.2s ease, transform 0.22s ease, visibility 0s linear 0s;
+}
+
+.panel .panel_section > * {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel .panel_section,
+  .panel .panel_section--active,
+  .panel .panel_corps {
+    transition: none;
+  }
+}
+
+/* ─── Zones de défilement communes ──────────────────────────────────── */
+.panel .todo_liste_defilement,
+.panel .param,
+.panel .salon_course,
+.panel .ambiance_conteneur {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dc-border-strong, rgba(255, 255, 255, 0.12)) transparent;
+}
+
+.panel .todo_liste_defilement::-webkit-scrollbar,
+.panel .param::-webkit-scrollbar,
+.panel .salon_course::-webkit-scrollbar,
+.panel .ambiance_conteneur::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel .todo_liste_defilement::-webkit-scrollbar-thumb,
+.panel .param::-webkit-scrollbar-thumb,
+.panel .salon_course::-webkit-scrollbar-thumb,
+.panel .ambiance_conteneur::-webkit-scrollbar-thumb {
+  background: var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+}
+
+/* Bloc "rectangle compact" partagé par les sections */
+.panel .notes_commandes,
+.panel .preset_config_section,
+.panel .ambiance_carte {
+  background: var(--dc-bg-secondary, #2b2d31);
+  border: 1px solid var(--dc-border, rgba(255, 255, 255, 0.06));
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+/* ======================================================================
+   1. Notes
+   ====================================================================== */
+.panel .todo_zone {
+  height: 100%;
+  padding: 12px 12px 0;
+  gap: 10px;
+  overflow: clip;
+  background: var(--panel-fond);
+}
+
+/* Commandes en haut, hors de la zone de défilement */
+.panel .todo_entete {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.panel .notes_commandes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.panel .notes_commandes > * {
+  min-width: 0;
+}
+
+.panel .session_titre_ligne {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.panel .theme_dropdown_btn {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.panel .theme_dropdown_liste {
+  z-index: 30;
+}
+
+.panel .session_titre_input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.panel .notes_commandes_infos {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panel .session_progression_score {
+  font-size: 11.5px;
+}
+
+.panel .session_progression_score strong {
+  font-size: 13px;
+}
+
+.panel .pomodoro_tours_compteur {
+  font-size: 11.5px;
+  padding: 2px 8px;
+}
+
+.panel .notes_commandes_grille {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.panel .notes_commandes_grille > :only-child {
+  grid-column: 1 / -1;
+}
+
+.panel .notes_commandes .todo_btn_ajouter,
+.panel .notes_commandes .session_action_btn,
+.panel .notes_commandes .session_btn_continuer,
+.panel .notes_commandes .session_btn_ajouter_rouge {
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 11.5px;
+  border-radius: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: none;
+}
+
+.panel .session_liste_actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 6px;
+  padding-bottom: 0;
+  overflow: visible;
+}
+
+.panel .session_liste_actions .session_action_btn {
+  flex: 1;
+}
+
+.panel .session_liste_actions .switch_ligne {
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.panel .session_lecture_zone {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.panel .session_lecture_texte {
+  font-size: 12px;
+}
+
+.panel .notes_commandes_organiser {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panel .session_organiser_message {
+  white-space: normal;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.panel .note_btn_ajouter {
+  width: 100%;
+  height: 32px;
+  justify-content: center;
+  font-size: 12.5px;
+}
+
+/* Liste : seule partie qui défile, avec fondu bas */
+.panel .todo_liste_zone {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.panel .todo_liste_defilement {
+  height: 100%;
+  /* marge haute/gauche : place pour la pastille d'ordre en débord (-7px) */
+  padding: 8px 4px 28px 8px;
+  box-sizing: border-box;
+}
+
+.panel .todo_liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panel .todo_vide {
+  margin: 4px 0;
+  font-size: 12px;
+}
+
+.panel .todo_liste_fondu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 48px;
+  background: linear-gradient(to bottom, transparent, var(--panel-fond) 90%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.panel .todo_liste_zone--suite .todo_liste_fondu {
+  opacity: 1;
+}
+
+/* Cartes de notes : épurées, actions secondaires révélées au survol */
+.panel .todo_carte {
+  padding: 10px 12px 6px;
+  gap: 4px;
+  border-radius: 10px;
+  box-shadow: none;
+  transition: border-color 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+}
+
+.panel .todo_carte:hover,
+.panel .todo_carte:focus-within {
+  border-color: rgba(88, 101, 242, 0.45);
+  box-shadow: none;
+}
+
+.panel .todo_contenu {
+  min-height: 40px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.panel .todo_carte_actions {
+  height: 24px;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+  gap: 4px;
+}
+
+.panel .todo_carte_actions_gauche,
+.panel .todo_carte_actions_droite {
+  gap: 4px;
+}
+
+.panel .todo_btn_agrandir {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 6px;
+  border-color: transparent;
+  font-size: 12px;
+  opacity: 0.5;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.panel .todo_carte:hover .todo_btn_agrandir,
+.panel .todo_btn_agrandir:focus-visible {
+  opacity: 1;
+  border-color: var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+}
+
+.panel .todo_btn_supprimer_carte,
+.panel .todo_btn_terminer {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 10.5px;
+}
+
+/* Supprimer / Terminer masqués hors survol (appareils à souris uniquement :
+   sur écran tactile ils restent visibles). Une tâche terminée garde son
+   bouton « ✓ Terminé » visible comme indicateur d'état. */
+@media (hover: hover) {
+  .panel .todo_btn_supprimer_carte,
+  .panel .todo_btn_terminer:not(.actif) {
+    opacity: 0;
+    transform: translateY(2px);
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+
+  .panel .todo_carte:hover .todo_btn_supprimer_carte,
+  .panel .todo_carte:hover .todo_btn_terminer,
+  .panel .todo_carte:focus-within .todo_btn_supprimer_carte,
+  .panel .todo_carte:focus-within .todo_btn_terminer {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+}
+
+/* Pastille d'ordre discrète, détourée de la couleur du panneau */
+.panel .session_ordre_badge {
+  top: -5px;
+  left: -5px;
+  width: 16px;
+  height: 16px;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+  border: 2px solid var(--panel-fond);
+  box-shadow: none;
+  box-sizing: content-box;
+}
+
+/* Carte en cours de glisser (clic droit maintenu) : l'original s'efface */
+.panel .todo_carte--glissee {
+  opacity: 0.35;
+  border-style: dashed;
+}
+
+/* Fantôme suivant le pointeur, rendu dans document.body (hors .panel) */
+.todo_carte_fantome {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(43, 45, 49, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--dc-blurple, #5865f2);
+  border-radius: var(--radius-md, 16px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+  color: var(--dc-text-primary, #f2f3f5);
+  font-family: 'Inter', sans-serif;
+  transform: rotate(-1.5deg);
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.todo_carte_fantome--annule {
+  opacity: 0.6;
+  border-color: var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+}
+
+.todo_carte_fantome_texte {
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.todo_carte_fantome_aide {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--dc-blurple-light, #949cf7);
+}
+
+.todo_carte_fantome--annule .todo_carte_fantome_aide {
+  color: var(--dc-text-muted, #80848e);
+}
+
+/* ======================================================================
+   2. Mon Pomodoro
+   ====================================================================== */
+.panel .param {
+  height: 100%;
+  padding: 12px;
+}
+
+.panel .param h2 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.panel .prereglages_header {
+  margin-bottom: 4px;
+}
+
+.panel .prereglages_layout {
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Carrousel conservé, cartes réduites à la largeur du panneau */
+.panel .prereglages_carousel_viewport {
+  height: 132px;
+}
+
+.panel .prereglage_carte {
+  width: 150px;
+  height: 116px;
+  border-radius: 14px;
+}
+
+.panel .prereglage_carte--pos-0 {
+  transform: translate(-50%, -50%);
+}
+
+.panel .prereglage_carte--pos-minus-1 {
+  transform: translate(calc(-50% - 82px), -50%) scale(0.8);
+}
+
+.panel .prereglage_carte--pos-minus-1:hover {
+  transform: translate(calc(-50% - 82px), -50%) scale(0.84);
+}
+
+.panel .prereglage_carte--pos-plus-1 {
+  transform: translate(calc(-50% + 82px), -50%) scale(0.8);
+}
+
+.panel .prereglage_carte--pos-plus-1:hover {
+  transform: translate(calc(-50% + 82px), -50%) scale(0.84);
+}
+
+.panel .prereglage_carte--hidden-left {
+  transform: translate(calc(-50% - 150px), -50%) scale(0.6);
+}
+
+.panel .prereglage_carte--hidden-right {
+  transform: translate(calc(-50% + 150px), -50%) scale(0.6);
+}
+
+.panel .prereglages_arrow_btn {
+  width: 28px;
+  height: 28px;
+}
+
+.panel .prereglages_infos_btn_appliquer {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 12px;
+}
+
+/* Configuration : une seule colonne sous le bouton d'application */
+.panel .preset_config_section {
+  margin-top: 10px;
+  padding: 10px;
+  gap: 10px;
+}
+
+.panel .preset_config_titre {
+  min-width: 0;
+  font-size: 12px;
+}
+
+.panel .preset_config_nom_actif {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.panel .preset_config_grille {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.panel .preset_config_colonne,
+.panel .preset_config_bloc {
+  gap: 8px;
+  min-width: 0;
+}
+
+.panel .param_champ {
+  margin-bottom: 0;
+}
+
+.panel .param_input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.panel .param_musique_ligne,
+.panel .preset_config_fond_actions,
+.panel .preset_config_actions_bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.panel .param_musique_carte {
+  min-width: 0;
+}
+
+.panel .preset_config_fond_preview {
+  width: 100%;
+  height: 96px;
+}
+
+.panel .preset_config_actions_bar > button {
+  flex: 1 1 100%;
+  justify-content: center;
+  padding: 8px 10px;
+  font-size: 12.5px;
+}
+
+/* ======================================================================
+   3. Salon de course
+   ====================================================================== */
+.panel .salon_course {
+  height: 100%;
+  padding: 12px;
+}
+
+.panel .salon_entete_actions {
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 4px;
+}
+
+.panel .salon_btn_action {
+  padding: 7px 2px;
+  font-size: 0.74rem;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.salon_recherche_filtres {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 10px;
+  margin-bottom: 12px;
+}
+
+.panel .salon_recherche_filtres > :last-child {
+  grid-column: 1 / -1;
+}
+
+.panel .salon_recherche_filtres label {
+  font-size: 0.76rem !important;
+}
+
+.panel .salon_recherche_filtres input[type='range'] {
+  height: 24px !important;
+}
+
+.panel .salon_input_saisie {
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  min-width: 0;
+}
+
+.panel .salon_input_groupe {
+  margin-bottom: 12px;
+}
+
+.panel .salon_btn_valider_code {
+  flex-shrink: 0;
+  padding: 0 12px;
+}
+
+.panel .salon_liste,
+.panel .amis_liste,
+.panel .participants_liste {
+  gap: 8px;
+}
+
+.panel .salon_carte_image {
+  height: 56px;
+  padding: 6px 10px;
+}
+
+.panel .salon_carte_info {
+  padding: 8px 10px;
+  gap: 4px;
+}
+
+.panel .ami_carte {
+  gap: 6px;
+  padding: 8px;
+}
+
+.panel .ami_carte_gauche {
+  min-width: 0;
+}
+
+.panel .ami_pseudo {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.panel .ami_carte_droite {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.panel .session_active_entete {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.panel .salon_section_titre {
+  margin: 8px 0;
+  font-size: 0.9rem;
+}
+
+/* Ligne participant sur deux niveaux : identité / écoute + Desk */
+.panel .participant_row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'avatar nom statut'
+    'avatar ecoute desk';
+  align-items: center;
+  gap: 4px 10px;
+  min-height: 0;
+  padding: 8px 10px;
+}
+
+.panel .participant_avatar {
+  grid-area: avatar;
+  width: 36px;
+  height: 36px;
+}
+
+.panel .participant_info_nom {
+  grid-area: nom;
+}
+
+.panel .participant_statut {
+  grid-area: statut;
+  margin-left: 0;
+}
+
+.panel .participant_ecoute {
+  grid-area: ecoute;
+  font-size: 0.74rem;
+}
+
+.panel .participant_btn_desk {
+  grid-area: desk;
+  padding: 3px 10px;
+  font-size: 0.74rem;
+}
+
+/* ======================================================================
+   4. Ambiance
+   ====================================================================== */
+.panel .ambiance_conteneur {
+  height: 100%;
+  padding: 12px;
+  gap: 10px;
+}
+
+.panel .ambiance_carte {
+  padding: 12px;
+  gap: 10px;
+}
+
+.panel .ambiance_carte_entete {
+  gap: 10px;
+}
+
+.panel .ambiance_carte_titre {
+  font-size: 0.86rem;
+}
+
+.panel .ambiance_carte_soustitre,
+.panel .ambiance_sonnerie_desc {
+  font-size: 0.7rem;
+}
+
+.panel .ambiance_sonnerie_label {
+  font-size: 0.8rem;
+}
+
+.panel .ambiance_carte_icone {
+  width: 30px;
+  height: 30px;
+}
+
+.panel .lecteur_verre {
+  padding: 12px;
+  gap: 10px;
+}
+
+.panel .ambiance_sonnerie_item {
+  padding: 8px 10px;
+}
+
+.panel .ambiance_select {
+  min-width: 0;
+  padding: 7px 8px;
+}
+
+/* ─── Petits écrans : le panneau rétrécit, le contenu suit ──────────── */
+@media (max-width: 720px) {
+  .panel .prereglage_carte {
+    width: 128px;
+    height: 100px;
+  }
+
+  .panel .prereglages_carousel_viewport {
+    height: 112px;
+  }
+
+  .panel .notes_commandes_infos {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .panel .notes_commandes .session_action_btn,
+  .panel .notes_commandes .todo_btn_ajouter {
+    font-size: 10.5px;
+    padding: 0 6px;
+  }
+
+  .panel .todo_btn_supprimer_carte,
+  .panel .todo_btn_terminer {
+    padding: 0 6px;
+    font-size: 10px;
+  }
+}

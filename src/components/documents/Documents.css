@@ -1,0 +1,869 @@
+/* ======================================================================
+   Documents — section du menu latéral + fenêtres flottantes
+   La section reprend le cadre commun des autres sections du panneau
+   (voir layout/BlocDeux.css) ; les fenêtres vivent dans l'espace de travail.
+   ====================================================================== */
+
+/* ─── Section du panneau ────────────────────────────────────────────── */
+.panel .documents {
+  height: 100%;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--panel-fond);
+  color: var(--dc-text-primary, #f2f3f5);
+  font-family: 'Inter', sans-serif;
+  overflow: clip;
+  border-radius: 10px;
+  outline: 2px dashed transparent;
+  outline-offset: -6px;
+  transition: outline-color 0.15s ease;
+}
+
+.panel .documents--depot {
+  outline-color: var(--dc-blurple, #5865f2);
+}
+
+.panel .documents_entete {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 8px;
+  background: var(--dc-bg-secondary, #2b2d31);
+  border: 1px solid var(--dc-border, rgba(255, 255, 255, 0.06));
+  border-radius: 10px;
+}
+
+.panel .documents_titre {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.panel .documents_onglets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 3px;
+  background: var(--panel-fond);
+  border-radius: 8px;
+}
+
+.panel .documents_onglet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dc-text-secondary, #b5bac1);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.panel .documents_onglet:hover {
+  background: var(--dc-bg-surface, #383a40);
+  color: var(--dc-text-primary, #f2f3f5);
+}
+
+.panel .documents_onglet--actif {
+  background: var(--dc-blurple, #5865f2);
+  color: #ffffff;
+}
+
+.panel .documents_onglet_compte {
+  min-width: 16px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.panel .documents_btn_ajouter,
+.panel .documents_btn_secondaire {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.panel .documents_btn_ajouter {
+  width: 100%;
+  border: none;
+  background: var(--dc-blurple, #5865f2);
+  color: #ffffff;
+}
+
+.panel .documents_btn_ajouter:hover {
+  background: var(--dc-blurple-dark, #4752c4);
+}
+
+.panel .documents_actions_screens {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+.panel .documents_btn_secondaire {
+  padding: 0 12px;
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  background: transparent;
+  color: var(--dc-text-primary, #f2f3f5);
+}
+
+.panel .documents_btn_secondaire:hover {
+  background: var(--dc-bg-surface, #383a40);
+}
+
+.panel .documents_message {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dc-blurple-light, #949cf7);
+}
+
+/* Liste : seule partie qui défile */
+.panel .documents_liste {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dc-border-strong, rgba(255, 255, 255, 0.12)) transparent;
+  padding-right: 2px;
+}
+
+.panel .documents_vide {
+  margin: 4px 2px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dc-text-muted, #80848e);
+}
+
+/* Bande d'un document : deux états, inactif / ouvert dans une fenêtre */
+.panel .document_bande {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 6px 6px 6px 10px;
+  background: var(--dc-bg-surface, #383a40);
+  border: 1px solid var(--dc-border, rgba(255, 255, 255, 0.06));
+  border-radius: 8px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: background 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+}
+
+.panel .document_bande:hover {
+  border-color: var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+}
+
+.panel .document_bande--ouvert {
+  background: color-mix(in srgb, var(--doc-couleur, #5865f2) 20%, var(--dc-bg-surface, #383a40));
+  border-color: var(--doc-couleur, #5865f2);
+}
+
+.panel .document_bande--ouvert::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--doc-couleur, #5865f2);
+}
+
+.panel .document_bande--glissee {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+.panel .document_bande_icone {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--dc-text-muted, #80848e);
+}
+
+.panel .document_bande--ouvert .document_bande_icone {
+  color: var(--doc-couleur, #949cf7);
+}
+
+/* Pastille de couleur du document : clic = palette */
+.panel .document_bande_pastille {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 2px solid rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  background: var(--doc-couleur, #5865f2);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.panel .document_bande_pastille:hover,
+.panel .document_bande_pastille[aria-expanded='true'] {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+/* Palette de couleurs, dépliée sous la bande */
+.panel .document_couleurs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-top: -2px;
+  padding: 8px 10px;
+  background: var(--dc-bg-secondary, #2b2d31);
+  border: 1px solid var(--dc-border, rgba(255, 255, 255, 0.06));
+  border-radius: 8px;
+  animation: visionneuse_recherche_entree 0.14s ease;
+}
+
+.panel .document_couleur {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--doc-couleur);
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.panel .document_couleur:hover {
+  transform: scale(1.15);
+}
+
+.panel .document_couleur--active {
+  border-color: #ffffff;
+}
+
+.panel .document_couleur--perso {
+  background: conic-gradient(#f23f43, #f0b232, #23a559, #3ba3f5, #a970ff, #eb459e, #f23f43);
+  overflow: hidden;
+}
+
+.panel .document_couleur--perso input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.panel .document_bande_texte {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.panel .document_bande_nom {
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel .document_bande_meta {
+  font-size: 10.5px;
+  color: var(--dc-text-muted, #80848e);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel .document_bande_etat {
+  font-weight: 700;
+  color: var(--doc-couleur, #949cf7);
+}
+
+.panel .document_bande_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dc-text-secondary, #b5bac1);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+.panel .document_bande_btn:hover {
+  background: var(--dc-bg-tertiary, #1e1f22);
+  color: var(--dc-text-primary, #f2f3f5);
+}
+
+.panel .document_bande_btn--suppr:hover {
+  color: var(--dc-error, #f23f43);
+}
+
+/* Comme pour les notes : actions secondaires révélées au survol */
+@media (hover: hover) {
+  .panel .document_bande_btn {
+    opacity: 0;
+  }
+
+  .panel .document_bande:hover .document_bande_btn,
+  .panel .document_bande_btn:focus-visible {
+    opacity: 1;
+  }
+}
+
+.panel .documents_aide {
+  margin: 0;
+  flex-shrink: 0;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--dc-text-muted, #80848e);
+  text-align: center;
+}
+
+/* ─── Fantôme du glisser (rendu dans document.body) ─────────────────── */
+.document_fantome {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 2px;
+  max-width: 260px;
+  padding: 8px 12px;
+  background: rgba(43, 45, 49, 0.94);
+  border: 1px solid var(--doc-couleur, #5865f2);
+  border-radius: 10px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.45);
+  color: var(--dc-text-primary, #f2f3f5);
+  font-family: 'Inter', sans-serif;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.document_fantome--annule {
+  opacity: 0.6;
+  border-color: var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+}
+
+.document_fantome_nom {
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.document_fantome_aide {
+  grid-column: 2;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--dc-blurple-light, #949cf7);
+}
+
+.document_fantome--annule .document_fantome_aide {
+  color: var(--dc-text-muted, #80848e);
+}
+
+/* ─── Fenêtres flottantes de l'espace de travail ────────────────────── */
+/* z-index 60–89 : sous le menu latéral (90) et les notes épinglées (150) */
+.fenetre_doc {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+  min-height: 200px;
+  background: var(--dc-bg-secondary, #2b2d31);
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  color: var(--dc-text-primary, #f2f3f5);
+  font-family: 'Inter', sans-serif;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.fenetre_doc--premier-plan {
+  border-color: color-mix(in srgb, var(--doc-couleur, #5865f2) 65%, transparent);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Fenêtre visée pendant le glisser d'un document depuis la liste */
+.fenetre_doc--cible {
+  outline: 2px dashed var(--dc-text-primary, #f2f3f5);
+  outline-offset: 3px;
+}
+
+.fenetre_doc--deplacement {
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.55);
+}
+
+.fenetre_doc_barre {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 6px 0 10px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  border-bottom: 1px solid var(--dc-border, rgba(255, 255, 255, 0.06));
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.fenetre_doc--deplacement .fenetre_doc_barre {
+  cursor: grabbing;
+}
+
+.fenetre_doc_grip,
+.fenetre_doc_icone {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--dc-text-muted, #80848e);
+}
+
+/* Pastilles des documents de la fenêtre ; l'active montre le titre dans sa couleur */
+.fenetre_doc_pastilles {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.fenetre_doc_pastille {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 24px;
+  border-radius: 999px;
+  transition: background 0.15s ease;
+}
+
+.fenetre_doc_pastille--active {
+  flex-shrink: 1;
+  min-width: 0;
+  padding-right: 2px;
+  background: color-mix(in srgb, var(--doc-couleur) 16%, transparent);
+}
+
+.fenetre_doc_barre .fenetre_doc_pastille_btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+.fenetre_doc_barre .fenetre_doc_pastille_btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--doc-couleur) 22%, transparent);
+}
+
+.fenetre_doc_pastille_point {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--doc-couleur);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.fenetre_doc_pastille--active .fenetre_doc_pastille_point {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--doc-couleur) 45%, transparent);
+}
+
+.fenetre_doc_nom {
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--doc-couleur);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fenetre_doc_barre .fenetre_doc_pastille_retirer {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: var(--doc-couleur);
+}
+
+.fenetre_doc_barre .fenetre_doc_pastille_retirer:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--doc-couleur) 30%, transparent);
+  color: #ffffff;
+}
+
+/* Couches de contenu : une par document, seule l'active est visible */
+.fenetre_doc_couche {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+}
+
+.fenetre_doc_couche--active {
+  visibility: visible;
+}
+
+.fenetre_doc_zoom {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.fenetre_doc_zoom_valeur {
+  min-width: 38px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--dc-text-secondary, #b5bac1);
+  font-variant-numeric: tabular-nums;
+}
+
+.fenetre_doc_barre button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dc-text-secondary, #b5bac1);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.fenetre_doc_barre button:hover:not(:disabled) {
+  background: var(--dc-bg-surface, #383a40);
+  color: var(--dc-text-primary, #f2f3f5);
+}
+
+.fenetre_doc_barre button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.fenetre_doc_barre .fenetre_doc_fermer:hover {
+  background: var(--dc-error, #f23f43);
+  color: #ffffff;
+}
+
+.fenetre_doc_contenu {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: #111214;
+}
+
+/* ─── Visionneuse PDF ───────────────────────────────────────────────── */
+.visionneuse_pdf {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.visionneuse_pdf_defilement {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 12px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dc-border-strong, rgba(255, 255, 255, 0.12)) transparent;
+}
+
+/* Clic droit maintenu : la main « saisit » le document */
+.visionneuse_pdf_defilement--deplacement {
+  cursor: grabbing;
+  user-select: none;
+}
+
+/* margin auto (et non flex/center) : une page plus large que la fenêtre
+   reste entièrement accessible par le défilement horizontal */
+.visionneuse_pdf_page {
+  position: relative;
+  margin: 0 auto 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.visionneuse_pdf_page canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.visionneuse_pdf_surlignage {
+  position: absolute;
+  background: rgba(250, 204, 21, 0.42);
+  border-radius: 2px;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.visionneuse_pdf_surlignage--actif {
+  background: rgba(249, 115, 22, 0.6);
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.85);
+}
+
+/* Barre de recherche : apparaît sous la barre de titre, en haut à droite */
+.visionneuse_pdf_recherche {
+  position: absolute;
+  top: 8px;
+  right: 14px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: min(360px, calc(100% - 28px));
+  padding: 4px 4px 4px 10px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+  animation: visionneuse_recherche_entree 0.16s ease;
+}
+
+@keyframes visionneuse_recherche_entree {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.visionneuse_pdf_recherche_champ {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--dc-text-primary, #f2f3f5);
+  font-family: inherit;
+  font-size: 12.5px;
+  outline: none;
+}
+
+.visionneuse_pdf_recherche_champ:focus {
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+
+.visionneuse_pdf_recherche:focus-within {
+  border-color: var(--dc-blurple, #5865f2);
+}
+
+.visionneuse_pdf_recherche_champ::placeholder {
+  color: var(--dc-text-muted, #80848e);
+}
+
+.visionneuse_pdf_recherche_compteur {
+  flex-shrink: 0;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dc-text-muted, #80848e);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.visionneuse_pdf_recherche button,
+.visionneuse_pdf_pages button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dc-text-secondary, #b5bac1);
+  cursor: pointer;
+}
+
+.visionneuse_pdf_recherche button:hover:not(:disabled),
+.visionneuse_pdf_pages button:hover:not(:disabled) {
+  background: var(--dc-bg-surface, #383a40);
+  color: var(--dc-text-primary, #f2f3f5);
+}
+
+.visionneuse_pdf_recherche button:disabled,
+.visionneuse_pdf_pages button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Indicateur de page, en bas à gauche */
+.visionneuse_pdf_pages {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: rgba(30, 31, 34, 0.9);
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dc-text-secondary, #b5bac1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Retour visuel du bouton « screen » : éclair puis confirmation */
+.fenetre_doc_capture_flash {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: #ffffff;
+  pointer-events: none;
+  animation: fenetre_doc_flash 0.22s ease-out forwards;
+}
+
+@keyframes fenetre_doc_flash {
+  from { opacity: 0.75; }
+  to { opacity: 0; }
+}
+
+.fenetre_doc_capture_message {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  z-index: 5;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  background: rgba(30, 31, 34, 0.94);
+  border: 1px solid var(--dc-success, #23a559);
+  border-radius: 999px;
+  color: var(--dc-text-primary, #f2f3f5);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: visionneuse_recherche_entree 0.16s ease;
+}
+
+.fenetre_doc_capture_message--erreur {
+  border-color: var(--dc-error, #f23f43);
+}
+
+.fenetre_doc_barre .fenetre_doc_loupe--actif {
+  background: rgba(88, 101, 242, 0.25);
+  color: var(--dc-blurple-light, #949cf7);
+}
+
+.fenetre_doc_image {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.fenetre_doc_image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform-origin: 0 0;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.fenetre_doc_image--zoom {
+  cursor: grab;
+}
+
+.fenetre_doc_image--zoom:active {
+  cursor: grabbing;
+}
+
+.fenetre_doc_erreur {
+  margin: 0;
+  padding: 24px 16px;
+  font-size: 12.5px;
+  text-align: center;
+  color: var(--dc-text-muted, #80848e);
+}
+
+/* Capte la souris à la place du contenu (iframe) pendant un geste ou
+   quand la fenêtre est en arrière-plan : le 1er clic la ramène devant */
+.fenetre_doc_bouclier {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.fenetre_doc_redim {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  touch-action: none;
+  background:
+    linear-gradient(135deg, transparent 50%, var(--dc-text-muted, #80848e) 50%, var(--dc-text-muted, #80848e) 58%, transparent 58%, transparent 70%, var(--dc-text-muted, #80848e) 70%, var(--dc-text-muted, #80848e) 78%, transparent 78%);
+  opacity: 0.7;
+}
+
+.fenetre_doc_redim:hover {
+  opacity: 1;
+}
+
+/* Pendant un geste sur une fenêtre : ni sélection ni curseur parasite */
+body.fenetre_doc_geste--deplacement,
+body.fenetre_doc_geste--redimension {
+  user-select: none;
+}
+
+body.fenetre_doc_geste--deplacement * {
+  cursor: grabbing !important;
+}
+
+body.fenetre_doc_geste--redimension * {
+  cursor: nwse-resize !important;
+}

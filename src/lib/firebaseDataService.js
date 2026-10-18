@@ -1,0 +1,716 @@
+// ==========================================================================
+// Service de données Firebase — Opérations CRUD centralisées (Firestore)
+// ==========================================================================
+// Remplace supabaseDataService.js
+// ==========================================================================
+
+import { db } from './firebase';
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc, 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  writeBatch, 
+  orderBy,
+  addDoc,
+  deleteDoc,
+  limit,
+  or,
+  onSnapshot
+} from "firebase/firestore";
+
+// -------------------------------------------------------
+// Profil (collection « preferences_utilisateur »)
+// -------------------------------------------------------
+
+export async function chargerProfil(userId) {
+  try {
+    const docRef = doc(db, "preferences_utilisateur", userId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+    return null;
+  } catch (err) {
+    console.error('Erreur chargement profil :', err);
+    return null;
+  }
+}
+
+// -------------------------------------------------------
+// Sessions de Course (collection « sessions_course »)
+// -------------------------------------------------------
+
+export async function creerSession(sessionData) {
+  try {
+    const docRef = await addDoc(collection(db, "sessions_course"), {
+      ...sessionData,
+      created_at: new Date().toISOString()
+    });
+    return docRef.id;
+  } catch (err) {
+    console.error('Erreur création session :', err);
+    throw err;
+  }
+}
+
+export async function rejoindreSession(sessionId, participant) {
+  try {
+    const docRef = doc(db, "sessions_course", sessionId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const participants = data.participants || [];
+      // Vérifier si le participant est déjà dedans
+      if (!participants.some(p => p.uid === participant.uid)) {
+        await updateDoc(docRef, {
+          participants: [...participants, participant]
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Erreur rejoindre session :', err);
+    throw err;
+  }
+}
+
+export async function quitterSession(sessionId, userId) {
+  try {
+    const docRef = doc(db, "sessions_course", sessionId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const participants = data.participants || [];
+      const nouveauxParticipants = participants.filter(p => p.uid !== userId);
+      
+      // Si la session est vide, on peut la supprimer ou juste la mettre à jour
+      if (nouveauxParticipants.length === 0) {
+        await deleteDoc(docRef);
+      } else {
+        await updateDoc(docRef, { participants: nouveauxParticipants });
+      }
+    }
+  } catch (err) {
+    console.error('Erreur quitter session :', err);
+    throw err;
+  }
+}
+
+export function ecouterSessions(callback) {
+  const q = query(collection(db, "sessions_course"), orderBy("created_at", "desc"));
+  return onSnapshot(q, (snapshot) => {
+    const sessions = [];
+    snapshot.forEach((doc) => {
+      sessions.push({ id: doc.id, ...doc.data() });
+    });
+    callback(sessions);
+  }, (err) => {
+    console.error("Erreur ecouterSessions :", err);
+  });
+}
+
+
+export async function sauvegarderProfil(userId, { pseudo, photo_profil, preferences, coins, temps_total_pomodoro, email }) {
+  try {
+    const docRef = doc(db, "preferences_utilisateur", userId);
+    const dataToSave = { updated_at: new Date().toISOString() };
+    if (pseudo !== undefined) dataToSave.pseudo = pseudo;
+    if (photo_profil !== undefined) dataToSave.photo_profil = photo_profil;
+    if (preferences !== undefined) dataToSave.preferences = preferences;
+    if (coins !== undefined) dataToSave.coins = coins;
+    if (temps_total_pomodoro !== undefined) dataToSave.temps_total_pomodoro = temps_total_pomodoro;
+    if (email !== undefined) dataToSave.email = email;
+
+    await setDoc(docRef, dataToSave, { merge: true });
+  } catch (err) {
+    console.error('Erreur sauvegarde profil :', err);
+  }
+}
+
+export async function sauvegarderPhotoProfil(userId, photoProfil) {
+  try {
+    const docRef = doc(db, "preferences_utilisateur", userId);
+    await setDoc(docRef, {
+      photo_profil: photoProfil,
+      updated_at: new Date().toISOString()
+    }, { merge: true });
+  } catch (err) {
+    console.error('Erreur sauvegarde photo de profil :', err);
+    throw err;
+  }
+}
+
+export async function sauvegarderPreferences(userId, preferences) {
+  try {
+    const docRef = doc(db, "preferences_utilisateur", userId);
+    await setDoc(docRef, {
+      preferences,
+      updated_at: new Date().toISOString()
+    }, { merge: true });
+  } catch (err) {
+    console.error('Erreur sauvegarde préférences :', err);
+  }
+}
+
+// -------------------------------------------------------
+// Notes / Tâches (collection « taches »)
+// -------------------------------------------------------
+
+export async function chargerNotes(userId) {
+  try {
+    const q = query(
+      collection(db, "taches"), 
+      where("user_id", "==", userId)
+    );
+    const querySnapshot = await getDocs(q);
+    const notes = [];
+    querySnapshot.forEach((doc) => {
+      notes.push(doc.data());
+    });
+    // Tri côté client (date décroissante)
+    return notes.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation));
+  } catch (err) {
+    console.error('Erreur chargement notes :', err);
+    return [];
+  }
+}
+
+export async function sauvegarderNotes(userId, notes) {
+  try {
+    const q = query(collection(db, "taches"), where("user_id", "==", userId));
+    const querySnapshot = await getDocs(q);
+    
+    const batch = writeBatch(db);
+    
+    // Supprimer les notes existantes
+    querySnapshot.forEach((document) => {
+      batch.delete(document.ref);
+    });
+
+    // Insérer les nouvelles
+    notes.forEach((n) => {
+      const docRef = doc(collection(db, "taches"), n.id);
+      batch.set(docRef, {
+        id: n.id,
+        user_id: userId,
+        contenu: n.contenu ?? '',
+        tags: n.tags ?? [],
+        dateEcheance: n.dateEcheance ?? '',
+        terminee: n.terminee ?? false,
+        epinglee: n.epinglee ?? false,
+        position: n.position ?? null,
+        ordre: n.ordre ?? null,
+        dateCreation: n.dateCreation ?? new Date().toISOString(),
+        dateModification: n.dateModification ?? new Date().toISOString(),
+      });
+    });
+
+    await batch.commit();
+  } catch (err) {
+    console.error('Erreur sauvegarde notes :', err);
+  }
+}
+
+// -------------------------------------------------------
+// Préréglages (collection « prereglages »)
+// -------------------------------------------------------
+
+export async function chargerPrereglages(userId) {
+  try {
+    const q = query(
+      collection(db, "prereglages"), 
+      where("user_id", "==", userId)
+    );
+    const querySnapshot = await getDocs(q);
+    const prereglages = [];
+    querySnapshot.forEach((doc) => {
+      prereglages.push(doc.data());
+    });
+    return prereglages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  } catch (err) {
+    console.error('Erreur chargement préréglages :', err);
+    return [];
+  }
+}
+
+export async function sauvegarderPrereglages(userId, prereglages) {
+  try {
+    const q = query(collection(db, "prereglages"), where("user_id", "==", userId));
+    const querySnapshot = await getDocs(q);
+    
+    const batch = writeBatch(db);
+    
+    // Supprimer
+    querySnapshot.forEach((document) => {
+      batch.delete(document.ref);
+    });
+
+    // Insérer
+    prereglages.forEach((p) => {
+      const { id, nom, ...config } = p;
+      const docRef = doc(collection(db, "prereglages"), id);
+      batch.set(docRef, {
+        id,
+        user_id: userId,
+        nom,
+        ...config, // Firestore gère bien le mix
+        created_at: new Date().toISOString()
+      });
+    });
+
+    await batch.commit();
+  } catch (err) {
+    console.error('Erreur sauvegarde préréglages :', err);
+  }
+}
+
+// -------------------------------------------------------
+// Historique Pomodoro (collection « seances_pomodoro »)
+// -------------------------------------------------------
+
+export async function chargerHistorique(userId) {
+  try {
+    const q = query(
+      collection(db, "seances_pomodoro"), 
+      where("user_id", "==", userId)
+    );
+    const querySnapshot = await getDocs(q);
+    const jours = [];
+    querySnapshot.forEach((doc) => {
+      jours.push(doc.data().jour);
+    });
+    return jours.sort();
+  } catch (err) {
+    console.error('Erreur chargement historique :', err);
+    return [];
+  }
+}
+
+export async function ajouterJourHistorique(userId, jour) {
+  try {
+    // On utilise l'ID 'userId_jour' pour éviter les doublons et s'assurer que
+    // les enregistrements sont uniques
+    const docId = `${userId}_${jour}`;
+    const docRef = doc(db, "seances_pomodoro", docId);
+    await setDoc(docRef, {
+      user_id: userId,
+      jour: jour,
+      created_at: new Date().toISOString()
+    }, { merge: true });
+  } catch (err) {
+    console.error('Erreur ajout jour historique :', err);
+  }
+}
+
+// -------------------------------------------------------
+// Activités Pomodoro & Statistiques (collection « activites_pomodoro »)
+// -------------------------------------------------------
+
+export async function chargerActivitesPomodoro(userId) {
+  try {
+    const q = query(
+      collection(db, "activites_pomodoro"),
+      where("user_id", "==", userId)
+    );
+    const querySnapshot = await getDocs(q);
+    const activites = [];
+    querySnapshot.forEach((doc) => {
+      activites.push({ id: doc.id, ...doc.data() });
+    });
+    return activites.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  } catch (err) {
+    console.error('Erreur chargement activites pomodoro :', err);
+    return [];
+  }
+}
+
+export async function enregistrerActivitePomodoro(userId, activite) {
+  try {
+    const docRef = doc(collection(db, "activites_pomodoro"));
+    const data = {
+      ...activite,
+      user_id: userId,
+      timestamp: activite.timestamp || Date.now(),
+      created_at: new Date().toISOString()
+    };
+    await setDoc(docRef, data);
+    return { id: docRef.id, ...data };
+  } catch (err) {
+    console.error('Erreur enregistrement activite pomodoro :', err);
+    return null;
+  }
+}
+
+export async function chargerLeaderboardGlobal(currentUserId) {
+  try {
+    const q = query(collection(db, "preferences_utilisateur"), limit(30));
+    const querySnapshot = await getDocs(q);
+    const coureurs = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      const id = doc.id;
+      coureurs.push({
+        id,
+        pseudo: data.pseudo || data.email?.split('@')[0] || 'Coureur',
+        photo_profil: data.photo_profil || null,
+        temps_total_pomodoro: data.temps_total_pomodoro || 0,
+        coins: data.coins || 0,
+        estMoi: id === currentUserId
+      });
+    });
+    return coureurs.sort((a, b) => b.temps_total_pomodoro - a.temps_total_pomodoro);
+  } catch (err) {
+    console.error("Erreur chargement leaderboard :", err);
+    return [];
+  }
+}
+
+// -------------------------------------------------------
+// Sessions archivées (collection « sessions_notes »)
+// -------------------------------------------------------
+
+export async function chargerSessionsArchivees(userId) {
+  try {
+    const q = query(
+      collection(db, "sessions_notes"), 
+      where("user_id", "==", userId)
+    );
+    const querySnapshot = await getDocs(q);
+    const sessions = [];
+    querySnapshot.forEach((doc) => {
+      sessions.push(doc.data());
+    });
+    return sessions.sort((a, b) => new Date(a.dateCreation) - new Date(b.dateCreation));
+  } catch (err) {
+    console.error('Erreur chargement sessions archivées :', err);
+    return [];
+  }
+}
+
+export async function sauvegarderSessionArchivee(userId, session) {
+  try {
+    const docRef = doc(db, "sessions_notes", session.id);
+    await setDoc(docRef, {
+      id: session.id,
+      user_id: userId,
+      titre: session.titre,
+      numero: session.numero,
+      date: session.date, // Attention, la prop locale s'appelle "date"
+      heure: session.heure,
+      dateCreation: session.dateCreation,
+      notes: session.notes ?? [],
+      created_at: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Erreur sauvegarde session archivée :', err);
+  }
+}
+
+
+// -------------------------------------------------------
+// Récompenses (collection « recompenses »)
+// -------------------------------------------------------
+
+export async function chargerRecompenses(userId) {
+  try {
+    const q = query(
+      collection(db, "recompenses"), 
+      where("user_id", "==", userId)
+    );
+    const querySnapshot = await getDocs(q);
+    const recompenses = [];
+    querySnapshot.forEach((doc) => {
+      recompenses.push({ id: doc.id, ...doc.data() });
+    });
+    // Tri côté client (date décroissante)
+    return recompenses.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation));
+  } catch (err) {
+    console.error("Erreur chargement récompenses :", err);
+    return [];
+  }
+}
+
+export async function ajouterRecompense(userId, recompense) {
+  try {
+    const docRef = doc(collection(db, "recompenses"));
+    const dataToSave = {
+      ...recompense,
+      user_id: userId,
+      dateCreation: new Date().toISOString()
+    };
+    await setDoc(docRef, dataToSave);
+    return { id: docRef.id, ...dataToSave };
+  } catch (err) {
+    console.error("Erreur ajout récompense :", err);
+    throw err;
+  }
+}
+
+export async function mettreAJourRecompense(userId, recompenseId, misesAJour) {
+  try {
+    const docRef = doc(db, "recompenses", recompenseId);
+    await setDoc(docRef, misesAJour, { merge: true });
+  } catch (err) {
+    console.error("Erreur màj récompense :", err);
+    throw err;
+  }
+}
+// -------------------------------------------------------
+// Social (Recherche, Demandes d'amis, Amis)
+// -------------------------------------------------------
+
+export async function rechercherUtilisateurs(texteRecherche, currentUserId) {
+  try {
+    const q = query(collection(db, "preferences_utilisateur"), limit(50));
+    const querySnapshot = await getDocs(q);
+    const resultats = [];
+    
+    const cible = texteRecherche.toLowerCase().trim();
+    if (!cible) return [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      const id = doc.id;
+      
+      if (id === currentUserId) return;
+      
+      const pseudoMatch = data.pseudo && data.pseudo.toLowerCase().includes(cible);
+      const emailMatch = data.email && data.email.toLowerCase().includes(cible);
+      
+      if (pseudoMatch || emailMatch) {
+        resultats.push({
+          id,
+          pseudo: data.pseudo || data.email || 'Utilisateur inconnu',
+          photo_profil: data.photo_profil || null,
+          niveau: data.temps_total_pomodoro ? Math.floor((data.temps_total_pomodoro / 60) / 10) + 1 : 1
+        });
+      }
+    });
+    
+    return resultats;
+  } catch (err) {
+    console.error("Erreur recherche utilisateurs :", err);
+    return [];
+  }
+}
+
+export async function envoyerDemandeAmi(expediteurId, destinataireId) {
+  try {
+    const q = query(
+      collection(db, "demandes_amis"),
+      or(
+        where("expediteur_id", "==", expediteurId),
+        where("destinataire_id", "==", expediteurId)
+      )
+    );
+    const querySnapshot = await getDocs(q);
+    
+    let demandeExiste = false;
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if ((data.expediteur_id === expediteurId && data.destinataire_id === destinataireId) ||
+          (data.expediteur_id === destinataireId && data.destinataire_id === expediteurId)) {
+        demandeExiste = true;
+      }
+    });
+
+    if (demandeExiste) {
+      console.log("Une demande d'ami ou une amitié existe déjà.");
+      return null;
+    }
+
+    const docRef = await addDoc(collection(db, "demandes_amis"), {
+      expediteur_id: expediteurId,
+      destinataire_id: destinataireId,
+      statut: 'en_attente',
+      created_at: new Date().toISOString()
+    });
+    return docRef.id;
+  } catch (err) {
+    console.error("Erreur envoi demande d'ami :", err);
+    throw err;
+  }
+}
+
+export async function repondreDemandeAmi(demandeId, nouveauStatut) {
+  try {
+    const docRef = doc(db, "demandes_amis", demandeId);
+    if (nouveauStatut === 'refusee') {
+      await deleteDoc(docRef);
+    } else {
+      await updateDoc(docRef, {
+        statut: nouveauStatut,
+        updated_at: new Date().toISOString()
+      });
+    }
+  } catch (err) {
+    console.error("Erreur réponse demande d'ami :", err);
+    throw err;
+  }
+}
+
+export async function getDemandesAmis(userId) {
+  try {
+    const q = query(
+      collection(db, "demandes_amis"),
+      where("destinataire_id", "==", userId),
+      where("statut", "==", "en_attente")
+    );
+    const querySnapshot = await getDocs(q);
+    
+    const demandes = [];
+    for (const d of querySnapshot.docs) {
+      const data = d.data();
+      const expediteurRef = doc(db, "preferences_utilisateur", data.expediteur_id);
+      const expediteurSnap = await getDoc(expediteurRef);
+      
+      let profilExpediteur = { pseudo: 'Utilisateur inconnu', niveau: 1 };
+      if (expediteurSnap.exists()) {
+        const pData = expediteurSnap.data();
+        profilExpediteur = {
+          pseudo: pData.pseudo || 'Utilisateur inconnu',
+          photo_profil: pData.photo_profil || null,
+          niveau: pData.temps_total_pomodoro ? Math.floor((pData.temps_total_pomodoro / 60) / 10) + 1 : 1
+        };
+      }
+      
+      demandes.push({
+        id: d.id,
+        ...data,
+        expediteur: profilExpediteur
+      });
+    }
+    
+    return demandes;
+  } catch (err) {
+    console.error("Erreur chargement demandes d'amis :", err);
+    return [];
+  }
+}
+
+export async function getDemandesEnvoyees(userId) {
+  try {
+    const q = query(
+      collection(db, "demandes_amis"),
+      where("expediteur_id", "==", userId),
+      where("statut", "==", "en_attente")
+    );
+    const querySnapshot = await getDocs(q);
+    
+    const demandes = [];
+    querySnapshot.forEach((doc) => {
+      demandes.push({ id: doc.id, ...doc.data() });
+    });
+    return demandes;
+  } catch (err) {
+    console.error("Erreur chargement demandes envoyées :", err);
+    return [];
+  }
+}
+
+export async function getAmis(userId) {
+  try {
+    const q = query(
+      collection(db, "demandes_amis"),
+      or(
+        where("expediteur_id", "==", userId),
+        where("destinataire_id", "==", userId)
+      )
+    );
+    const querySnapshot = await getDocs(q);
+    
+    const amis = [];
+    for (const d of querySnapshot.docs) {
+      const data = d.data();
+      if (data.statut !== 'acceptee') continue;
+      
+      const amiId = data.expediteur_id === userId ? data.destinataire_id : data.expediteur_id;
+      const amiRef = doc(db, "preferences_utilisateur", amiId);
+      const amiSnap = await getDoc(amiRef);
+      
+      if (amiSnap.exists()) {
+        const pData = amiSnap.data();
+        amis.push({
+          id: d.id, // L'id de la relation d'amitié (document 'demandes_amis')
+          amiId: amiId, // L'id Firebase de l'ami
+          pseudo: pData.pseudo || 'Ami',
+          photo_profil: pData.photo_profil || null,
+          niveau: pData.temps_total_pomodoro ? Math.floor((pData.temps_total_pomodoro / 60) / 10) + 1 : 1
+        });
+      }
+    }
+    
+    return amis;
+  } catch (err) {
+    console.error("Erreur chargement amis :", err);
+    return [];
+  }
+}
+
+// -------------------------------------------------------
+// Planning (Calendrier et Notes associées aux jours)
+// -------------------------------------------------------
+
+// Récupère toutes les entrées d'un utilisateur pour un mois donné (format 'YYYY-MM')
+// Utilisé pour calculer le nombre de notes par jour (les bulles sur le calendrier)
+export async function chargerPlanningMois(userId, prefixeMois) {
+  try {
+    const q = query(
+      collection(db, "planning_jours"),
+      where("user_id", "==", userId)
+    );
+    // Note: Pour optimiser, une vraie app avec beaucoup de données ferait un where("date", ">=", prefixeMois + "-01") etc.
+    // Pour l'instant, on filtre côté client.
+    const querySnapshot = await getDocs(q);
+    const resultats = {};
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.date && data.date.startsWith(prefixeMois)) {
+        resultats[data.date] = {
+          count: data.notes ? data.notes.length : 0,
+          evenement: data.evenement || ''
+        };
+      }
+    });
+    return resultats;
+  } catch (err) {
+    console.error("Erreur chargement planning du mois :", err);
+    return {};
+  }
+}
+
+// Récupère les détails (titre, thème, notes) pour un jour spécifique ('YYYY-MM-DD')
+export async function chargerPlanningJour(userId, dateStr) {
+  try {
+    const docId = `${userId}_${dateStr}`;
+    const docRef = doc(db, "planning_jours", docId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+    return { date: dateStr, titreSession: '', themeSession: 'Concentration (par défaut)', notes: [] };
+  } catch (err) {
+    console.error("Erreur chargement planning du jour :", err);
+    return { date: dateStr, titreSession: '', themeSession: 'Concentration (par défaut)', notes: [] };
+  }
+}
+
+// Sauvegarde les détails pour un jour spécifique
+export async function sauvegarderPlanningJour(userId, dateStr, donnees) {
+  try {
+    const docId = `${userId}_${dateStr}`;
+    const docRef = doc(db, "planning_jours", docId);
+    await setDoc(docRef, {
+      user_id: userId,
+      date: dateStr,
+      ...donnees,
+      updated_at: new Date().toISOString()
+    }, { merge: true });
+  } catch (err) {
+    console.error("Erreur sauvegarde planning du jour :", err);
+  }
+}

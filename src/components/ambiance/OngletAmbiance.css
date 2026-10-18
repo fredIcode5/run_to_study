@@ -1,0 +1,951 @@
+/* ─── Styles Onglet Ambiance (Thème Discord Dark) ─────────────────── */
+
+.ambiance_conteneur {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  padding-bottom: 24px;
+  box-sizing: border-box;
+}
+
+.ambiance_carte {
+  background: var(--dc-bg-surface, #2b2d31);
+  border: 1px solid var(--dc-border, #383a40);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ambiance_carte:hover {
+  border-color: rgba(88, 101, 242, 0.4);
+}
+
+.ambiance_carte_entete {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ambiance_carte_icone {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ambiance_carte_icone--musique {
+  background: rgba(88, 101, 242, 0.15);
+  color: var(--dc-blurple, #5865f2);
+}
+
+.ambiance_carte_icone--sonnerie {
+  background: rgba(240, 178, 50, 0.15);
+  color: #f0b232;
+}
+
+.ambiance_carte_titre {
+  margin: 0;
+  font-family: 'Inter', 'gg sans', system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--dc-text-primary, #ffffff);
+}
+
+.ambiance_carte_soustitre {
+  margin: 2px 0 0 0;
+  font-size: 0.78rem;
+  color: var(--dc-text-muted, #949ba4);
+}
+
+/* --- Section 1 : Lecteur « verre » (pochette, titre, progression, commandes) --- */
+.lecteur_verre {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 8px 24px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #ffffff;
+}
+
+/* Pochette carrée 1:1, recadrée au centre */
+.lecteur_verre_pochette {
+  position: relative;
+  align-self: center;
+  width: min(68%, 150px);
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #111214;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.lecteur_verre_pochette img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: lecteur_pochette_fondu 0.35s ease;
+}
+
+/* Miniature YouTube 4:3 à bandes noires : on agrandit l'image 16:9 qu'elle contient */
+.lecteur_verre_pochette--youtube img {
+  transform: scale(1.34);
+}
+
+@keyframes lecteur_pochette_fondu {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lecteur_verre_pochette_vide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.55);
+  background: radial-gradient(circle at 30% 25%, rgba(88, 101, 242, 0.45), transparent 60%),
+    linear-gradient(145deg, #2b2d31, #1a1b1e);
+}
+
+.lecteur_verre_pochette .ambiance_pulse_badge {
+  top: 8px;
+  right: 8px;
+}
+
+.lecteur_verre_entete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lecteur_verre_textes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lecteur_verre_radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(88, 101, 242, 0.28);
+  color: #c9cdfb;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lecteur_verre_titre {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lecteur_verre_artiste {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.75);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Source YouTube indisponible (privée, supprimée, lecture intégrée interdite…) */
+.lecteur_verre_erreur {
+  margin-top: 4px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #ffb4b6;
+}
+
+/* Boutons-icônes blancs, sans fond (comme sur la référence) */
+.lecteur_verre_icone_btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+}
+
+.lecteur_verre_icone_btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.lecteur_verre_icone_btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.lecteur_verre_icone_btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.lecteur_verre_icone_btn--actif {
+  color: var(--dc-blurple-light, #949cf7);
+}
+
+.lecteur_verre_icone_btn--actif::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Menu « ••• » */
+.lecteur_verre_menu_zone {
+  position: relative;
+  margin: -4px -6px 0 0;
+}
+
+.lecteur_verre_menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--dc-bg-floating, #111214);
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+  animation: lecteur_pochette_fondu 0.12s ease;
+}
+
+.lecteur_verre_menu button {
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dc-text-secondary, #b5bac1);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lecteur_verre_menu button:hover {
+  background: rgba(88, 101, 242, 0.2);
+  color: #ffffff;
+}
+
+.lecteur_verre_menu .lecteur_verre_menu_danger:hover {
+  background: rgba(242, 63, 67, 0.2);
+  color: #ff8a8d;
+}
+
+/* Progression : temps au-dessus, fine barre blanche */
+.lecteur_verre_progression {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lecteur_verre_temps {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  font-variant-numeric: tabular-nums;
+}
+
+.lecteur_verre_barre {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  margin: 0;
+  border-radius: 999px;
+  background: linear-gradient(to right, #ffffff 0%, #ffffff var(--val-pct, 0%), rgba(255, 255, 255, 0.25) var(--val-pct, 0%), rgba(255, 255, 255, 0.25) 100%);
+  outline: none;
+  cursor: pointer;
+}
+
+.lecteur_verre_barre:disabled {
+  cursor: default;
+}
+
+.lecteur_verre_barre::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.lecteur_verre_barre:hover:not(:disabled)::-webkit-slider-thumb,
+.lecteur_verre_barre:focus-visible::-webkit-slider-thumb {
+  opacity: 1;
+}
+
+.lecteur_verre_barre::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+/* Boucle · précédent · lecture · suivant · volume */
+.lecteur_verre_controles {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lecteur_verre_saut {
+  width: 40px;
+  height: 40px;
+}
+
+.lecteur_verre_play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.lecteur_verre_play:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.lecteur_verre_play:active {
+  transform: scale(0.94);
+}
+
+.lecteur_verre_volume {
+  padding: 0 4px;
+  animation: lecteur_pochette_fondu 0.15s ease;
+}
+
+/* Bouton « Radio » sous le lecteur et liste des radios */
+.lecteur_btn_radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  color: var(--dc-text-primary, #f2f3f5);
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.lecteur_btn_radio:hover,
+.lecteur_btn_radio--ouvert {
+  border-color: var(--dc-blurple, #5865f2);
+  background: rgba(88, 101, 242, 0.12);
+}
+
+.lecteur_btn_radio span {
+  flex: 1;
+  text-align: left;
+}
+
+.lecteur_btn_radio_chevron {
+  transition: transform 0.2s ease;
+}
+
+.lecteur_btn_radio--ouvert .lecteur_btn_radio_chevron {
+  transform: rotate(180deg);
+}
+
+.lecteur_radios {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: -4px;
+  animation: lecteur_pochette_fondu 0.15s ease;
+}
+
+.lecteur_radios_liste {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lecteur_radio_ligne {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--dc-border, rgba(255, 255, 255, 0.06));
+  border-radius: 8px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  color: var(--dc-text-primary, #f2f3f5);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.lecteur_radio_ligne:hover {
+  border-color: var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  background: var(--dc-bg-surface, #383a40);
+}
+
+.lecteur_radio_ligne--active {
+  border-color: var(--dc-blurple, #5865f2);
+  background: rgba(88, 101, 242, 0.16);
+}
+
+.lecteur_radio_icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--dc-blurple, #5865f2);
+  color: #ffffff;
+}
+
+.lecteur_radio_textes {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lecteur_radio_nom {
+  font-size: 0.84rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lecteur_radio_meta {
+  font-size: 0.7rem;
+  color: var(--dc-text-muted, #949ba4);
+}
+
+.lecteur_radios_gerer {
+  align-self: flex-end;
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  color: var(--dc-blurple-light, #949cf7);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lecteur_radios_gerer:hover {
+  text-decoration: underline;
+}
+
+.lecteur_radios_vide {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px dashed var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+}
+
+.lecteur_radios_vide p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--dc-text-muted, #949ba4);
+}
+
+/* Badge « en lecture » et curseur de volume */
+.ambiance_pulse_badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dc-success, #23a559);
+  box-shadow: 0 0 8px var(--dc-success, #23a559);
+  animation: pulse-green 1.5s infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+
+.ambiance_slider_controle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.ambiance_range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--dc-blurple, #5865f2) 0%, var(--dc-blurple, #5865f2) var(--val-pct, 50%), rgba(255, 255, 255, 0.15) var(--val-pct, 50%), rgba(255, 255, 255, 0.15) 100%);
+  outline: none;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.ambiance_range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ambiance_range::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 10px rgba(88, 101, 242, 0.8);
+}
+
+.ambiance_valeur_pct {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--dc-text-muted, #949ba4);
+  min-width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Section 2 : Sonneries --- */
+.ambiance_sonneries_liste {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ambiance_sonnerie_item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  border: 1px solid var(--dc-border, #313338);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.ambiance_sonnerie_details {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ambiance_sonnerie_label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--dc-text-primary, #ffffff);
+}
+
+.ambiance_sonnerie_desc {
+  font-size: 0.74rem;
+  color: var(--dc-text-muted, #949ba4);
+}
+
+.ambiance_sonnerie_select_groupe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ambiance_select {
+  flex: 1;
+  background: var(--dc-bg-surface, #2b2d31);
+  color: var(--dc-text-primary, #dbdee1);
+  border: 1px solid var(--dc-border-strong, #3f4147);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.ambiance_select:focus {
+  border-color: var(--dc-blurple, #5865f2);
+}
+
+.ambiance_btn_test {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--dc-border-strong, #3f4147);
+  background: var(--dc-bg-surface, #2b2d31);
+  color: var(--dc-text-primary, #dbdee1);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+}
+
+.ambiance_btn_test:hover,
+.ambiance_btn_test.test-actif {
+  background: rgba(240, 178, 50, 0.2);
+  border-color: #f0b232;
+  color: #f0b232;
+  transform: scale(1.05);
+}
+
+/* --- Section 3 : Radios (création et gestion) --- */
+.ambiance_carte_icone--radio {
+  background: rgba(235, 69, 158, 0.15);
+  color: #eb459e;
+}
+
+.ambiance_champ {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--dc-border-strong, #3f4147);
+  border-radius: 8px;
+  background: var(--dc-bg-surface, #2b2d31);
+  color: var(--dc-text-primary, #dbdee1);
+  font-family: inherit;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.ambiance_champ:focus {
+  border-color: var(--dc-blurple, #5865f2);
+}
+
+.ambiance_btn_principal,
+.ambiance_btn_secondaire {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.ambiance_btn_principal {
+  border: none;
+  background: var(--dc-blurple, #5865f2);
+  color: #ffffff;
+}
+
+.ambiance_btn_principal:hover:not(:disabled) {
+  background: var(--dc-blurple-dark, #4752c4);
+}
+
+.ambiance_btn_secondaire {
+  border: 1px solid var(--dc-border-strong, #3f4147);
+  background: var(--dc-bg-surface, #2b2d31);
+  color: var(--dc-text-primary, #dbdee1);
+}
+
+.ambiance_btn_secondaire:hover:not(:disabled) {
+  border-color: var(--dc-blurple, #5865f2);
+  background: rgba(88, 101, 242, 0.15);
+}
+
+.ambiance_btn_principal:disabled,
+.ambiance_btn_secondaire:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.radio_vide {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--dc-text-muted, #949ba4);
+}
+
+.radio_liste_gestion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.radio_gestion {
+  border: 1px solid var(--dc-border, #313338);
+  border-radius: 10px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  overflow: hidden;
+}
+
+.radio_gestion--active {
+  border-color: var(--dc-blurple, #5865f2);
+}
+
+.radio_gestion_ligne {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: 'nom ecouter modifier' 'meta ecouter modifier';
+  align-items: center;
+  column-gap: 4px;
+  padding: 8px 6px 8px 12px;
+}
+
+.radio_gestion_nom {
+  grid-area: nom;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--dc-text-primary, #ffffff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.radio_gestion_meta {
+  grid-area: meta;
+  font-size: 0.7rem;
+  color: var(--dc-text-muted, #949ba4);
+}
+
+.radio_icone_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dc-text-secondary, #b5bac1);
+  cursor: pointer;
+}
+
+.radio_icone_btn:first-of-type {
+  grid-area: ecouter;
+}
+
+.radio_icone_btn:last-of-type {
+  grid-area: modifier;
+}
+
+.radio_icone_btn:hover,
+.radio_icone_btn[aria-expanded='true'] {
+  border-color: var(--dc-border-strong, #3f4147);
+  background: var(--dc-bg-surface, #2b2d31);
+  color: #ffffff;
+}
+
+.radio_editeur {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--dc-border, #313338);
+  background: var(--dc-bg-tertiary, #1e1f22);
+}
+
+/* Éditeur d'une nouvelle radio : cadre propre, hors liste */
+.ambiance_carte > .radio_editeur {
+  border: 1px solid var(--dc-blurple, #5865f2);
+  border-radius: 10px;
+}
+
+.radio_elements {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.radio_element {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 8px;
+  background: var(--dc-bg-surface, #2b2d31);
+}
+
+.radio_element_vignette {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 28px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #111214;
+  color: var(--dc-text-muted, #949ba4);
+}
+
+.radio_element_vignette img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.radio_element_texte {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.radio_element_type {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--dc-text-primary, #ffffff);
+}
+
+.radio_element_lien {
+  font-size: 0.66rem;
+  color: var(--dc-text-muted, #949ba4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.radio_element_actions {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.radio_element_actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--dc-text-secondary, #b5bac1);
+  cursor: pointer;
+}
+
+.radio_element_actions button:hover:not(:disabled) {
+  background: var(--dc-bg-tertiary, #1e1f22);
+  color: #ffffff;
+}
+
+.radio_element_actions button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.radio_ajout {
+  display: flex;
+  gap: 6px;
+}
+
+.radio_erreur {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(242, 63, 67, 0.12);
+  border: 1px solid rgba(242, 63, 67, 0.4);
+  color: #ff8a8d;
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.radio_editeur_actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.radio_btn_supprimer {
+  margin-left: auto;
+}
+
+.radio_btn_supprimer:hover:not(:disabled) {
+  border-color: var(--dc-error, #f23f43);
+  background: rgba(242, 63, 67, 0.15);
+  color: #ff8a8d;
+}
+
+.radio_btn_creer {
+  align-self: flex-start;
+}
