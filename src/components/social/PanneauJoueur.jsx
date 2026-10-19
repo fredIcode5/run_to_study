@@ -15,12 +15,10 @@ import {
 function PanneauJoueur({ 
   pseudo, 
   niveau, 
-  distance, 
-  position, 
-  ouvrirProfil, 
-  onOuvrirOnglet, 
-  photoProfil, 
-  coins 
+  distance,
+  ouvrirProfil,
+  onOuvrirOnglet,
+  photoProfil
 }) {
   const [menuOuvert, setMenuOuvert] = useState(false);
 
@@ -74,22 +72,12 @@ function PanneauJoueur({
         <div className="joueur_identite">
           <span className="joueur_pseudo">{pseudo}</span>
           <span className="joueur_niveau">Niv. {niveau}</span>
-          <div className="joueur_coins" title="Coins gagnés">
-            <svg className="icone_coin" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="12" r="10" fill="#fbbf24" />
-              <text x="50%" y="50%" textAnchor="middle" dy=".3em" fontSize="12" fontWeight="bold" fill="#b45309">C</text>
-            </svg>
-            <span>{coins}</span>
-          </div>
         </div>
 
         <div className="joueur_stats">
           <div className="joueur_stat">
             <span className="joueur_stat_valeur">{distance} m</span>
             <span className="joueur_stat_label">Distance</span>
-          </div>
-          <div className="joueur_stat">
-            <span className="joueur_stat_valeur">Position : {position}</span>
           </div>
         </div>
       </div>

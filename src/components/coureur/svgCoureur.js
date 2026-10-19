@@ -151,8 +151,18 @@ export function assainirSvg(code) {
 // --- Animations par défaut, utilisées tant que l'utilisateur n'a rien enregistré
 export const SVG_COURSE_DEFAUT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120">
   <style>
+    :root {
+      --couleur-tete: #5865F2;
+      --couleur-torse: #5865F2;
+      --couleur-bras: #5865F2;
+      --couleur-jambes: #5865F2;
+    }
     .corps { animation: rebond 0.5s ease-in-out infinite; transform-origin: 50px 60px; }
-    .membre { stroke: #5865F2; stroke-width: 7; stroke-linecap: round; fill: none; }
+    .membre { stroke-width: 7; stroke-linecap: round; fill: none; }
+    .membre-torse { stroke: var(--couleur-torse, #5865F2); }
+    .membre-bras { stroke: var(--couleur-bras, #5865F2); }
+    .membre-jambe { stroke: var(--couleur-jambes, #5865F2); }
+    .tete { fill: var(--couleur-tete, #5865F2); }
     .jambe-a { animation: balance 0.5s ease-in-out infinite alternate; transform-origin: 50px 66px; }
     .jambe-b { animation: balance 0.5s ease-in-out infinite alternate-reverse; transform-origin: 50px 66px; }
     .bras-a { animation: balance 0.5s ease-in-out infinite alternate-reverse; transform-origin: 52px 40px; }
@@ -161,20 +171,31 @@ export const SVG_COURSE_DEFAUT = `<svg xmlns="http://www.w3.org/2000/svg" viewBo
     @keyframes rebond { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
   </style>
   <g class="corps">
-    <path class="membre bras-b" d="M52 40 L44 58 L52 70" opacity="0.6"/>
-    <path class="membre jambe-b" d="M50 66 L44 90 L48 112" opacity="0.6"/>
-    <path class="membre" d="M50 66 L54 36"/>
-    <path class="membre jambe-a" d="M50 66 L44 90 L48 112"/>
-    <path class="membre bras-a" d="M52 40 L44 58 L52 70"/>
-    <circle cx="57" cy="22" r="11" fill="#5865F2"/>
+    <path class="membre membre-bras bras-b" d="M52 40 L44 58 L52 70" opacity="0.6"/>
+    <path class="membre membre-jambe jambe-b" d="M50 66 L44 90 L48 112" opacity="0.6"/>
+    <path class="membre membre-torse" d="M50 66 L54 36"/>
+    <path class="membre membre-jambe jambe-a" d="M50 66 L44 90 L48 112"/>
+    <path class="membre membre-bras bras-a" d="M52 40 L44 58 L52 70"/>
+    <circle class="tete" cx="57" cy="22" r="11"/>
   </g>
 </svg>`;
 
 export const SVG_REPOS_DEFAUT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120">
   <style>
-    .membre { stroke: #23A559; stroke-width: 7; stroke-linecap: round; fill: none; }
+    :root {
+      --couleur-tete: #23A559;
+      --couleur-torse: #23A559;
+      --couleur-bras: #23A559;
+      --couleur-jambes: #23A559;
+      --couleur-sommeil: #949CF7;
+    }
+    .membre { stroke-width: 7; stroke-linecap: round; fill: none; }
+    .membre-jambe { stroke: var(--couleur-jambes, #23A559); }
+    .membre-torse { stroke: var(--couleur-torse, #23A559); }
+    .membre-bras { stroke: var(--couleur-bras, #23A559); }
+    .tete { fill: var(--couleur-tete, #23A559); }
     .souffle { animation: souffle 3s ease-in-out infinite; transform-origin: 50px 112px; }
-    .z { font: bold 14px sans-serif; fill: #949CF7; animation: flotte 3s ease-in-out infinite; }
+    .z { font: bold 14px sans-serif; fill: var(--couleur-sommeil, #949CF7); animation: flotte 3s ease-in-out infinite; }
     .z2 { animation-delay: 1.5s; }
     @keyframes souffle { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.03); } }
     @keyframes flotte {
@@ -184,16 +205,24 @@ export const SVG_REPOS_DEFAUT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox
     }
   </style>
   <g class="souffle">
-    <path class="membre" d="M50 70 L46 92 L46 112"/>
-    <path class="membre" d="M50 70 L56 92 L58 112"/>
-    <path class="membre" d="M50 70 L50 40"/>
-    <path class="membre" d="M50 44 L40 62 L42 72"/>
-    <path class="membre" d="M50 44 L60 62 L58 72"/>
-    <circle cx="50" cy="26" r="11" fill="#23A559"/>
+    <path class="membre membre-jambe" d="M50 70 L46 92 L46 112"/>
+    <path class="membre membre-jambe" d="M50 70 L56 92 L58 112"/>
+    <path class="membre membre-torse" d="M50 70 L50 40"/>
+    <path class="membre membre-bras" d="M50 44 L40 62 L42 72"/>
+    <path class="membre membre-bras" d="M50 44 L60 62 L58 72"/>
+    <circle class="tete" cx="50" cy="26" r="11"/>
   </g>
   <text class="z" x="64" y="20">z</text>
   <text class="z z2" x="70" y="14">z</text>
 </svg>`;
+
+export {
+  extraireVariablesSvg,
+  normaliserCouleursCoureur,
+  lireCouleursCoureurLocales,
+  ecrireCouleursCoureurLocales,
+  LABELS_PARTIES_CORPS,
+} from './couleursCoureur';
 
 export const ANIMATIONS_COUREUR_VIDES = { course: null, repos: null };
 

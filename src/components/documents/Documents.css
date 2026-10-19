@@ -351,6 +351,59 @@
   text-align: center;
 }
 
+/* ─── Partie « Fenêtre » : outils Cahier et Chat IA, sous les documents ── */
+.panel .documents_fenetre {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 8px;
+  background: var(--dc-bg-secondary, #2b2d31);
+  border: 1px solid var(--dc-border, rgba(255, 255, 255, 0.06));
+  border-radius: 10px;
+}
+
+.panel .documents_fenetre_titre {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.panel .documents_fenetre_outils {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.panel .documents_fenetre_btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  height: 34px;
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dc-text-primary, #f2f3f5);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.panel .documents_fenetre_btn:hover {
+  background: var(--dc-bg-surface, #383a40);
+}
+
+/* Outil ouvert : même repère que les bandes de documents ouvertes */
+.panel .documents_fenetre_btn--ouvert {
+  border-color: var(--dc-blurple, #5865f2);
+  background: rgba(88, 101, 242, 0.15);
+}
+
 /* ─── Fantôme du glisser (rendu dans document.body) ─────────────────── */
 .document_fantome {
   position: fixed;

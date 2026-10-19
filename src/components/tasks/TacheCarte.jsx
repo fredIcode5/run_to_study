@@ -3,6 +3,7 @@ import { useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, Check } from 'lucide-react';
 import { bloquerProchainMenuContextuel } from '../../utils/helpers';
+import { signalerGlisserVersEspace } from '../accueil/encouragements';
 
 // Distance (px) à parcourir clic droit enfoncé avant que le glisser ne démarre :
 // en dessous, c'est un simple clic droit sans effet
@@ -59,6 +60,7 @@ function TacheCarte({ tache, actions, onAgrandir, lectureSeule, estProgramme }) 
       if (!g.actif) {
         if (Math.hypot(e.clientX - g.departX, e.clientY - g.departY) < SEUIL_GLISSER) return;
         g.actif = true;
+        signalerGlisserVersEspace(true);
       }
       setFantome({
         x: e.clientX - g.decalageX,
@@ -75,7 +77,10 @@ function TacheCarte({ tache, actions, onAgrandir, lectureSeule, estProgramme }) 
 
       bloquerProchainMenuContextuel();
       setFantome(null);
-      if (estSurLePanneau(e.clientX, e.clientY)) return;
+      if (estSurLePanneau(e.clientX, e.clientY)) {
+        signalerGlisserVersEspace(false);
+        return;
+      }
 
       const marge = 8;
       const hauteur = carteRef.current?.offsetHeight || 160;
@@ -83,12 +88,16 @@ function TacheCarte({ tache, actions, onAgrandir, lectureSeule, estProgramme }) 
         x: Math.min(Math.max(e.clientX - g.decalageX, marge), window.innerWidth - LARGEUR_NOTE_EPINGLEE - marge),
         y: Math.min(Math.max(e.clientY - g.decalageY, marge), window.innerHeight - hauteur - marge),
       });
+      signalerGlisserVersEspace(false);
     };
 
     // Échap annule un glisser en cours
     const annuler = (e) => {
       if (e.key !== 'Escape' || !glisserRef.current) return;
-      if (glisserRef.current.actif) bloquerProchainMenuContextuel();
+      if (glisserRef.current.actif) {
+        bloquerProchainMenuContextuel();
+        signalerGlisserVersEspace(false);
+      }
       glisserRef.current = null;
       setFantome(null);
     };

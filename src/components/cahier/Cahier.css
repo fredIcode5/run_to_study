@@ -1,0 +1,177 @@
+/* ======================================================================
+   Cahier de session (fenêtre « Cahier » de la partie Documents › Fenêtre)
+   ====================================================================== */
+
+.cahier {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--dc-bg-secondary, #2b2d31);
+}
+
+/* Ancienne session ouverte depuis l'Historique */
+.cahier_bandeau {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(240, 178, 50, 0.1);
+  border-bottom: 1px solid rgba(240, 178, 50, 0.3);
+}
+
+.cahier_bandeau_texte {
+  flex: 1;
+  min-width: 140px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #f5c96b;
+}
+
+.cahier_bandeau_btn {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dc-text-primary, #f2f3f5);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cahier_bandeau_btn:hover {
+  background: var(--dc-bg-surface, #383a40);
+}
+
+.cahier_bandeau_btn--principal {
+  border-color: var(--dc-blurple, #5865f2);
+  background: var(--dc-blurple, #5865f2);
+}
+
+.cahier_bandeau_btn--principal:hover {
+  background: var(--dc-blurple-dark, #4752c4);
+}
+
+.cahier_alerte {
+  margin: 0;
+  padding: 8px 12px;
+  background: rgba(242, 63, 67, 0.12);
+  border-bottom: 1px solid rgba(242, 63, 67, 0.4);
+  color: #ff8a8d;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* Zone de rédaction : confortable pour une prise de notes prolongée */
+.cahier_zone {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 18px 20px;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--dc-text-primary, #f2f3f5);
+  font-family: 'Inter', sans-serif;
+  font-size: 14.5px;
+  line-height: 1.7;
+  tab-size: 4;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dc-border-strong, rgba(255, 255, 255, 0.12)) transparent;
+}
+
+.cahier_zone:focus {
+  outline: none;
+}
+
+.cahier_zone::placeholder {
+  color: var(--dc-text-muted, #80848e);
+}
+
+.cahier_zone[readonly] {
+  color: var(--dc-text-secondary, #b5bac1);
+}
+
+.cahier_pied {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 4px 22px 4px 12px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  border-top: 1px solid var(--dc-border, rgba(255, 255, 255, 0.06));
+  font-size: 11.5px;
+  color: var(--dc-text-muted, #80848e);
+}
+
+.cahier_compteur {
+  font-variant-numeric: tabular-nums;
+}
+
+.cahier_pied_etat {
+  flex: 1;
+  min-width: 0;
+}
+
+.cahier_etat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cahier_etat--ok {
+  color: var(--dc-success, #23a559);
+}
+
+.cahier_etat--erreur {
+  color: var(--dc-error, #f23f43);
+  font-weight: 600;
+}
+
+.cahier_lien {
+  margin-left: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--dc-text-primary, #f2f3f5);
+  font-family: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.cahier_effacer {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dc-text-secondary, #b5bac1);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cahier_effacer:hover:not(:disabled) {
+  border-color: var(--dc-error, #f23f43);
+  color: var(--dc-error, #f23f43);
+}
+
+.cahier_effacer:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cahier_etat--local {
+  color: var(--dc-warning, #f0b232);
+  font-weight: 600;
+}

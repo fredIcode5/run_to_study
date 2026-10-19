@@ -695,6 +695,209 @@
   font-size: 0.74rem;
 }
 
+/* ─── Salon de course : boutons de test, amis, piste, boutons définitifs ── */
+.panel .salon_course {
+  gap: 14px;
+}
+
+.panel .salon_bloc {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panel .salon_bloc_entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panel .salon_bloc_titre {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--dc-text-secondary, #b5bac1);
+}
+
+.panel .salon_badge {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--dc-bg-surface, #383a40);
+  color: var(--dc-text-muted, #80848e);
+  font-size: 0.68rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Trois boutons sur une ligne : tuiles égales, libellé sur deux lignes au besoin */
+.panel .salon_boutons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+}
+
+.panel .salon_boutons .salon_btn_action {
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 4px;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+/* Boutons définitifs : pas encore disponibles */
+.panel .salon_boutons--bientot {
+  background: transparent;
+  border: 1px dashed var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+}
+
+.panel .salon_boutons .salon_btn_action:disabled {
+  opacity: 0.5;
+  background: transparent;
+  color: var(--dc-text-muted, #80848e);
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
+}
+
+.panel .salon_liste_joueurs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.panel .salon_joueur,
+.panel .salon_ami_test {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  box-sizing: border-box;
+  padding: 4px 6px 4px 10px;
+  border-radius: 8px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  color: var(--dc-text-primary, #f2f3f5);
+  font-size: 0.82rem;
+}
+
+.panel .salon_ami_test {
+  width: 100%;
+  padding-right: 10px;
+  border: 1px solid transparent;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.panel .salon_ami_test:hover {
+  border-color: var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+}
+
+.panel .salon_ami_test svg {
+  flex-shrink: 0;
+  color: var(--dc-text-muted, #80848e);
+}
+
+.panel .salon_ami_test--present,
+.panel .salon_ami_test--present:hover {
+  border-color: var(--dc-blurple, #5865f2);
+  background: rgba(88, 101, 242, 0.12);
+}
+
+.panel .salon_ami_test--present svg {
+  color: var(--dc-blurple-light, #949cf7);
+}
+
+.panel .salon_pastille {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  border-radius: 50%;
+}
+
+.panel .salon_pastille--vous {
+  border: 2px solid var(--dc-text-secondary, #b5bac1);
+}
+
+.panel .salon_joueur_nom {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.panel .salon_joueur_origine {
+  flex-shrink: 0;
+  color: var(--dc-text-muted, #80848e);
+  font-size: 0.72rem;
+}
+
+.panel .salon_joueur_retirer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dc-text-muted, #80848e);
+  cursor: pointer;
+}
+
+.panel .salon_joueur_retirer:hover {
+  background: rgba(242, 63, 67, 0.15);
+  color: var(--dc-error, #f23f43);
+}
+
+.panel .salon_lien {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--dc-text-muted, #80848e);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.panel .salon_lien:hover {
+  color: var(--dc-text-primary, #f2f3f5);
+  text-decoration: underline;
+}
+
+.panel .salon_aide {
+  margin: 0;
+  color: var(--dc-text-muted, #80848e);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.panel .salon_separateur {
+  width: 100%;
+  height: 1px;
+  margin: 2px 0;
+  border: none;
+  background: var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+}
+
 /* ======================================================================
    4. Ambiance
    ====================================================================== */

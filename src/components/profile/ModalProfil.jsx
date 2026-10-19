@@ -32,12 +32,16 @@ function ModalProfil({
   taches,
   sessionsSauvegardees,
   onConsulterSession,
+  cahiersHistorique,
+  onOuvrirCahier,
   pointsPomodoro,
   activitesPomodoro,
   animationsCoureur,
   onEnregistrerAnimationCoureur,
   affichageCoureur,
-  onChangerAffichageCoureur
+  onChangerAffichageCoureur,
+  couleursCoureur,
+  onChangerCouleursCoureur,
 }) {
   const [ongletActif, setOngletActif] = useState(ongletInitial || 'profil');
 
@@ -101,13 +105,20 @@ function ModalProfil({
               onEnregistrerAnimation={onEnregistrerAnimationCoureur}
               affichage={affichageCoureur}
               onChangerAffichage={onChangerAffichageCoureur}
+              couleurs={couleursCoureur}
+              onChangerCouleurs={onChangerCouleursCoureur}
             />
           )}
           {ongletActif === 'planning' && (
             <OngletPlanning />
           )}
           {ongletActif === 'historique' && (
-            <OngletHistorique sessionsSauvegardees={sessionsSauvegardees} onConsulter={onConsulterSession} />
+            <OngletHistorique
+              sessionsSauvegardees={sessionsSauvegardees}
+              onConsulter={onConsulterSession}
+              cahiers={cahiersHistorique}
+              onOuvrirCahier={onOuvrirCahier}
+            />
           )}
           {ongletActif === 'stats' && (
             <OngletStats

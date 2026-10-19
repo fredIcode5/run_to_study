@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Play, Pause, SquarePen, Gift, Headphones, Pin, Clock9, Eye, Timer, Users } from 'lucide-react'
+import { Play, Pause, SquarePen, Gift, Headphones, Pin, Clock9, Timer, Users } from 'lucide-react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -19,8 +19,21 @@ import Chrono from './components/timer/Chrono';
 import Note from './components/tasks/Note';
 import NoteEpinglee from './components/tasks/NoteEpinglee';
 import FenetreDocument from './components/documents/FenetreDocument';
-import useDocuments from './components/documents/useDocuments';
+import useDocuments, { idOutil } from './components/documents/useDocuments';
+import Cahier from './components/cahier/Cahier';
+import useCahiers from './components/cahier/useCahiers';
+import { nouvelIdSession, lireSessionActiveLocale, ecrireSessionActiveLocale, decrireSessionDuCahier, listerCahiersHistorique } from './components/cahier/cahiers';
+import ChatIa from './components/chatIa/ChatIa';
+import useChatIa from './components/chatIa/useChatIa';
 import PisteAvecCoureur from './components/coureur/Coureur';
+import useSalonCourse from './components/social/useSalonCourse';
+import BoutonModeConcentration from './components/ui/BoutonModeConcentration';
+import { normaliserCouleursChrono, lireCouleursChronoLocales, ecrireCouleursChronoLocales } from './components/timer/couleursChrono';
+import { normaliserOpaciteLigne, lireOpaciteLigneLocale, ecrireOpaciteLigneLocale } from './components/coureur/lignePiste';
+import { normaliserOpaciteTitre, lireOpaciteTitreLocale, ecrireOpaciteTitreLocale } from './components/timer/opaciteTitreSession';
+import EcranAccueil from './components/accueil/EcranAccueil';
+import { normaliserEncouragements, lireEncouragementsLocaux, ecrireEncouragementsLocaux } from './components/accueil/encouragements';
+import { normaliserFondAccueil, lireFondAccueilLocal, ecrireFondAccueilLocal } from './components/accueil/fondAccueil';
 import { normaliserRadios, lireRadiosLocales, ecrireRadiosLocales, miniatureYoutube, envoyerCommandeMusique } from './components/ambiance/radios';
 import {
   ANIMATIONS_COUREUR_VIDES,
@@ -29,6 +42,9 @@ import {
   normaliserAffichageCoureur,
   lireAffichageLocal,
   ecrireAffichageLocal,
+  normaliserCouleursCoureur,
+  lireCouleursCoureurLocales,
+  ecrireCouleursCoureurLocales,
 } from './components/coureur/svgCoureur';
 import Carnet from './components/tasks/Carnet';
 import ModalProfil from './components/profile/ModalProfil';
@@ -222,6 +238,19 @@ function App() {
   const [animationsCoureur, setAnimationsCoureur] = useState(lireAnimationsLocales);
   // Position (décalage x / y) et taille du coureur, même persistance que ses animations
   const [affichageCoureur, setAffichageCoureur] = useState(lireAffichageLocal);
+  // Couleurs personnalisées des parties du coureur SVG
+  const [couleursCoureur, setCouleursCoureur] = useState(lireCouleursCoureurLocales);
+  // Couleurs de remplissage de la barre du chrono (travail / pause), réglées dans
+  // « Mon Pomodoro » ; même persistance que les autres préférences
+  const [couleursChrono, setCouleursChrono] = useState(lireCouleursChronoLocales);
+  // Opacité de la ligne de tirets sous les coureurs, réglée dans « Salon de course »
+  const [opaciteLignePiste, setOpaciteLignePiste] = useState(lireOpaciteLigneLocale);
+  // Opacité de la barre du titre de la session (sous le chrono), réglée dans « Mon Pomodoro »
+  const [opaciteTitreSession, setOpaciteTitreSession] = useState(lireOpaciteTitreLocale);
+  // Réglage « Encouragements » (Mon Pomodoro) : écran d'accueil et citations
+  const [encouragements, setEncouragements] = useState(lireEncouragementsLocaux);
+  // Fond de l'écran d'accueil (gris par défaut ou image sous un voile gris)
+  const [fondAccueil, setFondAccueil] = useState(lireFondAccueilLocal);
   const [chronoResetKey, setChronoResetKey] = useState(0);
 
   // Navigation ultra simple entre la vitrine d'accueil et l'appli Pomodoro,
@@ -241,6 +270,8 @@ function App() {
 
   // Documents importés (liste permanente) et leurs fenêtres flottantes
   const espaceDocuments = useDocuments();
+  // Joueurs de la Piste de course (version de test : joueurs fictifs)
+  const salonCourse = useSalonCourse();
   const [ecranChargementActif, setEcranChargementActif] = useState(false);
   const [modeCarnet, setModeCarnet] = useState(false);
 
@@ -251,6 +282,29 @@ function App() {
   const [recompenseCourante, setRecompenseCourante] = useState(null);
 
   const { connecte, utilisateur } = useAuth();
+
+  // --- Session en cours : identifiant stable (« session_<horodatage> »), créé à
+  // chaque nouvelle session et repris tel quel à l'archivage. Il relie la
+  // session à son cahier. Compte : préférences Firestore ; invité : ce navigateur.
+  // null le temps du chargement des préférences.
+  const [idSessionActive, setIdSessionActive] = useState(null);
+
+  const commencerNouvelleSession = () => {
+    const id = nouvelIdSession();
+    setIdSessionActive(id);
+    if (!connecte) ecrireSessionActiveLocale(id);
+  };
+
+  // Cahiers des sessions et Chat IA (outils de la partie « Fenêtre » des Documents)
+  const espaceCahiers = useCahiers({ connecte, idUtilisateur: utilisateur?.id });
+  const chatIa = useChatIa({ connecte, idUtilisateur: utilisateur?.id });
+  // Cahier affiché : null = celui de la session en cours, sinon une ancienne
+  // session ouverte depuis l'Historique ; revient à la session en cours une fois
+  // le Cahier retiré de toutes les fenêtres
+  const [sessionCahierConsultee, setSessionCahierConsultee] = useState(null);
+  useEffect(() => {
+    if (!espaceDocuments.outils.cahier) setSessionCahierConsultee(null);
+  }, [espaceDocuments.outils.cahier]);
 
   // Sessions archivées chargées au niveau App pour les rendre disponibles
   // à la fois dans le composant Note et dans l'onglet Historique du profil.
@@ -390,6 +444,8 @@ function App() {
     setCouleurFondAppliquee(null);
     setImageFond(null);
     setModeInvite(false);
+    // Notes vidées : c'est une nouvelle session, avec son propre cahier
+    commencerNouvelleSession();
 
     // Fermeture de la modale et redirection
     setConfirmationAccueilOuverte(false);
@@ -662,7 +718,16 @@ function App() {
       setImageFond(null);
       setAnimationsCoureur(lireAnimationsLocales());
       setAffichageCoureur(lireAffichageLocal());
+      setCouleursCoureur(lireCouleursCoureurLocales());
+      setCouleursChrono(lireCouleursChronoLocales());
+      setOpaciteLignePiste(lireOpaciteLigneLocale());
+      setOpaciteTitreSession(lireOpaciteTitreLocale());
+      setEncouragements(lireEncouragementsLocaux());
+      setFondAccueil(lireFondAccueilLocal());
       setRadios(lireRadiosLocales());
+      const idSessionLocale = lireSessionActiveLocale() || nouvelIdSession();
+      ecrireSessionActiveLocale(idSessionLocale);
+      setIdSessionActive(idSessionLocale);
       preferencesChargeesPourRef.current = 'invite';
       return;
     }
@@ -691,7 +756,14 @@ function App() {
       setBio(config.bio ?? '');
       setAnimationsCoureur({ ...ANIMATIONS_COUREUR_VIDES, ...(config.animationsCoureur || {}) });
       setAffichageCoureur(normaliserAffichageCoureur(config.affichageCoureur));
+      setCouleursCoureur(normaliserCouleursCoureur(config.couleursCoureur));
+      setCouleursChrono(normaliserCouleursChrono(config.couleursChrono));
+      setOpaciteLignePiste(normaliserOpaciteLigne(config.opaciteLignePiste));
+      setOpaciteTitreSession(normaliserOpaciteTitre(config.opaciteTitreSession));
+      setEncouragements(normaliserEncouragements(config.encouragements));
+      setFondAccueil(normaliserFondAccueil(config.fondAccueil));
       setRadios(normaliserRadios(config.radios));
+      setIdSessionActive(/^session_\d+$/.test(config.idSessionActive || '') ? config.idSessionActive : nouvelIdSession());
       preferencesChargeesPourRef.current = utilisateur.id;
     })();
     return () => { annule = true; };
@@ -732,7 +804,14 @@ function App() {
         bio,
         animationsCoureur,
         affichageCoureur,
+        couleursCoureur,
         radios,
+        couleursChrono,
+        opaciteLignePiste,
+        opaciteTitreSession,
+        encouragements,
+        fondAccueil,
+        idSessionActive,
       });
       // Sauvegarde des coins et temps (via sauvegarderProfil)
       // On en profite pour synchroniser le pseudo et l'email pour la recherche sociale !
@@ -745,10 +824,10 @@ function App() {
     }, 300);
 
     return () => clearTimeout(minuteur);
-  }, [reglages, musiqueAmbiance, couleurFondAppliquee, imageFond, bio, animationsCoureur, affichageCoureur, radios, coins, tempsTotalPomodoro, connecte, utilisateur?.id]);
+  }, [reglages, musiqueAmbiance, couleurFondAppliquee, imageFond, bio, animationsCoureur, affichageCoureur, couleursCoureur, radios, couleursChrono, opaciteLignePiste, opaciteTitreSession, encouragements, fondAccueil, idSessionActive, coins, tempsTotalPomodoro, connecte, utilisateur?.id]);
 
   // Coureur animé à droite de la barre du chronomètre : synchronisé sur la
-  // phase et l'état du chrono existant
+  // phase et l'état du chrono existant, suivi des coureurs du Salon de course
   const entourerAvecCoureur = (contenu, options = {}) => (
     <PisteAvecCoureur
       phase={chronoPhase}
@@ -756,16 +835,62 @@ function App() {
       resetKey={chronoResetKey}
       animations={animationsCoureur}
       affichage={affichageCoureur}
+      couleurs={couleursCoureur}
+      joueurs={salonCourse.joueurs}
+      onDeplacerJoueur={salonCourse.deplacerJoueur}
+      opaciteLigne={opaciteLignePiste}
       {...options}
     >
       {contenu}
     </PisteAvecCoureur>
   );
 
+  // Encouragements : appliqués aux prochaines apparitions de l'écran d'accueil
+  const changerEncouragements = (valeur) => {
+    const valeurs = normaliserEncouragements(valeur);
+    setEncouragements(valeurs);
+    if (!connecte) ecrireEncouragementsLocaux(valeurs);
+  };
+
+  // Fond de l'écran d'accueil : appliqué en direct, sans toucher aux citations
+  const changerFondAccueil = (fond) => {
+    const valeurs = normaliserFondAccueil(fond);
+    setFondAccueil(valeurs);
+    if (!connecte) ecrireFondAccueilLocal(valeurs);
+  };
+
+  // Opacité de la barre du titre de la session : appliquée en direct
+  const changerOpaciteTitreSession = (opacite) => {
+    const valeur = normaliserOpaciteTitre(opacite);
+    setOpaciteTitreSession(valeur);
+    if (!connecte) ecrireOpaciteTitreLocale(valeur);
+  };
+
+  // Opacité de la ligne sous les coureurs : appliquée en direct
+  const changerOpaciteLignePiste = (opacite) => {
+    const valeur = normaliserOpaciteLigne(opacite);
+    setOpaciteLignePiste(valeur);
+    if (!connecte) ecrireOpaciteLigneLocale(valeur);
+  };
+
+  // Couleurs de la barre du chrono : appliquées en direct
+  const changerCouleursChrono = (couleurs) => {
+    const valeurs = normaliserCouleursChrono(couleurs);
+    setCouleursChrono(valeurs);
+    if (!connecte) ecrireCouleursChronoLocales(valeurs);
+  };
+
   // Position / taille du coureur : appliquées en direct, enregistrées comme les animations
   const changerAffichageCoureur = (affichage) => {
     setAffichageCoureur(affichage);
     if (!connecte) ecrireAffichageLocal(affichage);
+  };
+
+  // Couleurs personnalisées du coureur : appliquées en direct et persistées
+  const changerCouleursCoureur = (couleurs) => {
+    const valeurs = normaliserCouleursCoureur(couleurs);
+    setCouleursCoureur(valeurs);
+    if (!connecte) ecrireCouleursCoureurLocales(valeurs);
   };
 
   // Enregistre une animation du coureur ; l'autre animation n'est jamais touchée
@@ -848,7 +973,9 @@ function App() {
   // Chargés depuis / synchronisés vers Supabase (table « prereglages »)
   // pour un compte connecté. Mode invité : en mémoire uniquement.
   const [prereglages, setPrereglages] = useState(PREREGLAGES_PAR_DEFAUT);
-  const [sessionEnLigne, setSessionEnLigne] = useState(null);
+  // Session multijoueur rejointe : renseignée de nouveau quand les boutons
+  // définitifs du Salon de course seront branchés (null en version de test)
+  const [sessionEnLigne] = useState(null);
   const prereglagesChargesPourRef = useRef(null);
 
   const prereglagesAffiches = sessionEnLigne ? [
@@ -1345,6 +1472,11 @@ function App() {
     racine.style.setProperty('--couleur-boutons', reglages.couleurBoutons);
   }, [reglages.couleurChrono, reglages.couleurPoignee, reglages.couleurBoutons]);
 
+  // Opacité de la barre du titre de la session, consommée par App.css
+  useEffect(() => {
+    document.documentElement.style.setProperty('--opacite-titre-session', String(opaciteTitreSession));
+  }, [opaciteTitreSession]);
+
   // Met à jour une durée (dureeTravail ou dureePause) après validation basique
   const gererChangementDuree = (cle, valeur) => {
     const nombre = parseInt(valeur, 10);
@@ -1444,6 +1576,52 @@ function App() {
       : `${musiqueAmbiance.type}-${musiqueAmbiance.videoId || musiqueAmbiance.titre}`)
     : null;
 
+  // « Cahier » ouvert depuis le panneau : toujours celui de la session en cours
+  const espaceDocumentsPanneau = {
+    ...espaceDocuments,
+    ouvrirOutil: (type) => {
+      if (type === 'cahier') setSessionCahierConsultee(null);
+      espaceDocuments.ouvrirOutil(type);
+    },
+  };
+
+  // Cahier affiché : session en cours, ou ancienne session ouverte depuis l'Historique
+  const sessionCahier = sessionCahierConsultee || idSessionActive;
+  const titreCahier = sessionCahierConsultee
+    ? decrireSessionDuCahier(sessionCahierConsultee, sessionsProfilArchivees).titre
+    : (titreSession.trim() || `Session ${numeroSession}`);
+  const cahiersHistorique = listerCahiersHistorique(espaceCahiers.cahiers, sessionsProfilArchivees, idSessionActive);
+
+  const ouvrirCahierHistorique = (sessionId) => {
+    setSessionCahierConsultee(sessionId);
+    setProfilOuvert(false);
+    espaceDocuments.ouvrirOutil('cahier');
+  };
+
+  // --- Outils dans les fenêtres de documents : un élément par outil (pastille
+  // { id, nom, couleur, outil }) et son contenu, qui vit ici et ne se perd donc
+  // ni en changeant de pastille ni en fermant la fenêtre
+  const elementsOutils = {
+    [idOutil('cahier')]: { id: idOutil('cahier'), outil: 'cahier', nom: `Cahier · ${titreCahier}`, couleur: '#F0B232' },
+    [idOutil('chat')]: { id: idOutil('chat'), outil: 'chat', nom: 'Chat IA', couleur: '#00A8FC' },
+  };
+
+  const rendreOutil = (outil) => (outil === 'cahier' ? (
+    <Cahier
+      key={sessionCahier || 'chargement'}
+      contenu={espaceCahiers.cahiers[sessionCahier]?.contenu ?? ''}
+      etat={espaceCahiers.etats[sessionCahier]}
+      estSessionActive={!sessionCahierConsultee}
+      charge={espaceCahiers.charge && Boolean(sessionCahier)}
+      synchroIndisponible={espaceCahiers.synchroIndisponible}
+      onModifier={(contenu) => espaceCahiers.modifierCahier(sessionCahier, contenu)}
+      onReessayer={() => espaceCahiers.reessayer(sessionCahier)}
+      onRevenirSessionActive={() => setSessionCahierConsultee(null)}
+    />
+  ) : (
+    <ChatIa chat={chatIa} />
+  ));
+
   return (
     <>
       {!modeConcentration && (
@@ -1461,17 +1639,25 @@ function App() {
         <Accueil onCommencer={gererCommencer} />
       ) : (
         <>
+          {/* Écran d'accueil : visible quand l'espace de travail (notes épinglées,
+              fenêtres de documents et d'outils, carnet) est vide */}
+          <EcranAccueil
+            pseudo={connecte ? pseudoJoueur : null}
+            espaceVide={notesEpinglees.length === 0 && espaceDocuments.fenetres.length === 0 && !modeCarnet}
+            enAttente={ecranChargementActif}
+            encouragements={encouragements}
+            fond={fondAccueil}
+          />
+
           {!modeConcentration && (
             <div className="barre_joueur_musique_flottante">
               <PanneauJoueur
                 pseudo={pseudoJoueur}
                 niveau={1}
                 distance={distanceTotale}
-                position={0}
                 ouvrirProfil={() => ouvrirProfilAvecOnglet('profil')}
                 onOuvrirOnglet={ouvrirProfilAvecOnglet}
                 photoProfil={photoProfil}
-                coins={coins}
               />
               <LecteurProfilMusique
                 key={cleLecteurMusique}
@@ -1492,7 +1678,7 @@ function App() {
               modeLecture={modeLectureSession}
               onPhaseChange={setChronoPhase}
               onReset={() => setChronoResetKey(k => k + 1)}
-              photoProfil={photoProfil}
+              couleurs={couleursChrono}
               renderCoureur={entourerAvecCoureur}
             />
           </main>
@@ -1529,8 +1715,11 @@ function App() {
               onEnregistrerRadio={enregistrerRadio}
               onSupprimerRadio={supprimerRadio}
               onLancerRadio={lancerRadio}
-              onOuvrirBoutique={() => ouvrirProfilAvecOnglet('boutique')}
-              onSessionEnLigneChange={setSessionEnLigne}
+              salonCourse={salonCourse}
+              opaciteLignePiste={opaciteLignePiste}
+              onChangerOpaciteLignePiste={changerOpaciteLignePiste}
+              modeConcentration={modeConcentration}
+              onBasculerModeConcentration={modeConcentration ? demanderQuitterModeConcentration : activerModeConcentration}
               sessionEnLigne={sessionEnLigne}
               prereglages={prereglagesAffiches}
               onAppliquerPrereglage={appliquerPrereglage}
@@ -1539,6 +1728,14 @@ function App() {
               onRemplacerPrereglage={remplacerPrereglage}
               onMettreAJourPrereglage={mettreAJourPrereglage}
               onOuvrirCreationPrereglage={ouvrirCreationPrereglage}
+              couleursChrono={couleursChrono}
+              onChangerCouleursChrono={changerCouleursChrono}
+              encouragements={encouragements}
+              onChangerEncouragements={changerEncouragements}
+              fondAccueil={fondAccueil}
+              onChangerFondAccueil={changerFondAccueil}
+              opaciteTitreSession={opaciteTitreSession}
+              onChangerOpaciteTitreSession={changerOpaciteTitreSession}
               recompenses={recompenses}
               onOuvrirRecompense={(id) => actionsPourRecompense(id).onOuvrir(id)}
               vueActive={vueActive}
@@ -1553,7 +1750,9 @@ function App() {
               numeroSession={numeroSession}
               modeCarnet={modeCarnet}
               setModeCarnet={setModeCarnet}
-              espaceDocuments={espaceDocuments}
+              idSessionActive={idSessionActive}
+              onNouvelleSession={commencerNouvelleSession}
+              espaceDocuments={espaceDocumentsPanneau}
             />
           )}
 
@@ -1583,7 +1782,9 @@ function App() {
 
 
 
-          {/* Boutons d'action en bas : Ranger/Déployer + Mode concentration */}
+          {/* Actions en haut à droite : Ranger/Déployer + compteur de coureurs.
+              Le bouton du mode concentration vit dans la poignée du menu latéral ;
+              ce menu étant masqué en mode concentration, il revient ici pour en sortir. */}
           <div className="actions_bas_page">
             {aDesNotesARanger && (
               <button
@@ -1604,15 +1805,9 @@ function App() {
               </button>
             )}
 
-            <button
-              type="button"
-              className="btn_mode_concentration"
-              title={modeConcentration ? 'Quitter le mode concentration' : 'Mode concentration'}
-              aria-label={modeConcentration ? 'Quitter le mode concentration' : 'Mode concentration'}
-              onClick={modeConcentration ? demanderQuitterModeConcentration : activerModeConcentration}
-            >
-              <Eye size={20} />
-            </button>
+            {modeConcentration && (
+              <BoutonModeConcentration actif onClick={demanderQuitterModeConcentration} />
+            )}
           </div>
 
           <ModalProfil
@@ -1641,6 +1836,8 @@ function App() {
             onEnregistrerAnimationCoureur={enregistrerAnimationCoureur}
             affichageCoureur={affichageCoureur}
             onChangerAffichageCoureur={changerAffichageCoureur}
+            couleursCoureur={couleursCoureur}
+            onChangerCouleursCoureur={changerCouleursCoureur}
             onConsulterSession={(session) => {
               setSessionConsulteeApp(session);
               setModeLectureSession(true);
@@ -1648,6 +1845,8 @@ function App() {
               setProfilOuvert(false);
               setPanelOuvert(true);
             }}
+            cahiersHistorique={cahiersHistorique}
+            onOuvrirCahier={ouvrirCahierHistorique}
           />
 
 
@@ -1656,10 +1855,11 @@ function App() {
             <NoteEpinglee key={tache.id} tache={tache} actions={actionsPourTache(tache.id)} />
           ))}
 
-          {/* Fenêtres de documents : indépendantes des notes, empilées selon le premier plan */}
+          {/* Fenêtres de documents : indépendantes des notes, empilées selon le premier plan.
+              Le Cahier et le Chat IA y prennent place comme des documents. */}
           {espaceDocuments.fenetres.map((fenetre) => {
             const docs = fenetre.documentIds
-              .map((id) => espaceDocuments.documents.find((d) => d.id === id))
+              .map((id) => espaceDocuments.documents.find((d) => d.id === id) || elementsOutils[id])
               .filter(Boolean);
             if (docs.length === 0) return null;
             const rang = espaceDocuments.ordreFenetres.indexOf(fenetre.id);
@@ -1668,6 +1868,7 @@ function App() {
                 key={fenetre.id}
                 fenetre={fenetre}
                 docs={docs}
+                rendreOutil={rendreOutil}
                 zIndex={60 + Math.min(rang, 29)}
                 auPremierPlan={rang === espaceDocuments.ordreFenetres.length - 1}
                 onMettreAJour={(geo) => espaceDocuments.mettreAJourFenetre(fenetre.id, geo)}

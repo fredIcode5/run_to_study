@@ -40,6 +40,93 @@
   transition: opacity 0.3s ease, visibility 0s linear 0s;
 }
 
+/* ─── Piste de course : autres coureurs, à côté du coureur principal ──────
+   Placée et dimensionnée par PisteDeCourse d'après l'espace libre. Aucun
+   habillage (ni fond ni bordure) : les clics traversent la surface, seuls les
+   coureurs eux-mêmes sont interactifs */
+.piste_course {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Ligne de tirets blancs sous les pieds des coureurs : défile de la droite
+   vers la gauche pendant la course, s'arrête au repos. Opacité réglée dans le
+   Salon de course */
+.piste_ligne {
+  position: absolute;
+  height: var(--ligne-epaisseur, 2px);
+  border-radius: 999px;
+  background-image: linear-gradient(to right, #ffffff var(--ligne-tiret, 10px), transparent var(--ligne-tiret, 10px));
+  background-size: var(--ligne-pas, 18px) 100%;
+  background-repeat: repeat-x;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  animation: defilementLignePiste 0.45s linear infinite paused;
+}
+
+.piste_ligne--defile {
+  animation-play-state: running;
+}
+
+@keyframes defilementLignePiste {
+  from { background-position-x: 0; }
+  to { background-position-x: calc(-1 * var(--ligne-pas, 18px)); }
+}
+
+.piste_coureur {
+  position: absolute;
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+}
+
+.piste_coureur--deplace {
+  cursor: grabbing;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+}
+
+/* Le coureur survolé, sélectionné ou déplacé passe devant le peloton */
+.piste_coureur:hover,
+.piste_coureur:focus-visible,
+.piste_coureur--deplace {
+  z-index: 300 !important;
+}
+
+.piste_coureur:focus-visible {
+  outline: 2px solid var(--dc-blurple, #5865f2);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Nom du joueur sous sa silhouette, au survol, au focus et pendant le déplacement */
+.piste_coureur_nom {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 7px;
+  border: 1px solid var(--piste-coureur-couleur, var(--dc-border-strong, rgba(255, 255, 255, 0.12)));
+  border-radius: 999px;
+  background: rgba(30, 31, 34, 0.94);
+  color: var(--dc-text-primary, #f2f3f5);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.piste_coureur:hover .piste_coureur_nom,
+.piste_coureur:focus-visible .piste_coureur_nom,
+.piste_coureur--deplace .piste_coureur_nom {
+  opacity: 1;
+}
+
 /* Écrans étroits : plus de place à droite du chrono, le coureur passe dessous */
 @media (max-width: 900px) {
   .coureur {
@@ -52,7 +139,9 @@
 @media (prefers-reduced-motion: reduce) {
   .coureur,
   .coureur_animation,
-  .coureur_animation--active {
+  .coureur_animation--active,
+  .piste_coureur_nom,
+  .piste_ligne {
     transition: none;
   }
 }
@@ -243,6 +332,184 @@
 
   .coureur_editeur_apercu {
     height: 160px;
+  }
+}
+
+/* ─── Personnalisation des couleurs du coureur ──────────────────────── */
+.coureur_couleurs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.coureur_couleurs_grille {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.coureur_couleurs_liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 6px;
+  box-sizing: border-box;
+}
+
+.coureur_couleurs_liste::-webkit-scrollbar {
+  width: 6px;
+}
+.coureur_couleurs_liste::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 999px;
+}
+.coureur_couleurs_liste::-webkit-scrollbar-thumb {
+  background: var(--dc-bg-surface, #383a40);
+  border-radius: 999px;
+}
+
+.coureur_couleur_item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.coureur_couleur_item:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: #232428;
+}
+
+.coureur_couleur_info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.coureur_couleur_nom {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--dc-text-primary, #f2f3f5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.coureur_couleur_technique {
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.72rem;
+  color: var(--dc-text-muted, #80848e);
+}
+
+.coureur_couleur_controle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.coureur_couleur_swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.coureur_couleur_code {
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--dc-text-secondary, #b5bac1);
+  width: 62px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.coureur_couleur_btn_reinit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  background: var(--dc-bg-surface, #383a40);
+  color: var(--dc-text-secondary, #b5bac1);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.coureur_couleur_btn_reinit:hover {
+  background: var(--dc-blurple, #5865f2);
+  color: #fff;
+  border-color: var(--dc-blurple, #5865f2);
+  transform: rotate(-45deg);
+}
+
+.coureur_couleur_btn_espace {
+  width: 28px;
+  height: 28px;
+}
+
+/* Aperçu direct du coureur */
+.coureur_couleurs_apercu_zone {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.coureur_couleurs_onglets_mode {
+  display: flex;
+  gap: 6px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.08));
+}
+
+.coureur_mode_btn {
+  flex: 1;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dc-text-muted, #80848e);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.coureur_mode_btn:hover {
+  color: var(--dc-text-primary, #f2f3f5);
+}
+
+.coureur_mode_btn--actif {
+  background: var(--dc-blurple, #5865f2);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(88, 101, 242, 0.35);
+}
+
+.coureur_couleurs_apercu_box {
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .coureur_couleurs_grille {
+    grid-template-columns: 1fr;
   }
 }
 

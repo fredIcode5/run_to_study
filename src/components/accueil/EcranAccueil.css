@@ -1,0 +1,170 @@
+/* ======================================================================
+   Écran d'accueil de l'espace de travail (bienvenue + encouragement)
+   ====================================================================== */
+
+/* Couche sous toute l'interface, transparente : le fond d'écran choisi (preset,
+   couleur ou image de l'application) reste visible. Elle ne capte jamais la
+   souris, si bien qu'elle ne gêne ni les dépôts ni les interactions. */
+.ecran_accueil {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Voile gris (celui de la navbar) entre le fond d'écran et le texte : couche à
+   part (::before), opacité réglable dans « Encouragements », aucun clic capté.
+   Il reste affiché en permanence, même quand des éléments sont dans l'espace. */
+.ecran_accueil::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--dc-bg-secondary, #2b2d31);
+  opacity: var(--ecran-accueil-voile, 0.65);
+  pointer-events: none;
+}
+
+/* Textes clairs et ombre marquée : lisibles quel que soit le fond d'écran.
+   Seul le texte s'efface (1,5 s, bien sous la limite de 5 s) et réapparaît. */
+.ecran_accueil_contenu {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85), 0 0 18px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transition: opacity 1.5s ease;
+}
+
+.ecran_accueil_contenu--visible {
+  opacity: 1;
+  transition: opacity 0.6s ease;
+}
+
+.ecran_accueil .ecran_accueil_citation {
+  color: #e3e5e8;
+}
+
+.ecran_accueil .ecran_accueil_auteur {
+  color: #c4c9ce;
+}
+
+/* Contenu centré sur l'écran (même axe que le chrono), dans la hauteur
+   située sous la barre du chrono */
+.ecran_accueil_contenu {
+  z-index: 1;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 0 32px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.ecran_accueil_bienvenue,
+.ecran_accueil_citation {
+  max-width: min(var(--ecran-accueil-largeur, 760px), 100%);
+  margin: 0;
+}
+
+/* Message de bienvenue : rendu du « typewriter » de référence. Police choisie
+   dans « Encouragements » (--ecran-accueil-police), sinon celle d'origine */
+.ecran_accueil_bienvenue {
+  font-family: var(--ecran-accueil-police, 'Space Grotesk', 'Cascadia Code', 'Consolas', monospace);
+  font-size: calc(clamp(1.6rem, 4vw, 2.8rem) * var(--ecran-accueil-echelle, 1));
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  line-height: 1.25;
+  color: var(--dc-text-primary, #f2f3f5);
+}
+
+/* Effacé en fondu 3 s après avoir été écrit (il réapparaît d'un coup à la
+   prochaine apparition) ; sa place reste réservée pour que la citation ne
+   bouge pas pendant son écriture */
+.ecran_accueil_bienvenue--retiree {
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+.ecran_accueil_citation {
+  font-family: var(--ecran-accueil-police, 'Cascadia Code', 'Consolas', 'Courier New', monospace);
+  font-size: calc(clamp(0.95rem, 1.8vw, 1.2rem) * var(--ecran-accueil-echelle, 1));
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+  color: var(--dc-text-secondary, #b5bac1);
+}
+
+/* Pseudo mis en valeur dans le message de bienvenue */
+.ecran_accueil_pseudo {
+  color: var(--ecran-accueil-couleur-pseudo, var(--dc-blurple-light, #949cf7));
+}
+
+/* Auteur de la citation, sous celle-ci */
+.ecran_accueil_auteur {
+  max-width: min(var(--ecran-accueil-largeur, 760px), 100%);
+  margin: -8px 0 0;
+  font-family: var(--ecran-accueil-police, 'Cascadia Code', 'Consolas', 'Courier New', monospace);
+  font-size: calc(clamp(0.82rem, 1.4vw, 0.98rem) * var(--ecran-accueil-echelle, 1));
+  font-style: italic;
+  letter-spacing: 0.04em;
+  color: var(--dc-text-muted, #80848e);
+}
+
+/* Police manuscrite : lettres liées, donc sans espacement */
+.ecran_accueil_contenu--lettres-liees .ecran_accueil_bienvenue,
+.ecran_accueil_contenu--lettres-liees .ecran_accueil_citation,
+.ecran_accueil_contenu--lettres-liees .ecran_accueil_auteur {
+  letter-spacing: normal;
+}
+
+/* Texte complet réservé et texte tapé superposés dans la même cellule */
+.ecran_accueil_ligne {
+  display: inline-grid;
+  overflow-wrap: break-word;
+}
+
+.ecran_accueil_ligne > * {
+  grid-area: 1 / 1;
+}
+
+.ecran_accueil_reserve {
+  visibility: hidden;
+}
+
+.ecran_accueil_texte {
+  justify-self: center;
+  border-right: 0.15em solid transparent;
+}
+
+/* Curseur orange clignotant (keyframes « blink-caret » de la référence) */
+.ecran_accueil_texte--curseur {
+  animation: ecran_accueil_curseur 0.75s step-end infinite;
+}
+
+@keyframes ecran_accueil_curseur {
+  from, to { border-color: transparent; }
+  50% { border-color: orange; }
+}
+
+@media (max-width: 600px) {
+  .ecran_accueil_contenu {
+    gap: 12px;
+    padding: 0 18px;
+  }
+
+  .ecran_accueil_bienvenue {
+    letter-spacing: 0.08em;
+  }
+}
+
+/* Mouvement réduit : l'écriture reste (aucun déplacement), le curseur ne clignote plus */
+@media (prefers-reduced-motion: reduce) {
+  .ecran_accueil_texte--curseur {
+    animation: none;
+    border-color: orange;
+  }
+}

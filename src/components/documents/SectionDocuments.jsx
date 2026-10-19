@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { FileText, Image, File, Trash2, Camera, SquareArrowOutUpRight } from 'lucide-react';
+import { FileText, Image, File, Trash2, Camera, SquareArrowOutUpRight, NotebookPen, Bot } from 'lucide-react';
 import ModalConfirmation from '../ui/ModalConfirmation';
 import { TYPES_ACCEPTES, PALETTE_DOCUMENTS, estPdf, estImage } from './useDocuments';
+import { signalerGlisserVersEspace } from '../accueil/encouragements';
 import './Documents.css';
 
 // Distance (px) à parcourir bouton enfoncé avant que le glisser ne démarre
@@ -11,6 +12,13 @@ const SEUIL_GLISSER = 6;
 const CATEGORIES = [
   { id: 'documents', label: 'Fichiers' },
   { id: 'screens', label: 'Screens' },
+];
+
+// Outils de la partie « Fenêtre » : comme un document, un clic les affiche dans
+// la fenêtre au premier plan (ou dans leur fenêtre s'ils sont déjà ouverts)
+const OUTILS_FENETRE = [
+  { type: 'cahier', label: 'Cahier', aide: 'Notes de la session en cours', Icone: NotebookPen },
+  { type: 'chat', label: 'Chat IA', aide: 'Conversation avec un modèle d\'IA', Icone: Bot },
 ];
 
 export const IconeDocument = ({ doc, size = 16 }) => {
@@ -67,6 +75,8 @@ function SectionDocuments({ espaceDocuments, actif }) {
     ajouterAFenetre,
     selectionnerDocument,
     changerCouleurDocument,
+    outils,
+    ouvrirOutil,
   } = espaceDocuments;
 
   const [categorie, setCategorie] = useState('documents');
@@ -183,6 +193,7 @@ function SectionDocuments({ espaceDocuments, actif }) {
       if (!g.actif) {
         if (Math.hypot(e.clientX - g.departX, e.clientY - g.departY) < SEUIL_GLISSER) return;
         g.actif = true;
+        signalerGlisserVersEspace(true);
       }
       const surPanneau = estSurLePanneau(e.clientX, e.clientY);
       const cible = surPanneau ? null : fenetreSousLePointeur(e.clientX, e.clientY);
@@ -201,17 +212,20 @@ function SectionDocuments({ espaceDocuments, actif }) {
       }
       setFantome(null);
       marquerCible(null);
-      if (estSurLePanneau(e.clientX, e.clientY)) return;
-      const cible = fenetreSousLePointeur(e.clientX, e.clientY);
-      if (cible?.dataset.fenetreId) {
-        actionsRef.current.ajouterAFenetre(cible.dataset.fenetreId, g.doc.id);
-      } else {
-        actionsRef.current.ouvrirFenetre(g.doc.id, { x: e.clientX, y: e.clientY });
+      if (!estSurLePanneau(e.clientX, e.clientY)) {
+        const cible = fenetreSousLePointeur(e.clientX, e.clientY);
+        if (cible?.dataset.fenetreId) {
+          actionsRef.current.ajouterAFenetre(cible.dataset.fenetreId, g.doc.id);
+        } else {
+          actionsRef.current.ouvrirFenetre(g.doc.id, { x: e.clientX, y: e.clientY });
+        }
       }
+      signalerGlisserVersEspace(false);
     };
 
     const annuler = (e) => {
       if (e.key !== 'Escape' || !glisserRef.current) return;
+      if (glisserRef.current.actif) signalerGlisserVersEspace(false);
       glisserRef.current = null;
       setFantome(null);
       marquerCible(null);
@@ -383,6 +397,27 @@ function SectionDocuments({ espaceDocuments, actif }) {
       </div>
 
       <p className="documents_aide">Clic : afficher dans la fenêtre active · Glisser : nouvelle fenêtre, ou déposer sur une fenêtre pour l'y ajouter.</p>
+
+      <div className="documents_fenetre">
+        <h3 className="documents_fenetre_titre">Fenêtre</h3>
+        <div className="documents_fenetre_outils">
+          {OUTILS_FENETRE.map(({ type, label, aide, Icone }) => {
+            const ouvert = Boolean(outils[type]);
+            return (
+              <button
+                key={type}
+                type="button"
+                className={`documents_fenetre_btn${ouvert ? ' documents_fenetre_btn--ouvert' : ''}`}
+                onClick={() => ouvrirOutil(type)}
+                title={ouvert ? `${aide} — ouvert : afficher sa fenêtre` : `${aide} — s'affiche dans la fenêtre au premier plan`}
+              >
+                <Icone size={16} />
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {fantome && createPortal(
         <div

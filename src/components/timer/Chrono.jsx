@@ -3,6 +3,13 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import serviceAudio from '../../utils/audioService';
 import ChronoBarreProgression from './ChronoBarreProgression';
+import { COULEURS_CHRONO_DEFAUT } from './couleursChrono';
+
+// Fréquence de rafraîchissement de l'affichage (le temps lui-même est calculé
+// à partir de l'heure de fin prévue : aucune dérive ni accumulation d'erreur)
+const INTERVALLE_RAFRAICHISSEMENT_MS = 200;
+// Délai minimal entre deux changements de phase manuels (anti double-clic)
+const DELAI_ANTI_REBOND_MS = 400;
 
 // --- Chrono : gère le cycle "travail" / "pause" dont les durées sont
 // pilotées par les réglages (props dureeTravailMinutes / dureePauseMinutes).
@@ -16,7 +23,7 @@ function Chrono({
   modeLecture,
   onPhaseChange,
   onReset,
-  photoProfil,
+  couleurs = COULEURS_CHRONO_DEFAUT,
   renderCoureur,
 }) {
   // 'travail' = session Pomodoro classique, 'pause' = pause qui suit
@@ -27,8 +34,17 @@ function Chrono({
   const dureePause = dureePauseMinutes * 60;
   const dureeActuelle = phase === 'travail' ? dureeTravail : dureePause;
 
-  const [secondesRestantes, setSecondesRestantes] = useState(dureeActuelle);
-  const intervalRef = useRef(null);
+  // Temps restant en millisecondes ; l'affichage MM:SS en dérive (arrondi supérieur)
+  const [msRestants, setMsRestants] = useState(dureeActuelle * 1000);
+  const msRestantsRef = useRef(msRestants);
+  msRestantsRef.current = msRestants;
+  const secondesRestantes = Math.ceil(msRestants / 1000);
+  // Heure (Date.now) à laquelle la phase en cours se termine, tant que le chrono tourne
+  const finPrevueRef = useRef(null);
+  // Pause entièrement écoulée : la barre reste pleine (travail + pause) jusqu'à la relance
+  const [cycleTermine, setCycleTermine] = useState(false);
+  const derniereBasculeRef = useRef(0);
+  const transitionEnCoursRef = useRef(false);
 
   // Avertissement affiché quand on manipule le chrono pendant qu'on
   // consulte une ancienne session (onglet Notes en lecture seule) :
@@ -55,7 +71,7 @@ function Chrono({
   // la nouvelle durée sera prise en compte à la prochaine phase.
   useEffect(() => {
     if (!enMarche) {
-      setSecondesRestantes(phase === 'travail' ? dureeTravail : dureePause);
+      setMsRestants((phase === 'travail' ? dureeTravail : dureePause) * 1000);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dureeTravailMinutes, dureePauseMinutes, phase]);
@@ -64,45 +80,59 @@ function Chrono({
     onPhaseChange?.(phase);
   }, [phase, onPhaseChange]);
 
+  // Décompte : le temps restant est recalculé depuis l'heure de fin prévue
+  // (fiable même si le navigateur ralentit les minuteries d'un onglet en arrière-plan)
   useEffect(() => {
-    if (enMarche) {
-      intervalRef.current = setInterval(() => {
-        setSecondesRestantes((prev) => {
-          if (prev <= 1) {
-            clearInterval(intervalRef.current);
-            setEnMarche(false);
-
-            if (phase === 'travail') {
-              // Fin d'une session de travail
-              const nouveauTotal = compteurSessions + 1;
-              setCompteurSessions(nouveauTotal);
-
-              // Si cycle complet de 4 sessions terminé
-              if (nouveauTotal % 4 === 0) {
-                serviceAudio.jouerSonnerie(serviceAudio.sonneries.finCycle || 'carillon_celeste');
-              } else {
-                serviceAudio.jouerSonnerie(serviceAudio.sonneries.finTravail || 'cloche_zen');
-              }
-
-              onSessionTerminee?.(Math.floor(dureeTravail / 5));
-              setPhase('pause');
-              return dureePause;
-            } else {
-              // Début d'une nouvelle session de travail (fin de pause)
-              serviceAudio.jouerSonnerie(serviceAudio.sonneries.debutPause || 'marimba');
-              setPhase('travail');
-              return dureeTravail;
-            }
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      clearInterval(intervalRef.current);
+    if (!enMarche) {
+      finPrevueRef.current = null;
+      return undefined;
     }
+    if (finPrevueRef.current === null) finPrevueRef.current = Date.now() + msRestantsRef.current;
+    const rafraichir = () => {
+      if (finPrevueRef.current === null) return; // phase changée entre-temps
+      setMsRestants(Math.max(0, finPrevueRef.current - Date.now()));
+    };
+    rafraichir();
+    const intervalle = setInterval(rafraichir, INTERVALLE_RAFRAICHISSEMENT_MS);
+    return () => clearInterval(intervalle);
+  }, [enMarche, phase]);
 
-    return () => clearInterval(intervalRef.current);
-  }, [enMarche, phase, dureeTravail, dureePause, compteurSessions]);
+  // Fin de phase : traitée une seule fois, en dehors de tout calcul d'état
+  useEffect(() => {
+    if (!enMarche || msRestants > 0 || transitionEnCoursRef.current) return;
+    transitionEnCoursRef.current = true;
+    finPrevueRef.current = null;
+
+    if (phase === 'travail') {
+      // Fin d'une session de travail
+      const nouveauTotal = compteurSessions + 1;
+      setCompteurSessions(nouveauTotal);
+
+      // Si cycle complet de 4 sessions terminé
+      if (nouveauTotal % 4 === 0) {
+        serviceAudio.jouerSonnerie(serviceAudio.sonneries.finCycle || 'carillon_celeste');
+      } else {
+        serviceAudio.jouerSonnerie(serviceAudio.sonneries.finTravail || 'cloche_zen');
+      }
+
+      onSessionTerminee?.(Math.floor(dureeTravail / 5));
+      setPhase('pause');
+      setMsRestants(dureePause * 1000);
+    } else {
+      // Début d'une nouvelle session de travail (fin de pause)
+      serviceAudio.jouerSonnerie(serviceAudio.sonneries.debutPause || 'marimba');
+      setPhase('travail');
+      setMsRestants(dureeTravail * 1000);
+      setCycleTermine(true);
+    }
+    setEnMarche(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enMarche, msRestants]);
+
+  // Le verrou de transition est levé dès que la nouvelle phase est en place
+  useEffect(() => {
+    transitionEnCoursRef.current = false;
+  }, [phase]);
 
   const formaterTemps = (s) => {
     const minutes = Math.floor(s / 60).toString().padStart(2, '0');
@@ -110,35 +140,47 @@ function Chrono({
     return `${minutes}:${secs}`;
   };
 
-  const start = () => {
-    if (secondesRestantes > 0) setEnMarche(true);
+  // Pause / reprise : la reprise repart exactement du temps restant
+  const basculer = () => {
+    signalerLectureSeule();
+    if (enMarche) {
+      setEnMarche(false);
+    } else if (msRestants > 0) {
+      setCycleTermine(false);
+      setEnMarche(true);
+    }
   };
 
-  const pause = () => {
-    setEnMarche(false);
+  // Phase suivante : travail → pause, pause → travail, sans attendre la fin du
+  // décompte. Seule la progression de la nouvelle phase repart de zéro ; le chrono
+  // garde son état (s'il tournait, il continue dans la nouvelle phase).
+  const passerPhaseSuivante = () => {
+    const maintenant = Date.now();
+    if (maintenant - derniereBasculeRef.current < DELAI_ANTI_REBOND_MS || transitionEnCoursRef.current) return;
+    derniereBasculeRef.current = maintenant;
+    signalerLectureSeule();
+    const prochaine = phase === 'travail' ? 'pause' : 'travail';
+    finPrevueRef.current = null;
+    setCycleTermine(false);
+    setPhase(prochaine);
+    setMsRestants((prochaine === 'travail' ? dureeTravail : dureePause) * 1000);
   };
 
+  // Recommencer : la phase en cours repart de sa durée configurée
   const reset = () => {
+    signalerLectureSeule();
     setEnMarche(false);
-    setSecondesRestantes(dureeActuelle);
+    finPrevueRef.current = null;
+    setCycleTermine(false);
+    setMsRestants(dureeActuelle * 1000);
     if (onReset) onReset();
   };
 
-  const basculer = () => {
-    signalerLectureSeule();
-    if (enMarche) pause();
-    else start();
-  };
-
-  // Passe directement de la pause à une nouvelle session de travail,
-  // sans attendre la fin du décompte. N'a de sens qu'en phase "pause".
-  const sauterPause = () => {
-    if (phase !== 'pause') return;
-    clearInterval(intervalRef.current);
-    setEnMarche(false);
-    setPhase('travail');
-    setSecondesRestantes(dureeTravail);
-  };
+  // Avancement de chaque couche de la barre (0 → 1), calculé indépendamment
+  // à partir de la durée de sa propre phase
+  const avancementPhase = dureeActuelle > 0 ? Math.min(1, Math.max(0, 1 - msRestants / (dureeActuelle * 1000))) : 0;
+  const avancementTravail = phase === 'pause' || cycleTermine ? 1 : avancementPhase;
+  const avancementPause = cycleTermine ? 1 : phase === 'pause' ? avancementPhase : 0;
 
   // Distance simulée de la session en cours : 5 secondes écoulées = 1 mètre
   const secondesEcoulees = dureeActuelle - secondesRestantes;
@@ -150,15 +192,15 @@ function Chrono({
       {createPortal(
         <ChronoBarreProgression
           phase={phase}
-          secondesRestantes={secondesRestantes}
-          dureeTravail={dureeTravail}
-          dureePause={dureePause}
+          tempsAffiche={formaterTemps(secondesRestantes)}
+          avancementTravail={avancementTravail}
+          avancementPause={avancementPause}
+          couleurs={couleurs}
           enMarche={enMarche}
+          peutDemarrer={msRestants > 0}
           onTogglePlay={basculer}
-          onReset={() => { signalerLectureSeule(); reset(); }}
-          onSauterPause={sauterPause}
-          formaterTemps={formaterTemps}
-          photoProfil={photoProfil}
+          onPhaseSuivante={passerPhaseSuivante}
+          onReset={reset}
           avertissement={avertissementLectureSeule
             ? 'Le temps de travail ne sera pas ajouté à la session, vous êtes en lecture seule.'
             : null}

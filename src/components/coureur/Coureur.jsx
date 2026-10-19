@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import AnimationSvg from './AnimationSvg';
+import AnimationsCoureur from './AnimationsCoureur';
+import PisteDeCourse from './PisteDeCourse';
 import { assainirSvg, SVG_COURSE_DEFAUT, SVG_REPOS_DEFAUT, AFFICHAGE_COUREUR_DEFAUT } from './svgCoureur';
+import { OPACITE_LIGNE_DEFAUT } from './lignePiste';
 import './Coureur.css';
 
 // Hauteur du coureur rapportée à celle du chronomètre
@@ -12,9 +14,10 @@ const RAPPORT_HAUTEUR = 0.1;
 // affichage : décalage (x, y en px) et échelle réglés dans l'onglet « Coureur ».
 // La phase (travail / pause), l'état marche / arrêt et la réinitialisation
 // viennent du chronomètre existant : le coureur n'a aucune horloge à lui.
-// Les deux animations restent montées ; seule la visibilité bascule, si bien
-// qu'un changement de phase ne recharge ni ne redémarre aucun SVG.
-function PisteAvecCoureur({ children, phase, enMarche, resetKey, animations, affichage = AFFICHAGE_COUREUR_DEFAUT, hauteurMin = 0, className = '' }) {
+// joueurs : autres coureurs, posés sur la Piste de course à côté du sien ; ils
+// reprennent ses animations, chacun avec ses propres couleurs.
+// opaciteLigne : ligne de tirets qui défile sous les pieds des coureurs.
+function PisteAvecCoureur({ children, phase, enMarche, resetKey, animations, affichage = AFFICHAGE_COUREUR_DEFAUT, couleurs = {}, hauteurMin = 0, className = '', joueurs = [], onDeplacerJoueur, opaciteLigne = OPACITE_LIGNE_DEFAUT }) {
   const zoneRef = useRef(null);
   const [hauteurChrono, setHauteurChrono] = useState(0);
 
@@ -39,6 +42,18 @@ function PisteAvecCoureur({ children, phase, enMarche, resetKey, animations, aff
   const hauteur = Math.round(hauteurBase * affichage.echelle);
   const largeur = Math.round(hauteur * (auRepos ? ratioRepos : ratioCourse));
 
+  const styleCouleurs = useMemo(() => {
+    const res = {};
+    if (couleurs && typeof couleurs === 'object') {
+      Object.entries(couleurs).forEach(([k, v]) => {
+        if (typeof k === 'string' && k.startsWith('--') && v) {
+          res[k] = v;
+        }
+      });
+    }
+    return res;
+  }, [couleurs]);
+
   return (
     <div className={`piste_coureur_zone${className ? ` ${className}` : ''}`} ref={zoneRef}>
       {children}
@@ -50,26 +65,37 @@ function PisteAvecCoureur({ children, phase, enMarche, resetKey, animations, aff
             width: `${largeur}px`,
             '--coureur-dx': `${affichage.x}px`,
             '--coureur-dy': `${affichage.y}px`,
+            ...styleCouleurs,
           }}
           data-phase={auRepos ? 'repos' : 'course'}
         >
-          <AnimationSvg
-            code={codeCourse}
-            className={`coureur_animation${auRepos ? '' : ' coureur_animation--active'}`}
-            style={{ width: `${Math.round(hauteur * ratioCourse)}px` }}
-            enPause={auRepos}
+          <AnimationsCoureur
+            codeCourse={codeCourse}
+            codeRepos={codeRepos}
+            ratioCourse={ratioCourse}
+            ratioRepos={ratioRepos}
+            hauteur={hauteur}
+            auRepos={auRepos}
             resetKey={resetKey}
-            titre="Coureur en course (session de travail)"
-          />
-          <AnimationSvg
-            code={codeRepos}
-            className={`coureur_animation${auRepos ? ' coureur_animation--active' : ''}`}
-            style={{ width: `${Math.round(hauteur * ratioRepos)}px` }}
-            enPause={!auRepos}
-            resetKey={resetKey}
-            titre="Coureur au repos"
+            couleurs={couleurs}
+            titreCourse="Coureur en course (session de travail)"
+            titreRepos="Coureur au repos"
           />
         </div>
+      )}
+      {hauteur > 0 && (
+        <PisteDeCourse
+          joueurs={joueurs}
+          hauteurCoureur={hauteur}
+          codeCourse={codeCourse}
+          codeRepos={codeRepos}
+          ratioCourse={ratioCourse}
+          ratioRepos={ratioRepos}
+          auRepos={auRepos}
+          resetKey={resetKey}
+          onDeplacerJoueur={onDeplacerJoueur}
+          opaciteLigne={opaciteLigne}
+        />
       )}
     </div>
   );

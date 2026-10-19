@@ -1512,9 +1512,6 @@ select option {
   font-size: 12px;
   font-weight: 600;
   color: #ffffff;
-  background: rgba(160, 1, 168, 0.99);
-  padding: 2px 8px;
-  border-radius: 999px;
 }
 
 .joueur_stats {
@@ -3856,6 +3853,459 @@ select option {
 
 .preset_config_fond_rapide--actif {
   border-color: #ffffff;
+}
+
+/* ─── « Mon Pomodoro » : couleurs de la barre du chronomètre ──────── */
+.couleurs_chrono {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.couleurs_chrono_entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.couleurs_chrono_entete .param_section_titre {
+  margin: 0;
+}
+
+.couleurs_chrono_reinit {
+  flex-shrink: 0;
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  color: var(--dc-blurple-light, #949cf7);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.couleurs_chrono_reinit:hover {
+  text-decoration: underline;
+}
+
+.couleurs_chrono_choix_liste {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.couleurs_chrono_choix {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid var(--dc-border, rgba(255, 255, 255, 0.06));
+  border-radius: 10px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  cursor: pointer;
+}
+
+.couleurs_chrono_choix .preset_config_fond_selecteur {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.couleurs_chrono_texte {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.couleurs_chrono_label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--dc-text-primary, #f2f3f5);
+}
+
+.couleurs_chrono_aide {
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--dc-text-muted, #80848e);
+}
+
+/* Aperçu : même rendu que la barre du chrono, sur toute la largeur */
+.chrono_barre_piste.couleurs_chrono_apercu {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ─── « Mon Pomodoro » : réglage « Encouragements » ───────────────── */
+.encouragements {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 18px 0 12px;
+}
+
+.encouragements_compte {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dc-text-muted, #80848e);
+}
+
+.encouragements_interrupteur {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--dc-border, rgba(255, 255, 255, 0.06));
+  border-radius: 10px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.encouragements_interrupteur_texte {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.encouragements_interrupteur .switch {
+  flex-shrink: 0;
+}
+
+/* Bloc « Affichage » : position, taille du texte, couleur du pseudo */
+.encouragements_affichage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--dc-border, rgba(255, 255, 255, 0.06));
+  border-radius: 10px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+}
+
+.encouragements_reglage {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.encouragements_reglage_entete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.encouragements_reglage_ligne {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.encouragements_curseur {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--dc-blurple, #5865f2);
+  cursor: pointer;
+}
+
+.encouragements_reglage_valeur {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--dc-text-muted, #80848e);
+}
+
+.encouragements_reglage_valeur input {
+  width: 62px;
+  height: 26px;
+  box-sizing: border-box;
+  padding: 0 6px;
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 6px;
+  background: var(--dc-bg-secondary, #2b2d31);
+  color: var(--dc-text-primary, #f2f3f5);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+
+.encouragements_reglage_valeur input:focus {
+  border-color: var(--dc-blurple, #5865f2);
+}
+
+/* « Mon Pomodoro » › Titre de la session : aperçu de la barre sur un fond
+   coloré, pour juger de sa transparence */
+.reglage_titre_session {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0 12px;
+}
+
+.reglage_titre_session_apercu {
+  display: flex;
+  justify-content: center;
+  padding: 14px 12px;
+  border-radius: 10px;
+  background: linear-gradient(120deg, #2d6a8f 0%, #8e2f55 55%, #c47a2c 100%);
+}
+
+.reglage_titre_session_apercu .reglage_titre_session_barre {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 260px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Police de l'écran d'accueil : menu déroulant et aperçu dans la police choisie
+   (sinon les polices d'origine du message et de la citation) */
+.encouragements_police {
+  flex: none;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.encouragements_police_apercu {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--dc-text-secondary, #b5bac1);
+  overflow-wrap: break-word;
+}
+
+.encouragements_police_apercu_bienvenue {
+  font-family: var(--apercu-police, 'Space Grotesk', 'Cascadia Code', 'Consolas', monospace);
+  font-weight: 700;
+  color: var(--dc-text-primary, #f2f3f5);
+}
+
+.encouragements_police_apercu_citation {
+  font-family: var(--apercu-police, 'Cascadia Code', 'Consolas', 'Courier New', monospace);
+}
+
+.encouragements_couleur_pseudo {
+  background: var(--dc-bg-secondary, #2b2d31);
+}
+
+.encouragements_liste {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 230px;
+  margin: 0;
+  padding: 0 2px 0 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.encouragements_ligne {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.encouragements_champ {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--dc-border, rgba(255, 255, 255, 0.06));
+  border-radius: 8px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  color: var(--dc-text-primary, #f2f3f5);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  resize: vertical;
+  outline: none;
+}
+
+.encouragements_champ:focus {
+  border-color: var(--dc-blurple, #5865f2);
+}
+
+.encouragements_ligne_champs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.encouragements_champ--auteur {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--dc-text-secondary, #b5bac1);
+}
+
+.encouragements_ligne_champs .param_input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.encouragements_ligne--erreur .encouragements_champ {
+  border-color: var(--dc-error, #f23f43);
+}
+
+.encouragements_supprimer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dc-text-muted, #80848e);
+  cursor: pointer;
+}
+
+.encouragements_supprimer:hover:not(:disabled) {
+  background: rgba(242, 63, 67, 0.15);
+  color: #ff8a8d;
+}
+
+.encouragements_supprimer:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.encouragements_ajout {
+  display: flex;
+  gap: 6px;
+}
+
+.encouragements_ajout .param_input {
+  flex: 1;
+  min-width: 0;
+}
+
+.encouragements_actions,
+.encouragements_import_actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.encouragements_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 34px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--dc-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  background: var(--dc-bg-surface, #383a40);
+  color: var(--dc-text-primary, #f2f3f5);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.encouragements_btn:hover:not(:disabled) {
+  border-color: var(--dc-blurple, #5865f2);
+}
+
+.encouragements_btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.encouragements_btn--principal {
+  border-color: var(--dc-blurple, #5865f2);
+  background: var(--dc-blurple, #5865f2);
+  color: #ffffff;
+}
+
+.encouragements_import {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--dc-blurple, #5865f2);
+  border-radius: 10px;
+  background: rgba(88, 101, 242, 0.1);
+}
+
+.encouragements_import p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--dc-text-secondary, #b5bac1);
+}
+
+.encouragements_message {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.encouragements_message--erreur {
+  background: rgba(242, 63, 67, 0.12);
+  border: 1px solid rgba(242, 63, 67, 0.4);
+  color: #ff8a8d;
+}
+
+.encouragements_message--succes {
+  background: rgba(35, 165, 89, 0.12);
+  border: 1px solid rgba(35, 165, 89, 0.4);
+  color: #6fdc9b;
+}
+
+.encouragements_format {
+  font-size: 11.5px;
+  color: var(--dc-text-muted, #80848e);
+}
+
+.encouragements_format summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.encouragements_format pre {
+  margin: 6px 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  color: var(--dc-text-secondary, #b5bac1);
+  font-size: 10.5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.encouragements_format p {
+  margin: 0;
+}
+
+.couleurs_chrono_avertissement {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(240, 178, 50, 0.1);
+  border: 1px solid rgba(240, 178, 50, 0.35);
+  color: #f5c96b;
+  font-size: 11.5px;
+  line-height: 1.4;
 }
 
 /* Barre d'actions du préréglage */
@@ -8761,9 +9211,145 @@ select:focus {
   transform: translateX(-50%);
   z-index: 95;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   pointer-events: auto;
+}
+
+/* ─── Commandes de la session en cours autour du chrono (section Notes) ── */
+/* Titre de la session, centré sous le chrono (sous la ligne des coureurs quand
+   elle passe sous le chrono, sur petit écran) */
+.chrono_emplacement_titre {
+  display: flex;
+  justify-content: center;
+  margin-top: calc(8px + var(--chrono-decalage-titre, 0px));
+  /* Réglée dans « Mon Pomodoro » › Titre de la session */
+  opacity: var(--opacite-titre-session, 1);
+}
+
+/* Largeur bornée sur mobile pour laisser libre la poignée du menu latéral */
+/* Rectangle sans bordure ni ombre ; le focus éclaircit le fond. Même rendu
+   pour son aperçu dans « Mon Pomodoro » */
+.chrono_titre_session,
+.reglage_titre_session_barre {
+  width: min(300px, calc(100vw - 128px));
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(30, 31, 34, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: var(--dc-text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+  transition: background 0.15s ease;
+}
+
+.chrono_titre_session::placeholder {
+  color: var(--dc-text-muted);
+  font-weight: 500;
+}
+
+.chrono_titre_session:focus {
+  outline: none;
+  background: rgba(56, 58, 64, 0.96);
+}
+
+/* Boutons carrés « nouvelle session » (+) / « enregistrer la session » (✓),
+   côte à côte : à gauche du chrono, centrés sur sa hauteur, entre lui et le
+   panneau du joueur ; sous le titre quand la place manque (petits écrans) */
+.chrono_emplacement_actions--gauche {
+  position: absolute;
+  top: 0;
+  right: calc(100% + 12px);
+  height: var(--chrono-hauteur-widget, 48px);
+  display: flex;
+  align-items: center;
+}
+
+.chrono_emplacement_actions--dessous {
+  margin-top: 8px;
+}
+
+.chrono_actions_session {
+  display: flex;
+  gap: 6px;
+}
+
+.chrono_action_session {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--dc-border-strong);
+  border-radius: 8px;
+  background: rgba(30, 31, 34, 0.94);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  color: var(--dc-text-primary);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.chrono_action_session:hover {
+  background: var(--dc-bg-surface);
+}
+
+.chrono_action_session--principal {
+  border-color: var(--dc-blurple);
+  background: var(--dc-blurple);
+  color: #ffffff;
+}
+
+.chrono_action_session--principal:hover {
+  background: var(--dc-blurple-dark, #4752c4);
+}
+
+/* Infobulle : sous le bouton, au survol et au focus clavier */
+.chrono_action_session::after {
+  content: attr(data-infobulle);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 5;
+  padding: 5px 9px;
+  border: 1px solid var(--dc-border-strong);
+  border-radius: 6px;
+  background: var(--dc-bg-tertiary, #1e1f22);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  color: var(--dc-text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, -3px);
+  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0s linear 0.12s;
+}
+
+.chrono_action_session:hover::after,
+.chrono_action_session:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0s linear 0s;
+}
+
+/* Masqués (sans changer de place) tant qu'ils recouvriraient le menu latéral ouvert */
+.barre_chrono_flottante_haut_centre--commandes-masquees .chrono_emplacement_titre,
+.barre_chrono_flottante_haut_centre--commandes-masquees .chrono_emplacement_actions {
+  visibility: hidden;
 }
 
 /* Avertissement « lecture seule » affiché sous la barre du chrono */
@@ -8851,163 +9437,107 @@ select:focus {
   box-shadow: 0 4px 16px rgba(88, 101, 242, 0.65);
 }
 
-.chrono_barre_info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  min-width: 65px;
-}
-
-.chrono_barre_badge {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 2px 6px;
-  border-radius: 6px;
-  line-height: 1.2;
-}
-
-.chrono_barre_badge--travail {
-  background: rgba(88, 101, 242, 0.2);
-  color: var(--dc-blurple-light, #7983F5);
-  border: 1px solid rgba(88, 101, 242, 0.35);
-}
-
-.chrono_barre_badge--pause {
-  background: rgba(35, 165, 89, 0.2);
-  color: var(--dc-success, #23A559);
-  border: 1px solid rgba(35, 165, 89, 0.35);
-}
-
+/* Temps restant, aligné verticalement sur la barre */
 .chrono_barre_temps {
+  min-width: 3.4em;
   font-family: 'Space Grotesk', 'Inter', monospace;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--dc-text-primary);
-  line-height: 1.1;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
-/* ─── Piste et progression ────────────────────────────────────────── */
-.chrono_barre_piste_wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
+/* ─── Piste et progression à deux couches ─────────────────────────── */
 .chrono_barre_piste {
   position: relative;
-  width: 170px;
-  height: 12px;
+  width: 200px;
+  height: 14px;
   background: rgba(0, 0, 0, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
-  overflow: visible;
+  overflow: hidden;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-.chrono_barre_segment {
+.chrono_barre_couche {
   position: absolute;
-  top: 0;
   left: 0;
-  height: 100%;
   border-radius: 999px;
-  transition: width 0.3s linear;
+  transition: width 0.2s linear;
 }
 
-.chrono_barre_segment--travail {
-  background: linear-gradient(90deg, #5865F2, #7983F5);
-  box-shadow: 0 0 10px rgba(88, 101, 242, 0.65);
-  z-index: 1;
+/* Couche travail : toute la hauteur de la piste */
+.chrono_barre_couche--travail {
+  top: 0;
+  bottom: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 65%),
+    var(--chrono-couleur-travail, #5865f2);
 }
 
-.chrono_barre_segment--pause {
-  background: linear-gradient(90deg, #23A559, #57F287);
-  box-shadow: 0 0 10px rgba(35, 165, 89, 0.65);
-  border-radius: 0 999px 999px 0;
-  z-index: 1;
+/* Couche pause : superposée, plus fine — la couleur du travail reste visible autour */
+.chrono_barre_couche--pause {
+  top: 3px;
+  bottom: 3px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0) 70%),
+    var(--chrono-couleur-pause, #23a559);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
 }
 
-.chrono_barre_marqueur_pause {
-  position: absolute;
-  top: -2px;
-  bottom: -2px;
-  width: 2px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 1px;
-  z-index: 2;
-  box-shadow: 0 0 4px rgba(255, 255, 255, 0.6);
-}
-
-.chrono_barre_curseur {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 3;
-  transition: left 0.3s linear;
-  pointer-events: none;
-}
-
-.chrono_barre_curseur_point {
-  width: 14px;
-  height: 14px;
-  background: #ffffff;
-  border-radius: 50%;
-  border: 2px solid var(--dc-blurple);
-  box-shadow: 0 0 8px #ffffff, 0 0 14px var(--dc-blurple);
-}
-
-.chrono_barre_curseur--anime .chrono_barre_curseur_point {
-  animation: pulsePointBarre 1.5s infinite ease-in-out;
-}
-
-@keyframes pulsePointBarre {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 0 8px #ffffff, 0 0 14px var(--dc-blurple);
-  }
-  50% {
-    transform: scale(1.25);
-    box-shadow: 0 0 12px #ffffff, 0 0 20px var(--dc-blurple-light);
+@media (prefers-reduced-motion: reduce) {
+  .chrono_barre_couche {
+    transition: none;
   }
 }
 
-.chrono_barre_curseur_avatar {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 2px solid #ffffff;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.6), 0 0 10px var(--dc-blurple);
-  object-fit: cover;
-  background: #1e1f22;
-}
-
-/* ─── Drapeau d'arrivée ────────────────────────────────────────────── */
-.chrono_barre_drapeau {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.15rem;
-  line-height: 1;
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.4));
-  cursor: default;
-  transition: transform 0.2s ease;
-  user-select: none;
-}
-
-.chrono_barre_drapeau:hover {
-  transform: scale(1.25) rotate(10deg);
-}
-
-/* ─── Actions supplémentaires à droite ────────────────────────────── */
+/* ─── Commandes : pause / reprendre, phase suivante, recommencer ──── */
 .chrono_barre_actions {
   display: flex;
   align-items: center;
   gap: 6px;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
-  padding-left: 8px;
+  padding-left: 10px;
+}
+
+.chrono_barre_btn_action:focus-visible {
+  outline: 2px solid var(--dc-blurple-light, #949cf7);
+  outline-offset: 2px;
+}
+
+.chrono_barre_btn_action:disabled {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+}
+
+/* Écrans tactiles : zone cliquable plus grande */
+@media (pointer: coarse) {
+  .chrono_barre_btn_action {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 420px) {
+  .barre_chrono_widget {
+    gap: 8px;
+  }
+
+  .chrono_barre_temps {
+    font-size: 0.95rem;
+  }
+
+  .chrono_barre_piste {
+    width: 80px;
+  }
+
+  .chrono_barre_actions {
+    gap: 4px;
+    padding-left: 6px;
+  }
 }
 
 /* ─── 3ème Vue Chronomètre : Mode Centré au Milieu de l'Écran ─────── */
@@ -9152,7 +9682,6 @@ select:focus {
 }
 
 .joueur_niveau {
-  background: var(--dc-blurple);
   color: #ffffff;
 }
 
@@ -9745,6 +10274,60 @@ select:focus {
   color: #ffffff;
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(88, 101, 242, 0.4);
+}
+
+/* Dans la poignée du menu latéral, après « Documents » : à la taille des onglets */
+.btn_mode_concentration--poignee {
+  width: 36px;
+  height: 36px;
+  box-shadow: none;
+}
+
+@media (max-width: 1000px) {
+  .btn_mode_concentration--poignee {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 720px) {
+  .btn_mode_concentration--poignee {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+/* Compteur de coureurs, à l'ancienne place du bouton mode concentration */
+.compteur_coureurs {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 6px;
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--dc-bg-tertiary);
+  border: 1px solid var(--dc-border-strong);
+  color: var(--dc-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* Largeur fixe jusqu'à 99 : le compteur ne bouge pas (ni la Piste de course,
+   qui s'arrête juste avant lui) quand le nombre de coureurs change */
+.compteur_coureurs_nombre {
+  display: inline-block;
+  min-width: 2ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.compteur_coureurs_fictif {
+  color: var(--dc-text-muted);
+  font-weight: 500;
 }
 
 /* Toggle switch */
@@ -11018,6 +11601,23 @@ select:focus {
 
 .historique_vide {
   color: var(--dc-text-muted);
+}
+
+/* Historique des notes (cahiers des sessions passées), sous les anciennes sessions */
+.historique_notes_titre {
+  margin: 28px 0 12px;
+}
+
+.historique_notes_numero {
+  margin-left: 6px;
+}
+
+.historique_notes_apercu {
+  max-width: 280px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--dc-text-secondary);
 }
 
 /* ─── 31b. Bio dans Profil & Paramètres ───────────────────────────── */

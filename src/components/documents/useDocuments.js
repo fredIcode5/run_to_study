@@ -5,6 +5,16 @@ import { listerDocuments, enregistrerDocument, supprimerDocumentLocal, modifierD
 const LARGEUR_MENU = 388;
 const TAILLE_MIN = { largeur: 320, hauteur: 200 };
 
+// Outils de la partie « Fenêtre » (Cahier, Chat IA) : ils prennent place dans
+// les fenêtres comme les documents, sous l'identifiant « outil_<type> », et
+// n'existent qu'en un exemplaire (sélectionnés, ils rejoignent leur fenêtre)
+const TAILLES_OUTILS = {
+  cahier: { largeur: 560, hauteur: 600 },
+  chat: { largeur: 540, hauteur: 640 },
+};
+export const idOutil = (type) => `outil_${type}`;
+export const estIdOutil = (id) => id.startsWith('outil_');
+
 export const TYPES_ACCEPTES = 'application/pdf,image/*';
 
 // Couleurs des pastilles : distinctes et lisibles sur le fond sombre
@@ -24,14 +34,16 @@ const choisirCouleur = (couleursPrises) => {
 export const estPdf = (doc) => doc?.type === 'application/pdf';
 export const estImage = (doc) => doc?.type?.startsWith('image/');
 
-// Taille initiale d'une fenêtre selon le type de document : toujours en
-// format paysage (plus large que haute), bornée à l'écran
-const tailleInitiale = (doc) => {
+// Taille initiale d'une fenêtre selon son premier élément : document toujours
+// en format paysage (plus large que haute), outil à sa taille ; bornée à l'écran
+const tailleInitiale = (doc, idElement) => {
   const largeurMax = window.innerWidth - 32;
   const hauteurMax = window.innerHeight - 32;
-  const voulue = estPdf(doc)
-    ? { largeur: 760, hauteur: 480 }
-    : { largeur: 640, hauteur: 420 };
+  const voulue = !doc
+    ? TAILLES_OUTILS[idElement.slice('outil_'.length)]
+    : estPdf(doc)
+      ? { largeur: 760, hauteur: 480 }
+      : { largeur: 640, hauteur: 420 };
   return {
     largeur: Math.max(TAILLE_MIN.largeur, Math.min(voulue.largeur, largeurMax)),
     hauteur: Math.max(TAILLE_MIN.hauteur, Math.min(voulue.hauteur, hauteurMax)),
@@ -139,8 +151,8 @@ function useDocuments() {
   // cascade au centre de l'espace de travail (zone à gauche du menu)
   const ouvrirFenetre = (documentId, pointDepot) => {
     const doc = documents.find((d) => d.id === documentId);
-    if (!doc) return;
-    const taille = tailleInitiale(doc);
+    if (!doc && !estIdOutil(documentId)) return;
+    const taille = tailleInitiale(doc, documentId);
     let position;
     if (pointDepot) {
       position = { x: pointDepot.x - 60, y: pointDepot.y - 18 };
@@ -188,9 +200,10 @@ function useDocuments() {
     synchroniserOrdre(restantes);
   };
 
-  // Sélection depuis la section « Documents » : déjà ouvert → sa fenêtre la plus
-  // en avant passe au premier plan sur ce document ; sinon il rejoint la fenêtre
-  // au premier plan (ou une nouvelle fenêtre s'il n'y en a aucune)
+  // Sélection depuis la section « Documents » (document ou outil) : déjà ouvert →
+  // sa fenêtre la plus en avant passe au premier plan sur cet élément ; sinon il
+  // rejoint la fenêtre au premier plan (ou une nouvelle fenêtre s'il n'y en a
+  // aucune). Un outil n'est donc jamais ouvert deux fois.
   const selectionnerDocument = (documentId) => {
     const contenant = [...ordreFenetres].reverse()
       .map((idF) => fenetres.find((f) => f.id === idF))
@@ -222,9 +235,17 @@ function useDocuments() {
     return compte;
   }, [fenetres]);
 
+  // Outils présents dans une fenêtre (état des boutons Cahier / Chat IA)
+  const outils = {
+    cahier: fenetresParDocument.has(idOutil('cahier')),
+    chat: fenetresParDocument.has(idOutil('chat')),
+  };
+
   return {
     documents,
     fenetres,
+    outils,
+    ouvrirOutil: (type) => selectionnerDocument(idOutil(type)),
     ordreFenetres,
     fenetresParDocument,
     importerFichiers,

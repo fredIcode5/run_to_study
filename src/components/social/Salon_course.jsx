@@ -1,361 +1,159 @@
 import React from 'react';
-import { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext.jsx';
-import { getAmis, creerSession, rejoindreSession, quitterSession, ecouterSessions, chargerProfil } from '../../lib/firebaseDataService';
-import CarteSalon from './CarteSalon';
-import CarteAmi from './CarteAmi';
-import ParticipantRow from './ParticipantRow';
+import { useState } from 'react';
+import { UserPlus, LogIn, Flag, Check, Plus, X } from 'lucide-react';
+import { ORIGINES_JOUEUR, idJoueurAmi } from './joueursFictifs';
 
+// Les trois actions du salon, communes aux boutons de test et aux boutons définitifs
+const ACTIONS_SALON = [
+  { id: 'amis', label: 'Ajouter des amis', Icone: UserPlus },
+  { id: 'rejoindre', label: 'Rejoindre', Icone: LogIn },
+  { id: 'marathon', label: 'Marathon', Icone: Flag },
+];
 
-function Salon_course({ reglages, imageFondActuelle, musiqueActuelle, onOuvrirBoutique, onSessionEnLigneChange, pointsPomodoro }) {
-  const { utilisateur } = useAuth();
-  const [modeActif, setModeActif] = useState('recherche'); // Default to recherche
-  const [rechercheTempsTravail, setRechercheTempsTravail] = useState(25);
-  const [rechercheTempsRepos, setRechercheTempsRepos] = useState(5);
-  const [rechercheEcart, setRechercheEcart] = useState(5);
-  const [codeSaisi, setCodeSaisi] = useState('');
-  const [sessionActive, setSessionActive] = useState(null);
-  const [salons, setSalons] = useState([]);
-  const [amis, setAmis] = useState([]);
-  const [photoProfilLocale, setPhotoProfilLocale] = useState(null);
+// --- Salon de course (version de test) :
+//  1. boutons de test, qui ajoutent des joueurs fictifs sur la Piste de course
+//  2. liste d'amis de test (ouverte par « Ajouter des amis »)
+//  3. coureurs actuellement sur la piste, et opacité de la ligne sous leurs pieds
+//  4. boutons définitifs du futur multijoueur, visibles mais désactivés
+// salonCourse : état partagé avec la piste et le compteur (voir useSalonCourse)
+function Salon_course({ salonCourse, opaciteLigne, onChangerOpaciteLigne }) {
+  const { joueurs, compteur, retirerJoueur, viderPiste, test } = salonCourse;
+  const [amisVisibles, setAmisVisibles] = useState(false);
+  const idsSurPiste = new Set(joueurs.map((j) => j.id));
+  const opacitePct = Math.round(opaciteLigne * 100);
+  const changerOpacitePct = (valeur) => onChangerOpaciteLigne(Number(valeur) / 100);
 
-  useEffect(() => {
-    if (onSessionEnLigneChange) {
-      onSessionEnLigneChange(sessionActive);
-    }
-  }, [sessionActive, onSessionEnLigneChange]);
-
-  // Charger la photo de profil depuis Firestore
-  useEffect(() => {
-    if (!utilisateur?.uid) return;
-    chargerProfil(utilisateur.uid).then(profil => {
-      if (profil?.photo_profil) setPhotoProfilLocale(profil.photo_profil);
-    }).catch(console.error);
-  }, [utilisateur?.uid]);
-
-  useEffect(() => {
-    if (utilisateur?.uid) {
-      getAmis(utilisateur.uid).then(setAmis).catch(console.error);
-    }
-  }, [utilisateur]);
-
-  useEffect(() => {
-    const unsubscribe = ecouterSessions((sessionsRecues) => {
-      setSalons(sessionsRecues);
-      
-      // Détecter automatiquement si l'utilisateur fait partie d'une session
-      if (utilisateur?.uid) {
-        const maSession = sessionsRecues.find(s => 
-          s.participants && s.participants.some(p => p.uid === utilisateur.uid)
-        );
-        if (maSession) {
-          setSessionActive(maSession);
-          setModeActif('session');
-        } else {
-          setSessionActive(null);
-          setModeActif(prev => (prev === 'session' ? 'recherche' : prev));
-        }
-      }
-    });
-    return () => unsubscribe();
-  }, [utilisateur?.uid]);
-
-  // Toggle modes
-  const handleModeRecherche = () => setModeActif('recherche');
-  const handleModeRejoindre = () => setModeActif(modeActif === 'rejoindre' ? 'recherche' : 'rejoindre');
-  const handleModeCreer = () => setModeActif(modeActif === 'creer' ? 'recherche' : 'creer');
-
-  const executerCreation = async () => {
-    if (!utilisateur) return alert("Vous devez être connecté pour créer une session.");
-    const nvCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    
-    const tTravail = reglages?.dureeTravail || 25;
-    const tPause = reglages?.dureePause || 5;
-    let themeStr = 'Focus';
-    if (musiqueActuelle?.type === 'spotify') themeStr = 'Spotify';
-    else if (musiqueActuelle?.type === 'youtube') themeStr = 'YouTube';
-
-    const nvSalon = {
-      nom: 'Session de ' + (utilisateur?.pseudo || 'Anonyme'),
-      proprietaire: utilisateur?.pseudo || 'Anonyme',
-      proprietaireId: utilisateur?.uid,
-      theme: themeStr,
-      tempsTravail: tTravail, 
-      tempsPause: tPause,
-      imageFond: imageFondActuelle,
-      code: nvCode,
-      etatPomodoro: 'En attente',
-      participants: [{
-        uid: utilisateur.uid,
-        pseudo: utilisateur.pseudo || 'Anonyme',
-        photo: photoProfilLocale || utilisateur.photoURL || '🧑',
-        enSession: true
-      }]
-    };
-    
-    try {
-      const id = await creerSession(nvSalon);
-      setSessionActive({ id, ...nvSalon });
-      setModeActif('session');
-    } catch (e) {
-      alert("Erreur lors de la création de la session.");
-    }
+  const actionsTest = {
+    amis: () => setAmisVisibles((visibles) => !visibles),
+    rejoindre: test.rejoindre,
+    marathon: test.marathon,
   };
-
-  const validerCodeRejoindre = async (code) => {
-    if (!utilisateur) return alert("Vous devez être connecté pour rejoindre une session.");
-    const codeNettoye = code.trim().toUpperCase();
-    const salonTrouve = salons.find(s => s.code.toUpperCase() === codeNettoye);
-    if (salonTrouve) {
-      try {
-        await rejoindreSession(salonTrouve.id, {
-          uid: utilisateur.uid,
-          pseudo: utilisateur.pseudo || 'Anonyme',
-          photo: photoProfilLocale || utilisateur.photoURL || '🧑',
-          enSession: true
-        });
-        setSessionActive(salonTrouve);
-        setModeActif('session');
-      } catch (e) {
-        alert("Erreur en rejoignant la session.");
-      }
-    } else {
-      alert("Code de session invalide ou session introuvable.");
-    }
-  };
-
-  const handleRejoindreDirect = async (salon) => {
-    if (!utilisateur) return alert("Vous devez être connecté pour rejoindre une session.");
-    try {
-      await rejoindreSession(salon.id, {
-        uid: utilisateur.uid,
-        pseudo: utilisateur.pseudo || 'Anonyme',
-        photo: photoProfilLocale || utilisateur.photoURL || '🧑',
-        enSession: true
-      });
-      setSessionActive(salon);
-      setModeActif('session');
-    } catch (e) {
-      alert("Erreur en rejoignant la session.");
-    }
-  };
-
-  const handleQuitterSession = async () => {
-    if (sessionActive && utilisateur) {
-      try {
-        await quitterSession(sessionActive.id, utilisateur.uid);
-      } catch(e) {
-        console.error(e);
-      }
-    }
-    setSessionActive(null);
-    setModeActif('recherche');
-  };
-
-  const handleInviter = (ami) => {
-    alert(`Invitation envoyée à ${ami.pseudo}`);
-  };
-
-  const salonsFiltres = salons.filter((s) => {
-    if (rechercheEcart === 31) return true;
-    const ecartTravail = Math.abs((s.tempsTravail || 0) - rechercheTempsTravail);
-    const reposMatch = (s.tempsPause || 0) === rechercheTempsRepos;
-    return ecartTravail <= rechercheEcart && reposMatch;
-  });
-
-  // Prepare enriched friends (with active session info if they are in one)
-  const amisEnrichis = amis.map(ami => {
-    let enSession = false;
-    let codeSession = null;
-    
-    for (const salon of salons) {
-      if (salon.participants && salon.participants.some(p => p.uid === ami.amiId)) {
-        enSession = true;
-        codeSession = salon.code;
-        break;
-      }
-    }
-    
-    return {
-      ...ami,
-      photo: ami.photo_profil,
-      enSession,
-      codeSession
-    };
-  });
 
   return (
     <div className="salon_course">
-      
-      {modeActif !== 'session' && (
-        <div className="salon_entete_actions">
-          <button 
-            className={`salon_btn_action ${modeActif === 'recherche' || modeActif === 'accueil' ? 'actif' : ''}`} 
-            onClick={handleModeRecherche}
-          >
-            🔎 Rechercher
-          </button>
-          <button 
-            className={`salon_btn_action salon_btn_creer ${modeActif === 'creer' ? 'actif' : ''}`} 
-            onClick={handleModeCreer}
-          >
-            ➕ Créer
-          </button>
-          <button 
-            className={`salon_btn_action ${modeActif === 'rejoindre' ? 'actif' : ''}`} 
-            onClick={handleModeRejoindre}
-          >
-            🔗 Rejoindre
-          </button>
+      <div className="salon_bloc">
+        <h3 className="salon_bloc_titre">Joueurs fictifs <span className="salon_badge">test</span></h3>
+        <div className="salon_entete_actions salon_boutons" role="group" aria-label="Boutons de test">
+          {ACTIONS_SALON.map(({ id, label, Icone }) => (
+            <button
+              key={id}
+              type="button"
+              className={`salon_btn_action${id === 'amis' && amisVisibles ? ' actif' : ''}`}
+              onClick={actionsTest[id]}
+              aria-expanded={id === 'amis' ? amisVisibles : undefined}
+            >
+              <Icone size={16} aria-hidden="true" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {amisVisibles && (
+        <div className="salon_bloc">
+          <h3 className="salon_bloc_titre">Amis <span className="salon_badge">données de test</span></h3>
+          <ul className="salon_liste_joueurs">
+            {test.amis.map((ami) => {
+              const present = idsSurPiste.has(idJoueurAmi(ami));
+              return (
+                <li key={ami.amiId}>
+                  <button
+                    type="button"
+                    className={`salon_ami_test${present ? ' salon_ami_test--present' : ''}`}
+                    aria-pressed={present}
+                    onClick={() => test.basculerAmi(ami)}
+                  >
+                    <span className="salon_pastille" style={{ background: ami.couleur }} />
+                    <span className="salon_joueur_nom">{ami.pseudo}</span>
+                    {present ? <Check size={14} aria-hidden="true" /> : <Plus size={14} aria-hidden="true" />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
 
-      <div className="salon_contenu">
-        {modeActif === 'creer' && (
-          <div className="salon_section_creer" style={{ textAlign: 'center', padding: '32px 16px', background: 'var(--dc-bg-surface, #2b2d31)', borderRadius: '12px', border: '1px solid var(--dc-border-strong, #383a40)' }}>
-            <p style={{ marginBottom: '24px', color: 'var(--dc-text-secondary, #b5bac1)', fontSize: '0.95rem', lineHeight: '1.5' }}>
-              Vos paramètres de session vont servir à créer une session.
-            </p>
-            <button 
-              className="salon_btn_valider_code" 
-              style={{ padding: '10px 24px', fontSize: '1rem', background: 'var(--dc-blurple, #5865f2)' }}
-              onClick={executerCreation}
-            >
-              Créer
-            </button>
-          </div>
-        )}
-
-        {(modeActif === 'recherche' || modeActif === 'accueil') && (
-          <div className="salon_section_recherche">
-            <div className="salon_recherche_filtres">
-              <div style={{ display: 'flex', flexDirection: 'column', flex: '1' }}>
-                <label style={{ fontSize: '0.85rem', color: 'var(--dc-text-secondary, #b5bac1)', marginBottom: '4px', fontWeight: '500' }}>Temps de travail</label>
-                <input
-                  type="number"
-                  className="salon_input_saisie"
-                  value={rechercheTempsTravail}
-                  onChange={(e) => setRechercheTempsTravail(parseInt(e.target.value) || 0)}
-                  onWheel={(e) => {
-                    if (e.deltaY < 0) setRechercheTempsTravail(prev => prev + 1);
-                    else if (e.deltaY > 0) setRechercheTempsTravail(prev => prev > 0 ? prev - 1 : 0);
-                  }}
-                  style={{ marginBottom: 0 }}
-                />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', flex: '1' }}>
-                <label style={{ fontSize: '0.85rem', color: 'var(--dc-text-secondary, #b5bac1)', marginBottom: '4px', fontWeight: '500' }}>Temps de repos</label>
-                <input
-                  type="number"
-                  className="salon_input_saisie"
-                  value={rechercheTempsRepos}
-                  onChange={(e) => setRechercheTempsRepos(parseInt(e.target.value) || 0)}
-                  onWheel={(e) => {
-                    if (e.deltaY < 0) setRechercheTempsRepos(prev => prev + 1);
-                    else if (e.deltaY > 0) setRechercheTempsRepos(prev => prev > 0 ? prev - 1 : 0);
-                  }}
-                  style={{ marginBottom: 0 }}
-                />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', flex: '1' }}>
-                <label style={{ fontSize: '0.85rem', color: 'var(--dc-text-secondary, #b5bac1)', marginBottom: '4px', fontWeight: '500' }}>
-                  Écart : {rechercheEcart === 31 ? 'Toutes les séances' : `±${rechercheEcart} min`}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="31"
-                  value={rechercheEcart}
-                  onChange={(e) => setRechercheEcart(parseInt(e.target.value) || 0)}
-                  style={{ cursor: 'pointer', height: '42px', accentColor: 'var(--dc-blurple, #5865f2)', margin: 0 }}
-                />
-              </div>
-            </div>
-            <div className="salon_liste">
-              {salonsFiltres.length === 0 ? (
-                <p className="salon_vide">Aucune session disponible</p>
-              ) : (
-                salonsFiltres.map(salon => (
-                  <CarteSalon key={salon.id} salon={salon} onRejoindre={handleRejoindreDirect} />
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {modeActif === 'rejoindre' && (
-          <div className="salon_section_rejoindre">
-            <div className="salon_input_groupe">
-              <input
-                type="text"
-                className="salon_input_saisie code_saisie"
-                placeholder="Code (ex: AAA25b)"
-                value={codeSaisi}
-                onChange={(e) => setCodeSaisi(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') validerCodeRejoindre(codeSaisi); }}
-                autoFocus
-              />
-              <button className="salon_btn_valider_code" onClick={() => validerCodeRejoindre(codeSaisi)}>
-                Rejoindre
+      <div className="salon_bloc">
+        <div className="salon_bloc_entete">
+          <h3 className="salon_bloc_titre">Sur la piste <span className="salon_badge">{compteur.nombre}</span></h3>
+          {joueurs.length > 0 && (
+            <button type="button" className="salon_lien" onClick={viderPiste}>Tout retirer</button>
+          )}
+        </div>
+        <ul className="salon_liste_joueurs">
+          <li className="salon_joueur">
+            <span className="salon_pastille salon_pastille--vous" />
+            <span className="salon_joueur_nom">Vous</span>
+            <span className="salon_joueur_origine">Votre coureur</span>
+          </li>
+          {joueurs.map((joueur) => (
+            <li key={joueur.id} className="salon_joueur">
+              <span className="salon_pastille" style={{ background: joueur.couleur }} />
+              <span className="salon_joueur_nom">{joueur.nom}</span>
+              <span className="salon_joueur_origine">{ORIGINES_JOUEUR[joueur.origine]}</span>
+              <button
+                type="button"
+                className="salon_joueur_retirer"
+                onClick={() => retirerJoueur(joueur.id)}
+                aria-label={`Retirer ${joueur.nom} de la piste`}
+                title="Retirer de la piste"
+              >
+                <X size={14} />
               </button>
-            </div>
-            
-            <h3 className="salon_section_titre mt-4">Mes amis</h3>
-            <div className="amis_liste">
-              {amisEnrichis.length === 0 ? (
-                <p className="salon_vide">Vous n'avez pas encore d'amis connectés.</p>
-              ) : (
-                amisEnrichis.map(ami => (
-                  <CarteAmi 
-                    key={ami.id} 
-                    ami={ami} 
-                    onRejoindre={validerCodeRejoindre} 
-                    onInviter={handleInviter} 
-                  />
-                ))
-              )}
-            </div>
-          </div>
-        )}
+            </li>
+          ))}
+        </ul>
+        <p className="salon_aide">
+          {joueurs.length > 0
+            ? 'Faites glisser les coureurs à côté du chrono pour réorganiser le peloton.'
+            : 'Ajoutez des joueurs fictifs avec les boutons de test.'}
+        </p>
+      </div>
 
-        {modeActif === 'session' && sessionActive && (
-          <div className="salon_section_active">
-            <div className="session_active_entete">
-              <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--dc-text-primary, #F2F3F5)', fontFamily: "'Inter', 'gg sans', sans-serif" }}>
-                Code : <span style={{ color: 'var(--dc-blurple, #5865F2)' }}>{sessionActive.code}</span> — Chrono : {sessionActive.tempsTravail}/{sessionActive.tempsPause}
-              </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <button
-                  type="button"
-                  className="salon_btn_boutique"
-                  onClick={onOuvrirBoutique}
-                >
-                  🛍️ Boutique
-                </button>
-                <button className="salon_btn_quitter" onClick={handleQuitterSession}>Quitter</button>
-              </div>
-            </div>
-            
-            <h3 className="salon_section_titre">Participants</h3>
-            <div className="participants_liste">
-              {sessionActive.participants && sessionActive.participants.length > 0 ? (
-                [...sessionActive.participants]
-                  .sort((a, b) => (a.uid === utilisateur?.uid ? -1 : b.uid === utilisateur?.uid ? 1 : 0))
-                  .map(p => (
-                    <ParticipantRow
-                      key={p.uid}
-                      participant={p}
-                      estMoi={p.uid === utilisateur?.uid}
-                      musiqueCourante={p.uid === utilisateur?.uid ? musiqueActuelle : null}
-                      nbTours={p.uid === utilisateur?.uid ? (pointsPomodoro?.length ?? 0) : (p.nbTours ?? p.tours ?? undefined)}
-                    />
-                  ))
-              ) : (
-                <p className="salon_vide">Aucun participant (1/5)</p>
-              )}
-            </div>
-          </div>
-        )}
+      <div className="salon_bloc">
+        <label className="salon_bloc_titre" htmlFor="salon-opacite-ligne">Ligne sous les coureurs</label>
+        <div className="encouragements_reglage_ligne">
+          <input
+            id="salon-opacite-ligne"
+            type="range"
+            className="encouragements_curseur"
+            min={0}
+            max={100}
+            step={5}
+            value={opacitePct}
+            onChange={(e) => changerOpacitePct(e.target.value)}
+            aria-label="Opacité de la ligne sous les coureurs"
+          />
+          <span className="encouragements_reglage_valeur">
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              value={opacitePct}
+              onChange={(e) => e.target.value !== '' && changerOpacitePct(e.target.value)}
+              aria-label="Opacité de la ligne sous les coureurs (%)"
+            />
+            %
+          </span>
+        </div>
+        <p className="salon_aide">Les tirets défilent quand les coureurs courent. 0 % : ligne masquée.</p>
+      </div>
+
+      <hr className="salon_separateur" />
+
+      {/* Boutons définitifs : aucun gestionnaire, ils seront branchés au multijoueur */}
+      <div className="salon_bloc">
+        <h3 className="salon_bloc_titre">Multijoueur <span className="salon_badge">bientôt</span></h3>
+        <div className="salon_entete_actions salon_boutons salon_boutons--bientot" role="group" aria-label="Multijoueur, bientôt disponible">
+          {ACTIONS_SALON.map(({ id, label, Icone }) => (
+            <button key={id} type="button" className="salon_btn_action" disabled title="Bientôt disponible">
+              <Icone size={16} aria-hidden="true" />
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import Salon_course from '../social/Salon_course';
 import Param from '../settings/Param';
 import OngletAmbiance from '../ambiance/OngletAmbiance';
 import SectionDocuments from '../documents/SectionDocuments';
+import BoutonModeConcentration from '../ui/BoutonModeConcentration';
 import './BlocDeux.css';
 
 const ONGLETS_POIGNEE = [
@@ -48,8 +49,11 @@ function BlocDeux({
   onEnregistrerRadio,
   onSupprimerRadio,
   onLancerRadio,
-  onOuvrirBoutique,
-  onSessionEnLigneChange,
+  salonCourse,
+  opaciteLignePiste,
+  onChangerOpaciteLignePiste,
+  modeConcentration,
+  onBasculerModeConcentration,
   sessionEnLigne,
   prereglages,
   onAppliquerPrereglage,
@@ -58,6 +62,14 @@ function BlocDeux({
   onRemplacerPrereglage,
   onMettreAJourPrereglage,
   onOuvrirCreationPrereglage,
+  couleursChrono,
+  onChangerCouleursChrono,
+  encouragements,
+  onChangerEncouragements,
+  fondAccueil,
+  onChangerFondAccueil,
+  opaciteTitreSession,
+  onChangerOpaciteTitreSession,
   vueActive,
   setVueActive,
   sessionConsulteeApp,
@@ -71,6 +83,8 @@ function BlocDeux({
   numeroSession,
   modeCarnet,
   setModeCarnet,
+  idSessionActive,
+  onNouvelleSession,
   espaceDocuments
 }) {
 
@@ -109,6 +123,8 @@ function BlocDeux({
               numeroSession={numeroSession}
               modeCarnet={modeCarnet}
               setModeCarnet={setModeCarnet}
+              idSessionActive={idSessionActive}
+              onNouvelleSession={onNouvelleSession}
             />
           </section>
           <section className={classeSection(2)} inert={vueActive !== 2} aria-label="Mon Pomodoro">
@@ -133,16 +149,22 @@ function BlocDeux({
               onMettreAJourPrereglage={onMettreAJourPrereglage}
               onOuvrirCreationPrereglage={onOuvrirCreationPrereglage}
               sessionEnLigne={sessionEnLigne}
+              couleursChrono={couleursChrono}
+              onChangerCouleursChrono={onChangerCouleursChrono}
+              encouragements={encouragements}
+              onChangerEncouragements={onChangerEncouragements}
+              fondAccueil={fondAccueil}
+              onChangerFondAccueil={onChangerFondAccueil}
+              opaciteTitreSession={opaciteTitreSession}
+              onChangerOpaciteTitreSession={onChangerOpaciteTitreSession}
+              titreSession={titreSession}
             />
           </section>
           <section className={classeSection(3)} inert={vueActive !== 3} aria-label="Salon de course">
             <Salon_course
-              reglages={reglages}
-              imageFondActuelle={imageFondActuelle}
-              musiqueActuelle={musiqueActuelle}
-              onOuvrirBoutique={onOuvrirBoutique}
-              onSessionEnLigneChange={onSessionEnLigneChange}
-              pointsPomodoro={pointsPomodoro}
+              salonCourse={salonCourse}
+              opaciteLigne={opaciteLignePiste}
+              onChangerOpaciteLigne={onChangerOpaciteLignePiste}
             />
           </section>
           <section className={classeSection(4)} inert={vueActive !== 4} aria-label="Ambiance">
@@ -186,6 +208,12 @@ function BlocDeux({
               {onglet.notif && <span className="poignee_notif" aria-hidden="true"></span>}
             </button>
           ))}
+          <BoutonModeConcentration
+            actif={modeConcentration}
+            onClick={onBasculerModeConcentration}
+            taille={18}
+            className="btn_mode_concentration--poignee"
+          />
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AnimationSvg from '../coureur/AnimationSvg';
+import PersonnaliserCouleursCoureur from '../coureur/PersonnaliserCouleursCoureur';
 import {
   assainirSvg,
   SVG_COURSE_DEFAUT,
@@ -13,7 +14,7 @@ import '../coureur/Coureur.css';
 
 // --- Éditeur d'une animation (course ou repos) : code, aperçu, enregistrement.
 // Chaque éditeur a son propre brouillon : enregistrer l'un ne touche pas l'autre.
-function EditeurAnimation({ titre, description, codeEnregistre, codeDefaut, onEnregistrer }) {
+function EditeurAnimation({ titre, description, codeEnregistre, codeDefaut, onEnregistrer, couleurs = {} }) {
   const [brouillon, setBrouillon] = useState(codeEnregistre || '');
   const [apercu, setApercu] = useState(codeEnregistre || codeDefaut);
   const [erreur, setErreur] = useState(null);
@@ -110,7 +111,7 @@ function EditeurAnimation({ titre, description, codeEnregistre, codeDefaut, onEn
 
         <div className="coureur_editeur_apercu_zone">
           <div className="coureur_editeur_apercu">
-            <AnimationSvg code={apercu} titre={`Aperçu — ${titre}`} className="coureur_editeur_apercu_svg" />
+            <AnimationSvg code={apercu} couleurs={couleurs} titre={`Aperçu — ${titre}`} className="coureur_editeur_apercu_svg" />
           </div>
           <span className="coureur_editeur_apercu_legende">
             {apercuAJour ? 'Aperçu' : 'Aperçu non à jour — clique sur « Prévisualiser »'}
@@ -257,17 +258,49 @@ function ReglagesAffichage({ affichage, onChanger }) {
   );
 }
 
-// --- Onglet « Coureur » : position, taille et animations du coureur affiché à côté du chronomètre
-function OngletCoureur({ animations, onEnregistrerAnimation, affichage, onChangerAffichage }) {
+// --- Onglet « Coureur » : position, taille, couleurs et animations du coureur
+function OngletCoureur({
+  animations,
+  onEnregistrerAnimation,
+  affichage,
+  onChangerAffichage,
+  couleurs = {},
+  onChangerCouleurs,
+}) {
+  const codeCourseActuel = animations?.course || SVG_COURSE_DEFAUT;
+  const codeReposActuel = animations?.repos || SVG_REPOS_DEFAUT;
+
+  const changerCouleur = (cle, valeur) => {
+    onChangerCouleurs?.({ ...couleurs, [cle]: valeur });
+  };
+
+  const reinitialiserPartie = (cle) => {
+    const copie = { ...couleurs };
+    delete copie[cle];
+    onChangerCouleurs?.(copie);
+  };
+
+  const reinitialiserTout = () => {
+    onChangerCouleurs?.({});
+  };
+
   return (
     <div className="coureur_onglet">
       <p className="coureur_onglet_intro">
-        Le coureur s'affiche à droite du chronomètre. Règle sa position et sa taille, puis colle le code
-        SVG de chaque animation (les animations SMIL et CSS intégrées sont conservées), prévisualise-le
-        et enregistre.
+        Le coureur s'affiche à droite du chronomètre. Règle sa position et sa taille, personnalise ses
+        couleurs individuellement, ou colle le code SVG de chaque animation personnalisée.
       </p>
 
       <ReglagesAffichage affichage={affichage} onChanger={onChangerAffichage} />
+
+      <PersonnaliserCouleursCoureur
+        codeCourse={codeCourseActuel}
+        codeRepos={codeReposActuel}
+        couleurs={couleurs}
+        onChangerCouleur={changerCouleur}
+        onReinitialiserPartie={reinitialiserPartie}
+        onReinitialiserTout={reinitialiserTout}
+      />
 
       <EditeurAnimation
         titre="1. Animation de course"
@@ -275,6 +308,7 @@ function OngletCoureur({ animations, onEnregistrerAnimation, affichage, onChange
         codeEnregistre={animations?.course || null}
         codeDefaut={SVG_COURSE_DEFAUT}
         onEnregistrer={(code) => onEnregistrerAnimation('course', code)}
+        couleurs={couleurs}
       />
 
       <EditeurAnimation
@@ -283,6 +317,7 @@ function OngletCoureur({ animations, onEnregistrerAnimation, affichage, onChange
         codeEnregistre={animations?.repos || null}
         codeDefaut={SVG_REPOS_DEFAUT}
         onEnregistrer={(code) => onEnregistrerAnimation('repos', code)}
+        couleurs={couleurs}
       />
     </div>
   );

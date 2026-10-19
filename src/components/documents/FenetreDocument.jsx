@@ -200,11 +200,14 @@ const VUE_PAR_DEFAUT = { zoom: 1, recherche: false };
 // --- Fenêtre flottante de l'espace de travail, pouvant réunir plusieurs
 // documents : une pastille colorée par document dans la barre de titre, le
 // titre affiché prend la couleur de la pastille active.
+// Les outils Cahier et Chat IA y prennent place comme des documents (élément
+// { id, nom, couleur, outil }) ; leur contenu est fourni par rendreOutil.
 // La barre de titre déplace la fenêtre entière, la poignée du coin la
 // redimensionne ; la navigation dans le contenu reste indépendante.
 function FenetreDocument({
   fenetre,
   docs,
+  rendreOutil,
   zIndex,
   auPremierPlan,
   onMettreAJour,
@@ -424,6 +427,14 @@ function FenetreDocument({
 
       <div className="fenetre_doc_contenu">
         {docs.map((d) => {
+          if (d.outil) {
+            const actif = d.id === docActif.id;
+            return (
+              <div key={d.id} className={`fenetre_doc_couche${actif ? ' fenetre_doc_couche--active' : ''}`} inert={!actif}>
+                {rendreOutil(d.outil)}
+              </div>
+            );
+          }
           const vue = vues[d.id] || VUE_PAR_DEFAUT;
           return (
             <ContenuDocument
@@ -441,8 +452,9 @@ function FenetreDocument({
         })}
 
         {/* Bouclier : pendant un geste, ou tant que la fenêtre n'est pas au premier
-            plan, le contenu ne capte pas la souris (le 1er clic ramène la fenêtre devant) */}
-        {(interaction || !auPremierPlan) && <div className="fenetre_doc_bouclier" />}
+            plan, le contenu ne capte pas la souris (le 1er clic ramène la fenêtre devant).
+            Un outil affiché reçoit ce 1er clic (on peut écrire aussitôt dans le Cahier). */}
+        {(interaction || (!auPremierPlan && !docActif.outil)) && <div className="fenetre_doc_bouclier" />}
 
         {etatCapture === 'flash' && <div className="fenetre_doc_capture_flash" aria-hidden="true" />}
         {(etatCapture === 'ok' || etatCapture === 'erreur') && (

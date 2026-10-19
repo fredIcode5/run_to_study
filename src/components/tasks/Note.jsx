@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus } from 'lucide-react';
+import { Plus, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { chargerNotes, sauvegarderSessionArchivee, chargerPlanningJour, sauvegarderPlanningJour } from '../../lib/firebaseDataService';
 import { formaterJourIso, genererIdTache } from '../../utils/helpers';
@@ -10,6 +10,16 @@ import TacheCarte from './TacheCarte';
 import ModalTache from './ModalTache';
 import DialogueNouvelleSession from './DialogueNouvelleSession';
 import FenetreAnciennesSessions from '../profile/FenetreAnciennesSessions';
+import { ID_EMPLACEMENT_TITRE_SESSION, ID_EMPLACEMENT_ACTIONS_SESSION } from '../timer/ChronoBarreProgression';
+
+// Élément de la page (emplacement près du chrono) où afficher une commande
+const useEmplacement = (id) => {
+  const [element, setElement] = useState(null);
+  useEffect(() => {
+    setElement(document.getElementById(id));
+  }, [id]);
+  return element;
+};
 
 function Note({
   taches,
@@ -31,9 +41,17 @@ function Note({
   setTitreSession,
   numeroSession,
   modeCarnet,
-  setModeCarnet
+  setModeCarnet,
+  idSessionActive,
+  onNouvelleSession
 }) {
   const { connecte, utilisateur } = useAuth();
+
+  // Titre de la session (sous le chrono) et boutons « nouvelle session » /
+  // « enregistrer la session » (à gauche du chrono) : affichés près du chrono,
+  // gérés ici
+  const emplacementTitre = useEmplacement(ID_EMPLACEMENT_TITRE_SESSION);
+  const emplacementActions = useEmplacement(ID_EMPLACEMENT_ACTIONS_SESSION);
 
   const [idAgrandie, setIdAgrandie] = useState(null);
 
@@ -47,12 +65,6 @@ function Note({
   // Fenêtre "consulter les anciennes notes"
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const [recherche, setRecherche] = useState('');
-
-  // --- Thème de session : menu déroulant remplaçant l'ancien affichage
-  // « Session : #XXXX ». Permet de catégoriser la session en cours. ---
-  const THEMES_SESSION = ['Lecture', 'Devoir', 'Dessin'];
-  const [themeSession, setThemeSession] = useState('');
-  const [themeDropdownOuvert, setThemeDropdownOuvert] = useState(false);
 
   // --- Toggle Daily : affiche/masque les notes du calendrier pour aujourd'hui ---
   const [filtreDaily, setFiltreDaily] = useState(true);
@@ -205,28 +217,39 @@ function Note({
     setConfirmationOuverte(true);
   };
 
-  // Enregistre la session actuelle puis repart sur une session vierge
-  const enregistrerSessionEtRepartir = () => {
+  // Archive la session en cours sous son identifiant stable (celui de son
+  // cahier) : un nouvel enregistrement de la même session met à jour son entrée
+  // dans l'historique au lieu d'en créer une autre. Renvoie la liste mise à jour.
+  const archiverSessionEnCours = () => {
     const maintenant = new Date();
+    const id = idSessionActive || `session_${Date.now()}`;
+    const existante = sessionsSauvegardees.find((s) => s.id === id);
+    const numero = existante?.numero ?? numeroSession;
 
     const sessionArchivee = {
-      id: `session_${Date.now()}`,
-      titre: titreSession.trim() || `Session ${numeroSession}`,
-      numero: numeroSession,
+      id,
+      titre: titreSession.trim() || `Session ${numero}`,
+      numero,
       date: maintenant.toLocaleDateString(),
       heure: maintenant.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       dateCreation: dateCreationSession,
       notes: taches,
     };
 
-    const sessionsMisesAJour = [...sessionsSauvegardees, sessionArchivee];
+    const sessionsMisesAJour = existante
+      ? sessionsSauvegardees.map((s) => (s.id === id ? sessionArchivee : s))
+      : [...sessionsSauvegardees, sessionArchivee];
     setSessionsSauvegardees(sessionsMisesAJour);
 
     if (connecte && utilisateur?.id && sessionsChargeesPourRef.current === utilisateur.id) {
       sauvegarderSessionArchivee(utilisateur.id, sessionArchivee);
     }
+    return sessionsMisesAJour;
+  };
 
-    repartirSurNouvelleSession(sessionsMisesAJour);
+  // Enregistre la session actuelle puis repart sur une session vierge
+  const enregistrerSessionEtRepartir = () => {
+    repartirSurNouvelleSession(archiverSessionEnCours());
   };
 
   // Supprime la session actuelle sans l'enregistrer
@@ -234,13 +257,15 @@ function Note({
     repartirSurNouvelleSession(sessionsSauvegardees);
   };
 
-  // Vide l'éditeur et réinitialise
+  // Vide l'éditeur et réinitialise : nouvelle session, donc nouveau cahier vide
+  // (celui de la session précédente reste dans l'historique des notes)
   const repartirSurNouvelleSession = (sessionsActuelles) => {
     if (typeof viderTaches === 'function') {
       viderTaches();
     } else if (typeof ajouterTache === 'function') {
       ajouterTache();
     }
+    onNouvelleSession?.();
     setTitreSession('');
     setDateCreationSession(new Date().toISOString());
     setConfirmationOuverte(false);
@@ -257,24 +282,7 @@ function Note({
 
   // Enregistre la session actuelle sans créer une nouvelle session
   const enregistrerSession = () => {
-    const maintenant = new Date();
-
-    const sessionArchivee = {
-      id: `session_${Date.now()}`,
-      titre: titreSession.trim() || `Session ${numeroSession}`,
-      numero: numeroSession,
-      date: maintenant.toLocaleDateString(),
-      heure: maintenant.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      dateCreation: dateCreationSession,
-      notes: taches,
-    };
-
-    const sessionsMisesAJour = [...sessionsSauvegardees, sessionArchivee];
-    setSessionsSauvegardees(sessionsMisesAJour);
-
-    if (connecte && utilisateur?.id && sessionsChargeesPourRef.current === utilisateur.id) {
-      sauvegarderSessionArchivee(utilisateur.id, sessionArchivee);
-    }
+    archiverSessionEnCours();
   };
 
   // Filtre les sessions sauvegardées selon la barre de recherche
@@ -306,16 +314,15 @@ function Note({
 
     if (nonTerminees.length === 0) return;
 
-    if (taches.length > 0) {
-      enregistrerSession();
-    }
+    // La session en cours est archivée (avec son cahier) avant de laisser place à la suite
+    const sessionsActuelles = taches.length > 0 ? archiverSessionEnCours() : sessionsSauvegardees;
 
     const ancienneSessionMiseAJour = {
       ...sessionConsultee,
       notes: terminees
     };
 
-    const sessionsMisesAJour = sessionsSauvegardees.map((s) =>
+    const sessionsMisesAJour = sessionsActuelles.map((s) =>
       s.id === ancienneSessionMiseAJour.id ? ancienneSessionMiseAJour : s
     );
     setSessionsSauvegardees(sessionsMisesAJour);
@@ -329,6 +336,8 @@ function Note({
       remplacerTachesActives(nouvellesTaches);
     }
 
+    // « Suite de … » : une nouvelle session, avec son propre cahier
+    onNouvelleSession?.();
     setTitreSession(`Suite de ${sessionConsultee.titre || 'Session'}`);
     setDateCreationSession(new Date().toISOString());
 
@@ -393,24 +402,29 @@ function Note({
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="notes_commandes_grille">
+          ) : emplacementActions && createPortal(
+            <div className="chrono_actions_session">
               <button
                 type="button"
-                className="todo_btn_ajouter"
+                className="chrono_action_session chrono_action_session--principal"
                 onClick={demarrerNouvelleSession}
+                aria-label="Démarrer une nouvelle session"
+                data-infobulle="Démarrer une nouvelle session"
               >
-                +nouvelle session
+                <Plus size={18} strokeWidth={2.5} />
               </button>
 
               <button
                 type="button"
-                className="session_action_btn"
+                className="chrono_action_session"
                 onClick={enregistrerSession}
+                aria-label="Enregistrer la session"
+                data-infobulle="Enregistrer la session"
               >
-                Enregistrer la session
+                <Check size={18} strokeWidth={2.5} />
               </button>
-            </div>
+            </div>,
+            emplacementActions
           )}
 
           <div className="session_liste_actions">
@@ -476,44 +490,17 @@ function Note({
         </div>
 
         <div className="notes_commandes">
-          <div className="session_titre_ligne">
-            <div className="theme_dropdown_wrapper">
-              <button
-                type="button"
-                className="theme_dropdown_btn"
-                onClick={() => setThemeDropdownOuvert(!themeDropdownOuvert)}
-              >
-                <span className="theme_dropdown_label">{themeSession || 'Thème'}</span>
-                <span className="theme_dropdown_chevron">{themeDropdownOuvert ? '▲' : '▼'}</span>
-              </button>
-              {themeDropdownOuvert && (
-                <ul className="theme_dropdown_liste">
-                  {THEMES_SESSION.map((t) => (
-                    <li key={t}>
-                      <button
-                        type="button"
-                        className={`theme_dropdown_option${themeSession === t ? ' theme_dropdown_option--actif' : ''}`}
-                        onClick={() => {
-                          setThemeSession(t);
-                          setThemeDropdownOuvert(false);
-                        }}
-                      >
-                        {t}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
+          {emplacementTitre && createPortal(
             <input
               type="text"
-              className="session_titre_input"
+              className="chrono_titre_session"
               placeholder="Titre de la session"
+              aria-label="Titre de la session"
               value={titreSession}
               onChange={(e) => setTitreSession(e.target.value)}
-            />
-          </div>
+            />,
+            emplacementTitre
+          )}
 
           <div className="notes_commandes_infos">
             <span className="session_progression_score">

@@ -412,6 +412,84 @@ export async function sauvegarderSessionArchivee(userId, session) {
 
 
 // -------------------------------------------------------
+// Cahiers de session (collection « cahiers_sessions ») : un document par
+// session (identifiant stable), lié à la session par sessionId
+// -------------------------------------------------------
+
+export async function chargerCahiers(userId) {
+  try {
+    const q = query(collection(db, "cahiers_sessions"), where("user_id", "==", userId));
+    const querySnapshot = await getDocs(q);
+    const cahiers = [];
+    querySnapshot.forEach((document) => {
+      cahiers.push(document.data());
+    });
+    return cahiers;
+  } catch (err) {
+    console.error('Erreur chargement cahiers :', err);
+    return null;
+  }
+}
+
+// Renvoie true si l'enregistrement a réussi (affiché dans le cahier)
+export async function sauvegarderCahier(userId, cahier) {
+  try {
+    const docRef = doc(db, "cahiers_sessions", `${userId}_${cahier.sessionId}`);
+    await setDoc(docRef, {
+      user_id: userId,
+      sessionId: cahier.sessionId,
+      contenu: cahier.contenu ?? '',
+      dateCreation: cahier.dateCreation,
+      dateModification: cahier.dateModification,
+    });
+    return true;
+  } catch (err) {
+    console.error('Erreur sauvegarde cahier :', err);
+    return false;
+  }
+}
+
+// -------------------------------------------------------
+// Conversations du Chat IA (collection « conversations_ia »)
+// -------------------------------------------------------
+
+export async function chargerConversationsIa(userId) {
+  try {
+    const q = query(collection(db, "conversations_ia"), where("user_id", "==", userId));
+    const querySnapshot = await getDocs(q);
+    const conversations = [];
+    querySnapshot.forEach((document) => {
+      const { user_id: _userId, ...conversation } = document.data();
+      conversations.push(conversation);
+    });
+    return conversations;
+  } catch (err) {
+    console.error('Erreur chargement conversations IA :', err);
+    return null;
+  }
+}
+
+export async function sauvegarderConversationIa(userId, conversation) {
+  try {
+    await setDoc(doc(db, "conversations_ia", `${userId}_${conversation.id}`), { ...conversation, user_id: userId });
+    return true;
+  } catch (err) {
+    console.error('Erreur sauvegarde conversation IA :', err);
+    return false;
+  }
+}
+
+export async function supprimerConversationIa(userId, conversationId) {
+  try {
+    await deleteDoc(doc(db, "conversations_ia", `${userId}_${conversationId}`));
+    return true;
+  } catch (err) {
+    console.error('Erreur suppression conversation IA :', err);
+    return false;
+  }
+}
+
+// -------------------------------------------------------
 // Récompenses (collection « recompenses »)
 // -------------------------------------------------------
 
